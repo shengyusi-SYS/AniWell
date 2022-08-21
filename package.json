@@ -1,0 +1,8 @@
+{
+  "name": "Transcode-server-for-qBittorrent",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/blytzxdl/Transcode-server-for-qBittorrent.git",
+  "author": "西都凉 <shengyss@163.com>",
+  "license": "GPL3"
+}
