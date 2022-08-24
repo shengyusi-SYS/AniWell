@@ -4,5 +4,13 @@
   "main": "index.js",
   "repository": "https://github.com/blytzxdl/Transcode-server-for-qBittorrent.git",
   "author": "西都凉 <shengyss@163.com>",
-  "license": "GPL3"
+  "license": "GPL3",
+  "type": "module",
+  "dependencies": {
+    "cookie-parser": "^1.4.6",
+    "express": "^4.18.1",
+    "ffmpeg.js": "^4.2.9003",
+    "got": "^12.3.1",
+    "http-proxy-middleware": "^2.0.6"
+  }
 }
