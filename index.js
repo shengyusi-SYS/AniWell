@@ -19,10 +19,10 @@ const fileCookie = {}
 let qbCookie = { SID: undefined }
 
 
-app.use('/api/transcode', express.json())
-app.use('/api/transcode', cookieParser())
+app.use('/api/localFile', express.json())
+app.use('/api/localFile', cookieParser())
 
-app.use('/api/transcode/output', (req, res, next) => {
+app.use('/api/localFile/output', (req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     if (req.path == '/index.m3u8') {
             setTimeout(() => {
@@ -43,7 +43,7 @@ app.use('/api/transcode/output', (req, res, next) => {
     }
 })
 
-app.use('/api/transcode', (req, res, next) => {
+app.use('/api/localFile', (req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     // console.log(req.query.file , fileCookie[qbCookie.SID]);
     // if (req.cookies.SID) {
@@ -78,7 +78,7 @@ app.use('/api/transcode', (req, res, next) => {
     // }
 })
 
-app.use('/api/transcode/clearVideoTemp', (req, res, next) => {
+app.use('/api/localFile/clearVideoTemp', (req, res, next) => {
     setTimeout(() => {
         rimraf('./output', (err) => {
             console.log(err);
@@ -92,7 +92,7 @@ app.use('/api/transcode/clearVideoTemp', (req, res, next) => {
     }, 2000);
 })
 
-app.use('/api/transcode', (req, res, next) => {
+app.use('/api/localFile', (req, res, next) => {
         let formatList = {
             text: ['txt'],
             video: ['mkv', 'mp4', 'flv', 'ts', 'm3u8'],
@@ -155,5 +155,5 @@ app.use('/api/transcode', (req, res, next) => {
         }
 })
 
-app.use("/api/v2", proxy({ target: qbHost, changeOrigin: true }));
+app.use("/", proxy({ target: qbHost, changeOrigin: true }));
 app.listen(serverPort);
