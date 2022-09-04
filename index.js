@@ -7,6 +7,9 @@ import { spawn } from 'child_process';
 import express from 'express';
 import proxyMw from 'http-proxy-middleware';
 import rimraf from 'rimraf';
+const _rimrafs = (path) => new Promise((resolve, reject) => {
+    rimraf(path, resolve)
+})
 const readFile = promisify(fs.readFile)
 const writeFile = promisify(fs.writeFile)
 const rmdir = promisify(fs.rmdir)
@@ -17,23 +20,37 @@ const qbHost = 'http://localhost:8888'
 const serverPort = 9000
 const fileCookie = {}
 let qbCookie = { SID: undefined }
+let temp = ''
+let tryTimes = 0
 
+function checkM3u8() {
+    return readFile('./output/index.m3u8').then((result) => {
+        return result
+    }).catch((err) => {
+        tryTimes++
+        console.log('re');
+        if (tryTimes < 20) {
+            setTimeout(() => { checkM3u8() }, 200);
+        } else {
+            return false
+        }
+    })
+}
 
 app.use('/api/localFile', express.json())
 app.use('/api/localFile', cookieParser())
+
 
 //hls请求处理
 app.use('/output', (req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     if (req.path == '/index.m3u8') {
-        setTimeout(() => {
-            readFile(`./output${req.path}`).then((result) => {
-                res.send(result)
-            }).catch(err => {
-                console.log(err);
-                res.status(404).send('not found')
-            })
-        }, 2000);
+        checkM3u8().then((result) => {
+            res.send(result)
+        }).catch(err => {
+            console.log(err);
+            res.status(404).send('not found')
+        })
     } else {
         readFile(`./output${req.path}`).then((result) => {
             res.send(result)
@@ -102,7 +119,8 @@ app.use('/api/localFile/videoSrc', (req, res, next) => {
 })
 
 //文件请求处理
-app.use('/api/localFile', (req, res, next) => {
+app.use('/api/localFile', async (req, res, next) => {
+
     let formatList = {
         text: ['txt'],
         video: ['mkv', 'mp4', 'flv', 'ts', 'm3u8'],
@@ -120,6 +138,8 @@ app.use('/api/localFile', (req, res, next) => {
         }
         var filePath = `${body.rootPath}\\${body.name}`.replace(/\\\\/g, '\\')
     }
+
+
     try {
         if (fileType == 'text') {
             readFile(`${filePath}`).then((result) => {
@@ -129,30 +149,58 @@ app.use('/api/localFile', (req, res, next) => {
             if (suffix == 'mkv') {
                 throw new Error('暂不支持')
             } else {
-                readFile(`${filePath}`).catch(err => {
-                    throw new Error('文件错误')
-                }).then((result) => {
-                    console.log(`find ${filePath}`);
-                    const params = ['-ss', '0', '-i', `"${filePath}"`, '-c', 'copy', '-f', 'hls', '-hls_time', '10', '-hls_segment_type', 'mpegts', '-hls_playlist_type', 'event', './output/index.m3u8']
-                    return new Promise((r, j) => {
-                        const cp = spawn('ffmpeg', params, {
-                            shell: true,
-                            // stdio: 'inherit'
-                        })
-                        res.send('OK.')
-                        cp.on('error', (err) => {
-                            console.log(err);
-                            j(err);
-                        });
-                        cp.on('close', (code) => {
-                            console.log(`ffmpeg process close all stdio with code ${code}`);
-                            r(code);
-                        });
-                        cp.on('exit', (code) => {
-                            console.log(`ffmpeg process exited with code ${code}`);
-                        });
+                readFile(`${filePath}`)
+                    .catch(err => {
+                        throw new Error('文件错误')
                     })
-                })
+                    .then((result) => {
+                        console.log(`find ${filePath}`);
+                        if (temp == filePath) {
+                            return checkM3u8().then(() => {
+                                res.send('OK.')
+                                return 'exist'
+                            }).catch((err) => {
+                                return
+                            })
+                        } else {
+                            temp = filePath
+                            return _rimrafs('./output')
+                                .catch(err => console.log(err))
+                                .then(() => mkdir('./output'))
+                                .then(()=>console.log('clear'))
+                                .catch(err => console.log(err))
+                        }
+                    })
+                    .then((result) => {
+                        if (result == 'exist') {
+                            return
+                        }else{
+                            console.log('make');
+                            return new Promise((r, j) => {
+                                const params = ['-ss', '0', '-i', `"${filePath}"`, '-c', 'copy', '-f', 'hls', '-hls_time', '10', '-hls_segment_type', 'mpegts', '-hls_playlist_type', 'event', './output/index.m3u8', '-hide_banner']
+                                const cp = spawn('ffmpeg', params, {
+                                    shell: true,
+                                    // stdio: 'inherit'
+                                })
+                                checkM3u8().then(() => {
+                                    res.send('OK.')
+                                }).catch((err) => {
+                                    console.log(err);
+                                });
+                                cp.on('error', (err) => {
+                                    console.log(err);
+                                    j(err);
+                                });
+                                cp.on('close', (code) => {
+                                    console.log(`ffmpeg process close all stdio with code ${code}`);
+                                    r(code);
+                                });
+                                cp.on('exit', (code) => {
+                                    console.log(`ffmpeg process exited with code ${code}`);
+                                });
+                            })
+                        }
+                    })
             }
         } else if (fileType == 'picture') {
             throw new Error('暂不支持')
