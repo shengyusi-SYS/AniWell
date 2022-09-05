@@ -7,6 +7,7 @@ import { spawn } from 'child_process';
 import express from 'express';
 import proxyMw from 'http-proxy-middleware';
 import rimraf from 'rimraf';
+
 const _rimrafs = (path) => new Promise((resolve, reject) => {
     rimraf(path, resolve)
 })
@@ -16,8 +17,8 @@ const rmdir = promisify(fs.rmdir)
 const mkdir = promisify(fs.mkdir)
 const proxy = proxyMw.createProxyMiddleware;
 const app = express();
-const qbHost = 'http://localhost:8888'
-const serverPort = 9000
+const qbHost = 'http://localhost:8008'
+const serverPort = 9009
 const fileCookie = {}
 let qbCookie = { SID: undefined }
 let temp = ''
@@ -167,39 +168,35 @@ app.use('/api/localFile', async (req, res, next) => {
                             return _rimrafs('./output')
                                 .catch(err => console.log(err))
                                 .then(() => mkdir('./output'))
-                                .then(()=>console.log('clear'))
+                                .then(() => console.log('clear'))
                                 .catch(err => console.log(err))
                         }
                     })
                     .then((result) => {
-                        if (result == 'exist') {
-                            return
-                        }else{
-                            console.log('make');
-                            return new Promise((r, j) => {
-                                const params = ['-ss', '0', '-i', `"${filePath}"`, '-c', 'copy', '-f', 'hls', '-hls_time', '10', '-hls_segment_type', 'mpegts', '-hls_playlist_type', 'event', './output/index.m3u8', '-hide_banner']
-                                const cp = spawn('ffmpeg', params, {
-                                    shell: true,
-                                    // stdio: 'inherit'
-                                })
-                                checkM3u8().then(() => {
-                                    res.send('OK.')
-                                }).catch((err) => {
-                                    console.log(err);
-                                });
-                                cp.on('error', (err) => {
-                                    console.log(err);
-                                    j(err);
-                                });
-                                cp.on('close', (code) => {
-                                    console.log(`ffmpeg process close all stdio with code ${code}`);
-                                    r(code);
-                                });
-                                cp.on('exit', (code) => {
-                                    console.log(`ffmpeg process exited with code ${code}`);
-                                });
+                        console.log('make');
+                        return new Promise((r, j) => {
+                            const params = ['-ss', '0', '-i', `"${filePath}"`, '-c', 'copy', '-f', 'hls', '-hls_time', '10', '-hls_segment_type', 'fmp4', '-hls_playlist_type', 'event', './output/index.m3u8', '-hide_banner']
+                            const cp = spawn('ffmpeg', params, {
+                                shell: true,
+                                // stdio: 'inherit'
                             })
-                        }
+                            checkM3u8().then(() => {
+                                res.send('OK.')
+                            }).catch((err) => {
+                                console.log(err);
+                            });
+                            cp.on('error', (err) => {
+                                console.log(err);
+                                j(err);
+                            });
+                            cp.on('close', (code) => {
+                                console.log(`ffmpeg process close all stdio with code ${code}`);
+                                r(code);
+                            });
+                            cp.on('exit', (code) => {
+                                console.log(`ffmpeg process exited with code ${code}`);
+                            });
+                        })
                     })
             }
         } else if (fileType == 'picture') {
@@ -216,5 +213,15 @@ app.use('/api/localFile', async (req, res, next) => {
     }
 })
 
-app.use("/", proxy({ target: qbHost, changeOrigin: true }));
+app.use("/", proxy({
+    target: qbHost, 
+    changeOrigin: true, 
+    // ssl: {
+    //     cert: fs.readFileSync('../cert/web.pem', 'utf8'),
+    //     key: fs.readFileSync('../cert/web.key', 'utf8')
+    // },
+    secure: false
+}));
 app.listen(serverPort);
+
+export default app
