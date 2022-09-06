@@ -7,13 +7,14 @@ import express from 'express';
 import proxyMw from 'http-proxy-middleware';
 import rimraf from 'rimraf';
 import https from 'https';
-
+import kill from 'tree-kill';
 const _rimrafs = (path) => new Promise((resolve, reject) => {
     rimraf(path, resolve)
 })
 
 const readFile = promisify(fs.readFile)
 const writeFile = promisify(fs.writeFile)
+const readdir = promisify(fs.readdir)
 const rmdir = promisify(fs.rmdir)
 const mkdir = promisify(fs.mkdir)
 const proxy = proxyMw.createProxyMiddleware;
@@ -26,16 +27,18 @@ var settings = {
     tempPath: './',
     cert: './ssl/domain.pem',
     key: './ssl/domain.key',
-    secure: false
+    secure: false,
+    burnSubtitle: true,
+    encoder: 'h264_nvenc'
 }
 try {
-    settings = JSON.parse(fs.readFileSync('./settings.json'))
-    console.log('已加载本地配置');
+    settings = Object.assign(settings, JSON.parse(fs.readFileSync('./settings.json')))
+    console.log('已加载本地配置', settings);
 } catch (error) {
     fs.writeFileSync('./settings.json', JSON.stringify(settings, '', '\t'))
     console.log('已写入默认配置');
 }
-const { qbHost, serverPort, tempPath, cert, key, secure } = settings
+const { qbHost, serverPort, tempPath, cert, key, secure, burnSubtitle, encoder } = settings
 // console.log(settings);
 //转发配置
 var proxySettings = {
@@ -47,15 +50,29 @@ const fileCookie = {}
 // let qbCookie = { SID: undefined }
 let temp = ''
 let tryTimes = 0
+var fileRootPath = ''
+var subtitle = []
+var checkTimeout
+var FFmpegProcess
+var transCompleted = false
+
+// var masterList = `#EXTM3U
+// #EXT-X-VERSION:7
+// #EXT-X-MEDIA:TYPE=SUBTITLES,ID="subs",NAME="default",GROUP-ID="subtitle",DEFAULT=YES,URI="index_vtt.m3u8"
+// index_vtt.m3u8
+// #EXT-X-MEDIA:TYPE=VIDEO,NAME="default",DEFAULT=YES,URI="index.m3u8"
+// #EXT-X-STREAM-INF:BANDWIDTH=10000000,SUBTITLES="subs"
+// index.m3u8`
 
 function checkM3u8() {
+    clearTimeout(checkTimeout)
     return readFile(tempPath + 'output/index.m3u8').then((result) => {
         return result
     }).catch((err) => {
         tryTimes++
         console.log('re');
-        if (tryTimes < 20) {
-            setTimeout(() => { checkM3u8() }, 200);
+        if (tryTimes < 10) {
+            checkTimeout = setTimeout(() => { checkM3u8() }, 400);
         } else {
             return false
         }
@@ -65,8 +82,16 @@ function checkM3u8() {
 app.use('/api/localFile', express.json())
 app.use('/api/localFile', cookieParser())
 
+//test
 // app.use('/test', (req, res) => {
-//     res.send('Welcome')
+//     readFile(`${tempPath}output${req.path}`).then((result) => {
+//         console.log('sent', [req.path]);
+//         // console.log(result.toString());
+//         res.send(result)
+//     }).catch(err => {
+//         console.log(err);
+//         res.status(404).send('not found')
+//     })
 // })
 
 //hls请求处理
@@ -74,6 +99,7 @@ app.use('/output', (req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     if (req.path == '/index.m3u8') {
         checkM3u8().then((result) => {
+            // console.log('sent', [req.path]);
             res.send(result)
         }).catch(err => {
             console.log(err);
@@ -81,6 +107,7 @@ app.use('/output', (req, res, next) => {
         })
     } else {
         readFile(`${tempPath}output${req.path}`).then((result) => {
+            // console.log('sent', [req.path]);
             res.send(result)
         }).catch(err => {
             console.log(err);
@@ -127,21 +154,34 @@ app.use('/api/localFile/clearVideoTemp', (req, res, next) => {
     }, 2000);
 })
 
+// app.use('/api/localFile/killFFmpeg', (req, res, next) => {
+//     if (FFmpegProcess) {
+//         // spawn('taskkill',['-PID',FFmpegProcess.pid,'-F'])
+//         kill(FFmpegProcess.pid, 'SIGKILL')
+//         console.log(FFmpegProcess);
+//     }
+//     res.send('Ok.')
+// })
+
+
 //hls地址生成
 app.use('/api/localFile/videoSrc', (req, res, next) => {
     const path = req.headers.referer.split(':')
-    res.send({
-        video:`${path[0]}:${path[1]}:${serverPort}/output/index.m3u8`,
-        subtitle:``
-    })
+    // console.log('src', fileRootPath);
+    res.send(`${path[0]}:${path[1]}:${serverPort}/output/index.m3u8`)
 })
+// readdir().then((result) => {
+//     console.log(result)
+// }).catch((err) => {
+//     console.log(err)
 
+// });
 //文件请求处理
 app.use('/api/localFile', async (req, res, next) => {
 
     let formatList = {
         text: ['txt'],
-        video: ['mkv', 'mp4', 'flv', 'ts', 'm3u8'],
+        video: ['mkv', 'mp4', 'flv', 'ts', 'm3u8', 'mov', 'avi'],
         picture: ['jpg', 'png'],
         audio: ['mp3', 'wav', 'flac']
     }
@@ -154,10 +194,8 @@ app.use('/api/localFile', async (req, res, next) => {
                 fileType = key
             }
         }
-        var filePath = `${body.rootPath}\\${body.name}`.replace(/\\\\/g, '\\')
+        var filePath = `${body.rootPath}\\${body.name}`
     }
-
-
     try {
         if (fileType == 'text') {
             readFile(`${filePath}`).then((result) => {
@@ -173,6 +211,7 @@ app.use('/api/localFile', async (req, res, next) => {
                     if (temp == filePath) {
                         return checkM3u8().then(() => {
                             res.send('OK.')
+                            console.log('exist');
                             return 'exist'
                         }).catch((err) => {
                             return
@@ -187,30 +226,102 @@ app.use('/api/localFile', async (req, res, next) => {
                     }
                 })
                 .then((result) => {
-                    console.log('make');
-                    return new Promise((r, j) => {
-                        const params = ['-ss', '0', '-i', `"${filePath}"`, '-c', 'copy', '-f', 'hls', '-hls_time', '10', '-hls_segment_type', 'fmp4', '-hls_playlist_type', 'event', `${tempPath}output/index.m3u8`, '-hide_banner']
-                        const cp = spawn('ffmpeg', params, {
-                            shell: true,
-                            // stdio: 'inherit'
+                    if (result == 'exist' && transCompleted) {
+                        return
+                    } else {
+                        console.log('make');
+                        if (FFmpegProcess) {
+                            kill(FFmpegProcess.pid, 'SIGKILL')
+                            console.log(FFmpegProcess);
+                        }
+                        subtitle = []
+                        let nameReg = '/' + body.label
+                        let specialCharacter = ['\\', '$', '(', ')', '*', '+', '.', '[', '?', '^', '{', '|']
+                        let subType = ['ass', 'ssa', 'srt', 'vtt']
+                        specialCharacter.map(v => {
+                            let reg = new RegExp('\\' + v, 'gim')
+                            nameReg = nameReg.replace(reg, '\\' + v)
                         })
-                        checkM3u8().then(() => {
-                            res.send('OK.')
-                        }).catch((err) => {
-                            console.log(err);
-                        });
-                        cp.on('error', (err) => {
-                            console.log(err);
-                            j(err);
-                        });
-                        cp.on('close', (code) => {
-                            console.log(`ffmpeg process close all stdio with code ${code}`);
-                            r(code);
-                        });
-                        cp.on('exit', (code) => {
-                            console.log(`ffmpeg process exited with code ${code}`);
-                        });
-                    })
+                        let reg = new RegExp(nameReg)
+                        fileRootPath = filePath.replace(reg, '').replace(/\\/g, '/')
+                        // console.log('rrrrrrrrr', fileRootPath);
+                        readdir(fileRootPath).catch((err) => {
+                            console.log(err)
+                        }).then((arr) => {
+                            arr.forEach(v => {
+                                if (v.includes(body.label.replace(new RegExp('.' + suffix), ''))) {
+                                    if (subType.includes(v.split('.').slice(-1)[0])) {
+                                        subtitle.push(`${fileRootPath}/${v}`)
+                                        // console.log(v);
+                                    }
+                                }
+                            })
+                        }).then((result) => {
+                            return new Promise((r, j) => {
+                                var params
+                                let subSuffix = subtitle[0].split('.').slice(-1)[0]
+                                if (burnSubtitle && subtitle[0]) {
+                                    // console.log('transsssssssssssss');
+                                    let subtitlePath = 'in.' + subSuffix
+                                    fs.copyFileSync(subtitle[0], subtitlePath)
+                                    params = [
+                                        '-ss 0',
+                                        '-i', `"${filePath}"`,
+                                        ` -c:v:0 ${encoder}`,
+                                        '-pix_fmt yuv420p',
+                                        '-tag:v hvc1',
+                                        '-c:a:0 aac',
+                                        `-vf subtitles=${subtitlePath}`,
+                                        '-keyint_min 48',
+                                        '-muxdelay 0',
+                                        '-f hls',
+                                        '-hls_time 10',
+                                        '-hls_segment_type mpegts',
+                                        '-hls_playlist_type event',
+                                        `${tempPath}output/index.m3u8`,
+                                        '-hide_banner']
+                                } else {
+                                    // console.log('hlssssssssssssss');
+                                    params = [
+                                        '-ss 0',
+                                        '-i', `"${filePath}"`,
+                                        '-c copy',
+                                        '-f hls',
+                                        '-hls_time 10',
+                                        '-hls_segment_type fmp4',
+                                        '-hls_playlist_type event',
+                                        `${tempPath}output/index.m3u8`,
+                                        '-hide_banner']
+                                }
+                                // console.log([params.join(' ')]);
+                                FFmpegProcess = spawn('ffmpeg', params, {
+                                    shell: true,
+                                    // stdio: 'inherit'
+                                })
+                                checkM3u8().then(() => {
+                                    res.send('OK.')
+                                }).catch((err) => {
+                                    console.log(err);
+                                });
+                                FFmpegProcess.on('error', (err) => {
+                                    console.log(err);
+                                    j(err);
+                                });
+                                FFmpegProcess.on('close', (code) => {
+                                    if (code == 0) {
+                                        transCompleted = true
+                                    } else {
+                                        transCompleted = false
+                                    }
+                                    console.log(`ffmpeg process close all stdio with code ${code}`);
+                                    r(code);
+                                });
+                                FFmpegProcess.on('exit', (code) => {
+                                    console.log(`ffmpeg process exited with code ${code}`);
+                                });
+                            })
+                        })
+                    }
                 })
         } else if (fileType == 'picture') {
             throw new Error('暂不支持')
@@ -234,7 +345,7 @@ Promise.all([readFile(cert, 'utf8'), readFile(key, 'utf8')])
             cert: result[0],
             key: result[1]
         }
-        // proxySettings.secure = true
+        proxySettings.secure = true
         return 'https'
     }).catch((err) => {
         return 'http'
