@@ -29,7 +29,8 @@ var settings = {
     key: './ssl/domain.key',
     secure: false,
     burnSubtitle: true,
-    encoder: 'h264_nvenc'
+    forceTranscode: false,
+    encoder: 'h264_nvenc',
 }
 try {
     settings = Object.assign(settings, JSON.parse(fs.readFileSync('./settings.json')))
@@ -38,7 +39,7 @@ try {
     fs.writeFileSync('./settings.json', JSON.stringify(settings, '', '\t'))
     console.log('已写入默认配置');
 }
-const { qbHost, serverPort, tempPath, cert, key, secure, burnSubtitle, encoder } = settings
+const { qbHost, serverPort, tempPath, cert, key, secure, burnSubtitle, encoder, forceTranscode } = settings
 // console.log(settings);
 //转发配置
 var proxySettings = {
@@ -54,7 +55,7 @@ var fileRootPath = ''
 var subtitle = []
 var checkTimeout
 var FFmpegProcess
-var transCompleted = false
+var transState = 'false'
 
 // var masterList = `#EXTM3U
 // #EXT-X-VERSION:7
@@ -202,13 +203,14 @@ app.use('/api/localFile', async (req, res, next) => {
                 res.send(result)
             })
         } else if (fileType == 'video') {
+            console.log(transState);
             readFile(`${filePath}`)
                 .catch(err => {
                     throw new Error('文件错误')
                 })
                 .then((result) => {
                     console.log(`find ${filePath}`);
-                    if (temp == filePath) {
+                    if ((temp == filePath) && (transState != 'false')) {
                         return checkM3u8().then(() => {
                             res.send('OK.')
                             console.log('exist');
@@ -226,13 +228,13 @@ app.use('/api/localFile', async (req, res, next) => {
                     }
                 })
                 .then((result) => {
-                    if (result == 'exist' && transCompleted) {
+                    if (result == 'exist') {
                         return
                     } else {
                         console.log('make');
                         if (FFmpegProcess) {
                             kill(FFmpegProcess.pid, 'SIGKILL')
-                            console.log(FFmpegProcess);
+                            // console.log(FFmpegProcess);
                         }
                         subtitle = []
                         let nameReg = '/' + body.label
@@ -257,10 +259,28 @@ app.use('/api/localFile', async (req, res, next) => {
                                 }
                             })
                         }).then((result) => {
+                            transState = 'doing'
                             return new Promise((r, j) => {
                                 var params
-                                let subSuffix = subtitle[0].split('.').slice(-1)[0]
-                                if (burnSubtitle && subtitle[0]) {
+                                // console.log(subtitle[0]);
+                                if (forceTranscode && !subtitle[0]) {
+                                    params = [
+                                        '-ss 0',
+                                        '-i', `"${filePath}"`,
+                                        ` -c:v:0 ${encoder}`,
+                                        '-pix_fmt yuv420p',
+                                        '-tag:v hvc1',
+                                        '-c:a:0 aac',
+                                        '-keyint_min 48',
+                                        '-muxdelay 0',
+                                        '-f hls',
+                                        '-hls_time 10',
+                                        '-hls_segment_type mpegts',
+                                        '-hls_playlist_type event',
+                                        `${tempPath}output/index.m3u8`,
+                                        '-hide_banner']
+                                } else if ((forceTranscode || burnSubtitle) && subtitle[0]) {
+                                    let subSuffix = subtitle[0].split('.').slice(-1)[0]
                                     // console.log('transsssssssssssss');
                                     let subtitlePath = 'in.' + subSuffix
                                     fs.copyFileSync(subtitle[0], subtitlePath)
@@ -309,9 +329,9 @@ app.use('/api/localFile', async (req, res, next) => {
                                 });
                                 FFmpegProcess.on('close', (code) => {
                                     if (code == 0) {
-                                        transCompleted = true
+                                        transState = 'true'
                                     } else {
-                                        transCompleted = false
+                                        transState = 'false'
                                     }
                                     console.log(`ffmpeg process close all stdio with code ${code}`);
                                     r(code);

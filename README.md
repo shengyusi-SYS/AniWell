@@ -51,6 +51,8 @@
 	"secure": false,                 	//ssl安全设置，ssl配置成功后会自动使用true
 
 	"burnSubtitle": true,				//是否烧录字幕，为true且视频同目录下存在对应字幕文件时生效
+
+	"forceTranscode": false,			//是否强制转码，为true时无论字幕是否存在都强制转码，有字幕时自动烧录字幕（即忽略burnSubtitle项）
 		
     "encoder": "h264_nvenc"				//编码器，默认h264_nvenc需要英伟达显卡，其它显卡需替换，可选值先参考ffmpeg官方文档，建议h264类，hevc/h265兼容问题严重()，
 }
