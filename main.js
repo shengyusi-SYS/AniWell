@@ -31,6 +31,7 @@ var settings = {
     burnSubtitle: true,
     forceTranscode: false,
     encoder: 'h264_nvenc',
+    share:false
 }
 try {
     settings = Object.assign(settings, JSON.parse(fs.readFileSync('./settings.json')))
@@ -39,7 +40,7 @@ try {
     fs.writeFileSync('./settings.json', JSON.stringify(settings, '', '\t'))
     console.log('已写入默认配置');
 }
-const { qbHost, serverPort, tempPath, cert, key, secure, burnSubtitle, encoder, forceTranscode } = settings
+const { qbHost, serverPort, tempPath, cert, key, secure, burnSubtitle, encoder, forceTranscode,share } = settings
 // console.log(settings);
 //转发配置
 var proxySettings = {
@@ -95,9 +96,38 @@ app.use('/api/localFile', cookieParser())
 //     })
 // })
 
-//hls请求处理
-app.use('/output', (req, res, next) => {
+
+
+//权限验证
+app.use('/api/localFile', (req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
+    var SID = req.cookies.SID
+    got({
+        url: `${qbHost}/api/v2/auth/login`,
+        method: 'POST',
+        headers: {
+            cookie: `SID=${SID}`
+        }
+    }).then((result) => {
+        result = result.body
+        if (result == 'Ok.') {
+            next()
+        } else if (share&&req.path.includes('/output/index')) {
+            console.log('goooooo');
+            next()
+        } else{
+            throw new Error('无权限，请重新登录')
+        }
+    }).catch((err) => {
+        res.status(403).send(err.message)
+        return
+    });
+})
+
+//hls请求处理
+app.use('/api/localFile/output', (req, res, next) => {
+    // res.header("Access-Control-Allow-Origin", "*");
+    console.log(req.path);
     if (req.path == '/index.m3u8') {
         checkM3u8().then((result) => {
             // console.log('sent', [req.path]);
@@ -115,29 +145,6 @@ app.use('/output', (req, res, next) => {
             res.status(404).send('not found')
         })
     }
-})
-
-//权限验证
-app.use('/api/localFile', (req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    var SID = req.cookies.SID
-    got({
-        url: `${qbHost}/api/v2/auth/login`,
-        method: 'POST',
-        headers: {
-            cookie: `SID=${SID}`
-        }
-    }).then((result) => {
-        result = result.body
-        if (result == 'Ok.') {
-            next()
-        } else {
-            throw new Error('无权限，请重新登录')
-        }
-    }).catch((err) => {
-        res.status(403).send(err.message)
-        return
-    });
 })
 
 //hls缓存清理
@@ -169,7 +176,7 @@ app.use('/api/localFile/clearVideoTemp', (req, res, next) => {
 app.use('/api/localFile/videoSrc', (req, res, next) => {
     const path = req.headers.referer.split(':')
     // console.log('src', fileRootPath);
-    res.send(`${path[0]}:${path[1]}:${serverPort}/output/index.m3u8`)
+    res.send(`${path[0]}:${path[1]}:${serverPort}/api/localFile/output/index.m3u8`)
 })
 // readdir().then((result) => {
 //     console.log(result)
@@ -344,7 +351,9 @@ app.use('/api/localFile', async (req, res, next) => {
                     }
                 })
         } else if (fileType == 'picture') {
-            throw new Error('暂不支持')
+            readFile(`${filePath}`).then((result) => {
+                res.send(result)
+            })
         } else if (fileType == 'audio') {
             throw new Error('暂不支持')
         } else {
