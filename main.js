@@ -112,8 +112,8 @@ app.use('/api/localFile', (req, res, next) => {
         result = result.body
         if (result == 'Ok.') {
             next()
-        } else if (share&&req.path.includes('/output/index')) {
-            console.log('goooooo');
+        } else if (share&&req.path.includes('/output/')) {
+            // console.log('goooooo');
             next()
         } else{
             throw new Error('无权限，请重新登录')
