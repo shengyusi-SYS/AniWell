@@ -124,6 +124,11 @@ app.use('/api/localFile', (req, res, next) => {
     });
 })
 
+//连接状态测试
+app.use('/api/localFile/checkFileServer', (req, res) => {
+    res.send('Ok.')
+})
+
 //hls请求处理
 app.use('/api/localFile/output', (req, res, next) => {
     // res.header("Access-Control-Allow-Origin", "*");
@@ -154,7 +159,7 @@ app.use('/api/localFile/clearVideoTemp', (req, res, next) => {
             console.log(err);
             mkdir(`${tempPath}output`).then((result) => {
                 console.log('clear');
-                res.send('OK.')
+                res.send('Ok.')
             }).catch((err) => {
                 console.log(err);
             })
@@ -219,7 +224,7 @@ app.use('/api/localFile', async (req, res, next) => {
                     console.log(`find ${filePath}`);
                     if ((temp == filePath) && (transState != 'false')) {
                         return checkM3u8().then(() => {
-                            res.send('OK.')
+                            res.send('Ok.')
                             console.log('exist');
                             return 'exist'
                         }).catch((err) => {
@@ -326,7 +331,7 @@ app.use('/api/localFile', async (req, res, next) => {
                                     // stdio: 'inherit'
                                 })
                                 checkM3u8().then(() => {
-                                    res.send('OK.')
+                                    res.send('Ok.')
                                 }).catch((err) => {
                                     console.log(err);
                                 });
