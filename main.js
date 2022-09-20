@@ -31,7 +31,7 @@ var settings = {
     burnSubtitle: true,
     forceTranscode: false,
     encoder: 'h264_nvenc',
-    share:false
+    share: false,
 }
 try {
     settings = Object.assign(settings, JSON.parse(fs.readFileSync('./settings.json')))
@@ -40,13 +40,12 @@ try {
     fs.writeFileSync('./settings.json', JSON.stringify(settings, '', '\t'))
     console.log('已写入默认配置');
 }
-const { qbHost, serverPort, tempPath, cert, key, secure, burnSubtitle, encoder, forceTranscode,share } = settings
 // console.log(settings);
 //转发配置
 var proxySettings = {
-    target: qbHost,
+    target: settings.qbHost,
     changeOrigin: true,
-    secure
+    secure: settings.secure
 }
 const fileCookie = {}
 // let qbCookie = { SID: undefined }
@@ -66,9 +65,10 @@ var transState = 'false'
 // #EXT-X-STREAM-INF:BANDWIDTH=10000000,SUBTITLES="subs"
 // index.m3u8`
 
+//检查hls生成
 function checkM3u8() {
     clearTimeout(checkTimeout)
-    return readFile(tempPath + 'output/index.m3u8').then((result) => {
+    return readFile(settings.tempPath + 'output/index.m3u8').then((result) => {
         return result
     }).catch((err) => {
         tryTimes++
@@ -81,12 +81,13 @@ function checkM3u8() {
     })
 }
 
+
 app.use('/api/localFile', express.json())
 app.use('/api/localFile', cookieParser())
 
 //test
 // app.use('/test', (req, res) => {
-//     readFile(`${tempPath}output${req.path}`).then((result) => {
+//     readFile(`${settings.tempPath}output${req.path}`).then((result) => {
 //         console.log('sent', [req.path]);
 //         // console.log(result.toString());
 //         res.send(result)
@@ -103,7 +104,7 @@ app.use('/api/localFile', (req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     var SID = req.cookies.SID
     got({
-        url: `${qbHost}/api/v2/auth/login`,
+        url: `${settings.qbHost}/api/v2/auth/login`,
         method: 'POST',
         headers: {
             cookie: `SID=${SID}`
@@ -112,10 +113,10 @@ app.use('/api/localFile', (req, res, next) => {
         result = result.body
         if (result == 'Ok.') {
             next()
-        } else if (share&&req.path.includes('/output/')) {
+        } else if (settings.share && req.path.includes('/output/')) {
             // console.log('goooooo');
             next()
-        } else{
+        } else {
             throw new Error('无权限，请重新登录')
         }
     }).catch((err) => {
@@ -126,7 +127,23 @@ app.use('/api/localFile', (req, res, next) => {
 
 //连接状态测试
 app.use('/api/localFile/checkFileServer', (req, res) => {
-    res.send('Ok.')
+    res.send(settings)
+})
+
+//更新配置项
+app.use('/api/localFile/changeFileServerSettings', (req, res) => {
+    let data = req.body
+    data.forEach(val => {
+        settings[val.name] = val.value
+    })
+    writeFile('./settings.json', JSON.stringify(settings, '', '\t')).then((result) => {
+        console.log('已更新配置');
+        console.log(settings);
+        res.send('Ok.')
+    }).catch((err) => {
+        console.log(err);
+        res.send('Fails.')
+    });
 })
 
 //hls请求处理
@@ -142,7 +159,7 @@ app.use('/api/localFile/output', (req, res, next) => {
             res.status(404).send('not found')
         })
     } else {
-        readFile(`${tempPath}output${req.path}`).then((result) => {
+        readFile(`${settings.tempPath}output${req.path}`).then((result) => {
             // console.log('sent', [req.path]);
             res.send(result)
         }).catch(err => {
@@ -155,9 +172,9 @@ app.use('/api/localFile/output', (req, res, next) => {
 //hls缓存清理
 app.use('/api/localFile/clearVideoTemp', (req, res, next) => {
     setTimeout(() => {
-        rimraf(`${tempPath}output`, (err) => {
+        rimraf(`${settings.tempPath}output`, (err) => {
             console.log(err);
-            mkdir(`${tempPath}output`).then((result) => {
+            mkdir(`${settings.tempPath}output`).then((result) => {
                 console.log('clear');
                 res.send('Ok.')
             }).catch((err) => {
@@ -181,7 +198,7 @@ app.use('/api/localFile/clearVideoTemp', (req, res, next) => {
 app.use('/api/localFile/videoSrc', (req, res, next) => {
     const path = req.headers.referer.split(':')
     // console.log('src', fileRootPath);
-    res.send(`${path[0]}:${path[1]}:${serverPort}/api/localFile/output/index.m3u8`)
+    res.send(`${path[0]}:${path[1]}:${settings.serverPort}/api/localFile/output/index.m3u8`)
 })
 // readdir().then((result) => {
 //     console.log(result)
@@ -232,9 +249,9 @@ app.use('/api/localFile', async (req, res, next) => {
                         })
                     } else {
                         temp = filePath
-                        return _rimrafs(`${tempPath}output`)
+                        return _rimrafs(`${settings.tempPath}output`)
                             .catch(err => console.log(err))
-                            .then(() => mkdir(`${tempPath}output`))
+                            .then(() => mkdir(`${settings.tempPath}output`))
                             .then(() => console.log('clear'))
                             .catch(err => console.log(err))
                     }
@@ -275,11 +292,11 @@ app.use('/api/localFile', async (req, res, next) => {
                             return new Promise((r, j) => {
                                 var params
                                 // console.log(subtitle[0]);
-                                if (forceTranscode && !subtitle[0]) {
+                                if (settings.forceTranscode && !subtitle[0]) {
                                     params = [
                                         '-ss 0',
                                         '-i', `"${filePath}"`,
-                                        ` -c:v:0 ${encoder}`,
+                                        ` -c:v:0 ${settings.encoder}`,
                                         '-pix_fmt yuv420p',
                                         '-tag:v hvc1',
                                         '-c:a:0 aac',
@@ -289,9 +306,9 @@ app.use('/api/localFile', async (req, res, next) => {
                                         '-hls_time 10',
                                         '-hls_segment_type mpegts',
                                         '-hls_playlist_type event',
-                                        `${tempPath}output/index.m3u8`,
+                                        `${settings.tempPath}output/index.m3u8`,
                                         '-hide_banner']
-                                } else if ((forceTranscode || burnSubtitle) && subtitle[0]) {
+                                } else if ((settings.forceTranscode || settings.burnSubtitle) && subtitle[0]) {
                                     let subSuffix = subtitle[0].split('.').slice(-1)[0]
                                     // console.log('transsssssssssssss');
                                     let subtitlePath = 'in.' + subSuffix
@@ -299,7 +316,7 @@ app.use('/api/localFile', async (req, res, next) => {
                                     params = [
                                         '-ss 0',
                                         '-i', `"${filePath}"`,
-                                        ` -c:v:0 ${encoder}`,
+                                        ` -c:v:0 ${settings.encoder}`,
                                         '-pix_fmt yuv420p',
                                         '-tag:v hvc1',
                                         '-c:a:0 aac',
@@ -310,7 +327,7 @@ app.use('/api/localFile', async (req, res, next) => {
                                         '-hls_time 10',
                                         '-hls_segment_type mpegts',
                                         '-hls_playlist_type event',
-                                        `${tempPath}output/index.m3u8`,
+                                        `${settings.tempPath}output/index.m3u8`,
                                         '-hide_banner']
                                 } else {
                                     // console.log('hlssssssssssssss');
@@ -322,7 +339,7 @@ app.use('/api/localFile', async (req, res, next) => {
                                         '-hls_time 10',
                                         '-hls_segment_type fmp4',
                                         '-hls_playlist_type event',
-                                        `${tempPath}output/index.m3u8`,
+                                        `${settings.tempPath}output/index.m3u8`,
                                         '-hide_banner']
                                 }
                                 // console.log([params.join(' ')]);
@@ -372,7 +389,7 @@ app.use('/api/localFile', async (req, res, next) => {
 })
 
 
-Promise.all([readFile(cert, 'utf8'), readFile(key, 'utf8')])
+Promise.all([readFile(settings.cert, 'utf8'), readFile(settings.key, 'utf8')])
     .then((result) => {
         // console.log(result[0]);
         proxySettings.ssl = {
@@ -387,12 +404,12 @@ Promise.all([readFile(cert, 'utf8'), readFile(key, 'utf8')])
         // console.log(proxySettings);
         app.use("/", proxy(proxySettings));
         if (sec == 'http') {
-            app.listen(serverPort);
-            console.log(`HTTP Server is running on: http://localhost:${serverPort}`);
+            app.listen(settings.serverPort);
+            console.log(`HTTP Server is running on: http://localhost:${settings.serverPort}`);
         } else if (sec == 'https') {
             const httpsServer = https.createServer(proxySettings.ssl, app);
-            httpsServer.listen(serverPort, () => {
-                console.log(`HTTPS Server is running on: https://localhost:${serverPort}`);
+            httpsServer.listen(settings.serverPort, () => {
+                console.log(`HTTPS Server is running on: https://localhost:${settings.serverPort}`);
             });
         }
     })
