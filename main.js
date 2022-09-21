@@ -133,8 +133,18 @@ app.use('/api/localFile/checkFileServer', (req, res) => {
 //更新配置项
 app.use('/api/localFile/changeFileServerSettings', (req, res) => {
     let data = req.body
+    let clean = ['burnSubtitle',
+        'forceTranscode',
+        'encoder']
     data.forEach(val => {
-        settings[val.name] = val.value
+        if (settings[val.name] != val.value) {
+            settings[val.name] = val.value
+            if (clean.includes(val.name) && FFmpegProcess) {
+                console.log('kill');
+                kill(FFmpegProcess.pid, 'SIGKILL')
+                transState = 'false'
+            }
+        }
     })
     writeFile('./settings.json', JSON.stringify(settings, '', '\t')).then((result) => {
         console.log('已更新配置');
