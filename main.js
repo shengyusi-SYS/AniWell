@@ -30,8 +30,11 @@ var settings = {
     secure: false,
     burnSubtitle: true,
     forceTranscode: false,
-    encoder: 'h264_nvenc',
     share: false,
+    platform: 'nvidia',
+    encode: 'h265',
+    bitrate: 6,
+    customCommand: '',
 }
 try {
     settings = Object.assign(settings, JSON.parse(fs.readFileSync('./settings.json')))
@@ -56,6 +59,20 @@ var subtitle = []
 var checkTimeout
 var FFmpegProcess
 var transState = 'false'
+let encoders = {
+    h265: {
+        nvidia: 'hevc_nvenc',
+        intel: '',
+        amd: '',
+        other: '',
+    },
+    h264: {
+        nvidia: 'h264_nvenc',
+        intel: '',
+        amd: '',
+        other: '',
+    }
+}
 
 // var masterList = `#EXTM3U
 // #EXT-X-VERSION:7
@@ -135,7 +152,7 @@ app.use('/api/localFile/changeFileServerSettings', (req, res) => {
     let data = req.body
     let clean = ['burnSubtitle',
         'forceTranscode',
-        'encoder']
+        'encode', 'platform', 'customCommand']
     data.forEach(val => {
         if (settings[val.name] != val.value) {
             settings[val.name] = val.value
@@ -293,67 +310,74 @@ app.use('/api/localFile', async (req, res, next) => {
                                 if (v.includes(body.label.replace(new RegExp('.' + suffix), ''))) {
                                     if (subType.includes(v.split('.').slice(-1)[0])) {
                                         subtitle.push(`${fileRootPath}/${v}`)
-                                        // console.log(v);
                                     }
                                 }
                             })
                         }).then((result) => {
                             transState = 'doing'
                             return new Promise((r, j) => {
-                                var params
-                                // console.log(subtitle[0]);
-                                if (settings.forceTranscode && !subtitle[0]) {
-                                    params = [
-                                        '-ss 0',
-                                        '-i', `"${filePath}"`,
-                                        ` -c:v:0 ${settings.encoder}`,
-                                        '-pix_fmt yuv420p',
-                                        '-tag:v hvc1',
-                                        '-c:a:0 aac',
-                                        '-keyint_min 48',
-                                        '-muxdelay 0',
-                                        '-f hls',
-                                        '-hls_time 10',
-                                        '-hls_segment_type mpegts',
-                                        '-hls_playlist_type event',
-                                        `${settings.tempPath}output/index.m3u8`,
-                                        '-hide_banner']
-                                } else if ((settings.forceTranscode || settings.burnSubtitle) && subtitle[0]) {
-                                    let subSuffix = subtitle[0].split('.').slice(-1)[0]
-                                    // console.log('transsssssssssssss');
-                                    let subtitlePath = 'in.' + subSuffix
-                                    fs.copyFileSync(subtitle[0], subtitlePath)
-                                    params = [
-                                        '-ss 0',
-                                        '-i', `"${filePath}"`,
-                                        ` -c:v:0 ${settings.encoder}`,
-                                        '-pix_fmt yuv420p',
-                                        '-tag:v hvc1',
-                                        '-c:a:0 aac',
-                                        `-vf subtitles=${subtitlePath}`,
-                                        '-keyint_min 48',
-                                        '-muxdelay 0',
-                                        '-f hls',
-                                        '-hls_time 10',
-                                        '-hls_segment_type mpegts',
-                                        '-hls_playlist_type event',
-                                        `${settings.tempPath}output/index.m3u8`,
-                                        '-hide_banner']
+                                let subSuffix = subtitle[0].split('.').slice(-1)[0]
+                                let subtitlePath = 'in.' + subSuffix
+                                fs.copyFileSync(subtitle[0], subtitlePath)
+                                var params = []
+                                let encoder = encoders[settings.encode][settings.platform]
+                                let command = settings.customCommand.split('\n')
+                                if (command[0].length > 1) {
+                                    params = command
                                 } else {
-                                    // console.log('hlssssssssssssss');
-                                    params = [
-                                        '-ss 0',
-                                        '-i', `"${filePath}"`,
-                                        '-c copy',
-                                        '-f hls',
-                                        '-hls_time 10',
-                                        '-hls_segment_type fmp4',
-                                        '-hls_playlist_type event',
-                                        `${settings.tempPath}output/index.m3u8`,
-                                        '-hide_banner']
+                                    if (subtitle[0]) {
+                                        params.push(...[
+                                            ` -c:v ${encoder}`,
+                                            `-vf subtitles=${subtitlePath}`,
+                                        ])
+                                        if (settings.encode == 'h265') {
+                                            params.push(...[
+                                                `-tag:v hvc1`,
+                                                '-hls_segment_type fmp4',
+                                            ])
+                                        } else {
+                                            params.push(...[
+                                                `-pix_fmt yuv420p`,
+                                                '-hls_segment_type mpegts',
+                                            ])
+                                        }
+                                    } else if (settings.forceTranscode) {
+                                        params.push(...[
+                                            ` -c:v ${encoder}`,
+                                        ])
+                                        if (settings.encode == 'h265') {
+                                            params.push(...[
+                                                `-tag:v hvc1`,
+                                                '-hls_segment_type fmp4',
+                                            ])
+                                        } else {
+                                            params.push(...[
+                                                `-pix_fmt yuv420p`,
+                                                '-hls_segment_type mpegts',
+                                            ])
+                                        }
+                                    } else {
+                                        params.push('-c copy')
+                                    }
+                                    params.push(...[
+                                        '-c:a:0 aac',
+                                        `-b:v ${settings.bitrate}M`,
+                                        `-bufsize ${settings.bitrate * 2}M`,
+                                        `-maxrate ${settings.bitrate}M`
+                                        //         '-pix_fmt yuv420p',
+                                    ])
                                 }
-                                // console.log([params.join(' ')]);
-                                FFmpegProcess = spawn('ffmpeg', params, {
+                                let ffmpegCommand = [
+                                    '-ss 0',
+                                    `-i "${filePath}"`,
+                                    ...params,
+                                    '-f hls',
+                                    '-hls_time 10',
+                                    '-hls_playlist_type event',
+                                    `${settings.tempPath}output/index.m3u8`,
+                                    '-hide_banner']
+                                console.log([ffmpegCommand.join(' ')]);
+                                FFmpegProcess = spawn('ffmpeg', ffmpegCommand, {
                                     shell: true,
                                     // stdio: 'inherit'
                                 })
@@ -387,7 +411,9 @@ app.use('/api/localFile', async (req, res, next) => {
                 res.send(result)
             })
         } else if (fileType == 'audio') {
-            throw new Error('暂不支持')
+            readFile(`${filePath}`).then((result) => {
+                res.send(result)
+            })
         } else {
             throw new Error('暂不支持')
         }
