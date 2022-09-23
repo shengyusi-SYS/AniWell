@@ -62,16 +62,20 @@ var transState = 'false'
 let encoders = {
     h265: {
         nvidia: 'hevc_nvenc',
-        intel: '',
-        amd: '',
-        other: '',
+        intel: 'hevc_qsv',
+        amd: 'hevc_amf',
+        other: 'libx265',
     },
     h264: {
         nvidia: 'h264_nvenc',
-        intel: '',
-        amd: '',
-        other: '',
+        intel: 'h264_qsv',
+        amd: 'h264_amf',
+        other: 'libx264',
     }
+}
+let decoders = {
+    nvidia:'cuivd',
+    intel:'qsv',
 }
 
 // var masterList = `#EXTM3U
@@ -316,9 +320,11 @@ app.use('/api/localFile', async (req, res, next) => {
                         }).then((result) => {
                             transState = 'doing'
                             return new Promise((r, j) => {
-                                let subSuffix = subtitle[0].split('.').slice(-1)[0]
-                                let subtitlePath = 'in.' + subSuffix
-                                fs.copyFileSync(subtitle[0], subtitlePath)
+                                if (subtitle[0]) {
+                                    var subSuffix = subtitle[0].split('.').slice(-1)[0]
+                                    var subtitlePath = 'in.' + subSuffix
+                                    fs.copyFileSync(subtitle[0], subtitlePath)
+                                }
                                 var params = []
                                 let encoder = encoders[settings.encode][settings.platform]
                                 let command = settings.customCommand.split('\n')
