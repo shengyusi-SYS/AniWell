@@ -33,7 +33,7 @@ var settings = {
     share: false,
     platform: 'nvidia',
     encode: 'h265',
-    bitrate: 6,
+    bitrate: 5,
     customCommand: '',
 }
 try {
