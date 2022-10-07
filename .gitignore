@@ -107,5 +107,9 @@ dist
 /output
 /temp
 /ssl
+/src/ssl
 settings.json
 in.*
+test.*
+/out
+/FileServer-for-qBittorrent-win32-x64
