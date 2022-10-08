@@ -635,7 +635,7 @@ app.use('/api/localFile/output', (req, res, next) => {
     let targetSegment = path.parse(req.path).name
     console.log('-------------------->', targetSegment);
     if (req.path == '/index.m3u8') {
-        res.sendFile(`${settings.tempPath}output/index.m3u8`)
+        res.sendFile(path.resolve(`${settings.tempPath}output/index.m3u8`))
         return
     } else {
         res.header('Content-Type', 'application/x-mpegURL')

@@ -18,11 +18,12 @@
 
 ---
 
-请先在qbittorrent配置使用了本服务api的webui，安装ffmpeg并配置好环境变量，
-
-启动本应用前需设置qbittorrent Web UI端口(默认连接localhost:8008)，
-
-启动后，打开qbittorrent Web UI时，访问本服务端口(默认9009)而不是qbittorrent本身web端口
+1. 安装ffmpeg，配置好环境变量（后续加入手动指定路径）
+2. qbittorrent配置好webUI（建议先了解使用方法[qBittorrent Web UI](https://github.com/blytzxdl/qbwebui)）
+3. 将qbittorrent的web端口设为8008（或修改本应用根目录下的配置文件settings.json中的qbHost为当前qbittorrent的webUI地址，详见下方配置项）
+4. 可选，修改配置文件settings.json
+5. 运行本应用（win下为FileServer-for-qBittorrent.exe）
+6. 通过serverPort端口（默认地址http://localhost:9009）访问本应用，enjoy it！
 
 ### 配置项
 
@@ -45,10 +46,6 @@
 	
 	"secure": false,                 	//ssl安全设置，ssl配置成功后会自动使用true
 
-	"burnSubtitle": true,				//是否烧录字幕，为true且视频同目录下存在同名字幕文件时生效
-
-	"forceTranscode": false,			//是否强制转码，为true时无论字幕是否存在都强制转码，有字幕时自动烧录字幕（即忽略burnSubtitle项）
-
 	"share":false,						//为false时会通过qBittorrent校验cookie，只能通过web UI播放，为true时，可将生成的hls地址粘贴到其它支持流媒体的app中播放(如vlc,mpc等),以提供更好的解码支持（如hevc)，但目前这会跳过cookie校验，请保护好隐私，后续会改进
 
 	"platform": "nvidia",				//服务端显卡型号（详见转码说明）
@@ -56,10 +53,26 @@
 	"encode": "h264",					//目标编码格式（详见转码说明）
 
 	"bitrate": "5",						//视频码率限制（单位“M”，详见转码说明）
-
-	"customCommand": ""					//自定义ffmpeg指令，接收string类型（纯文本）（详见指令说明）
+					
+	"customInputCommand": ""			//自定义ffmpeg输入指令，接收string类型（纯文本）,按换行分隔（详见指令说明）
+	
+	"customOutputCommand": ""			//自定义ffmpeg输出指令
 }
 ```
+
+### 安全性
+
+---
+
+通过qBittorrent的cookie进行校验，仅在share配置为true时对外暴露缓存文件夹tempPath，暂时无法提供更完善的安全保护
+
+### ssl/https配置
+
+---
+
+qbittorrent未使用https时，本应用有无https皆可，qbittorrent开启https时，本应用必须配置https
+
+请使用和qbittorrent相同的证书，在本应用根目录下新建文件夹，命名ssl，放入证书，默认识别"domain.pem"和"domain.key"文件
 
 ### 转码说明
 
@@ -74,16 +87,16 @@
 
 - 转码相关问题
   
-  - 未开启转码的视频，仅进行切片，因此画质、体积基本等同源文件，生成速度极快，主要受源文件和缓存所在的硬盘速度限制，有内存盘的建议将缓存路径设定为内存盘，减少硬盘压力和读写量
+  - ~~未开启转码的视频，仅进行切片，因此画质、体积基本等同源文件，生成速度极快，主要受源文件和缓存所在的硬盘速度限制，有内存盘的建议将缓存路径设定为内存盘，减少硬盘压力和读写量。~~	当前版本统一强制转码，之后会重新加入不转码的支持
 	
 	
 	- 转码视频
 	
 	  - 速度：主要受编码器和解码器两方面的硬件能力限制
 	
-	    解码器默认为cpu解码，经有限测试，与gpu解码速度各有胜负，因此未提供解码器指定，兼容性更好，如果cpu过于孱弱，可通过自定义ffmpeg指令来启用显卡解码（不建议，兼容性差）
+	    ~~解码器默认为cpu解码，经有限测试，与gpu解码速度各有胜负，因此未提供解码器指定，兼容性更好，如果cpu过于孱弱，可通过自定义ffmpeg指令来启用显卡解码（不建议，兼容性差）~~
 	
-	    有对应显卡时，编码器默认为gpu编码，速度受gpu限制
+	    有对应显卡及系统环境满足条件时，编码器默认启用硬件加速，速度主要受gpu限制
 	
 	  - 画质：主要由源视频质量和视频码率决定，分辨率遵循源视频，不处理
 	
@@ -103,7 +116,7 @@
 
     综上，一个5M码率，24分钟的视频，流畅播放需要5M的带宽，平均625KB/s的网速，消耗的流量约为5M×60×24÷8 = 900MB
 
-  - 对于未转码视频，视频总体积和消耗的流量大致等于源文件体积
+  - ~~对于未转码视频，视频总体积和消耗的流量大致等于源文件体积~~
 
   - 对于转码的视频，可通过限制码率来控制需要的网速与消耗的流量（但过低时会严重影响画质）
 
@@ -114,24 +127,68 @@
 默认指令
 
 ```
--ss 0
--i input
--自定义ffmpeg指令生效位置，接收string/纯文本，换行分隔，前后为固定的指令示例，不了解请勿修改
+-copyts
+-ss ...
+(-c:v ...)
+-i "..." 
+-c:v ...
+(-tag:v hvc1) 
+(-pix_fmt yuv420p)
+(-sn) 
+(-vf subtitles=in.ass )
+-c:a aac 
+-ac 2  
+-ab 384000 
+-avoid_negative_ts disabled 
+-g ...
+-keyint_min:v:0 ...
+-b:v ...
+-bufsize ...
+-maxrate ...
 -f hls
--hls_time 10
--hls_segment_type fmp4(h265)/mpegts(h264)
+-hls_time 3
+-hls_segment_type mpegts
+-hls_flags temp_file
+-start_number ...
+-hls_segment_filename "..."
 -hls_playlist_type event
+-hls_list_size 0
 -hide_banner
-output/index.m3u8
+-y
+...
 ```
+
+(...和()表示按条件动态生成)
+
+自定义指令
+
+```js
+-copyts
+-ss ...
+-customInputCommand(输入指令生效位置)
+-i "..." 
+-customOutputCommand（输出指令生效位置）
+-avoid_negative_ts disabled 
+-g ...
+-keyint_min:v:0 ...
+-f hls
+-hls_time 3
+-hls_segment_type mpegts
+-hls_flags temp_file
+-start_number ...
+-hls_segment_filename "..."
+-hls_playlist_type event
+-hls_list_size 0
+-hide_banner
+-y
+...
+```
+
+
 
 服务器转码前会在控制台输出转码时用的指令，可将其复制后在终端运行，排查错误
 
-### ssl/https配置
 
----
-
-请使用和qbittorrent相同的证书，在本应用根目录下新建文件夹，命名ssl，放入证书，默认识别"domain.pem"和"domain.key"文件
 
 ### 更新计划（不分先后）
 
@@ -140,7 +197,6 @@ output/index.m3u8
 - 安全性改进
 - 封装qb原api，通过websocket向web传数据
 - 为种子建立本地数据库，提供刮削等功能
-- electron封装
 - 跨平台支持（linux、openwrt）
 - 其它优化
 - 。。。
