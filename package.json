@@ -6,56 +6,26 @@
   "author": "西都凉 <shengyss@163.com>",
   "license": "GPL3",
   "dependencies": {
+    "body-parser": "^1.20.1",
     "cookie-parser": "^1.4.6",
     "express": "^4.18.1",
     "fluent-ffmpeg": "^2.1.2",
+    "form-data": "^4.0.0",
     "got": "^12.3.1",
     "http-proxy-middleware": "^2.0.6",
     "rimraf": "^3.0.2",
+    "socket.io": "^4.5.2",
+    "tough-cookie": "^4.1.2",
     "tree-kill": "^1.2.2"
   },
   "devDependencies": {
-    "@electron-forge/cli": "^6.0.0-beta.66",
-    "@electron-forge/maker-deb": "^6.0.0-beta.66",
-    "@electron-forge/maker-rpm": "^6.0.0-beta.66",
-    "@electron-forge/maker-squirrel": "^6.0.0-beta.66",
-    "@electron-forge/maker-zip": "^6.0.0-beta.66",
-    "electron-squirrel-startup": "^1.0.0",
     "electron": "21.0.1",
-    "electron-packager": "^16.0.0"
+    "electron-packager": "^16.0.0",
+    "electron-squirrel-startup": "^1.0.0"
   },
   "scripts": {
-    "start": "electron-forge start",
-    "package": "electron-forge package",
-    "make": "electron-forge make",
-    "build":"npx electron-packager . --overwrite --out=out --icon=public/favicon.ico --ignore='^(/ssl$)' --ignore='^(/out$)' --ignore='.gitignore' --ignore='in.ass' --ignore='settings.json' --ignore='jsconfig.json' --ignore='^(test).js'"
-  },
-  "config": {
-    "forge": {
-      "packagerConfig": {},
-
-      "makers": [
-        {
-          "name": "@electron-forge/maker-squirrel",
-          "config": {
-            "name": "FileServer_for_qBittorrent"
-          }
-        },
-        {
-          "name": "@electron-forge/maker-zip",
-          "platforms": [
-            "darwin"
-          ]
-        },
-        {
-          "name": "@electron-forge/maker-deb",
-          "config": {}
-        },
-        {
-          "name": "@electron-forge/maker-rpm",
-          "config": {}
-        }
-      ]
-    }
+    "serve": "nodemon ./src/server.js",
+    "start": "electron ./src/main.js",
+    "build": "npx electron-packager . --overwrite --out=out --icon=public/favicon.ico --ignore='^(/ssl$)' --ignore='^(/out$)' --ignore='.gitignore' --ignore='in.ass' --ignore='settings.json' --ignore='jsconfig.json' --ignore='^(test).js' --ignore='libraryIndex.json'"
   }
 }

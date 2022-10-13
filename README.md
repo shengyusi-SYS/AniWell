@@ -18,11 +18,11 @@
 
 ---
 
-1. 安装ffmpeg，配置好环境变量（后续加入手动指定路径）
+1. 安装ffmpeg，配置好环境变量（在环境变量-系统变量-Path）（或稍后将ffmpeg目录添加到配置文件settings.json中，详见下方配置项）
 2. qbittorrent配置好webUI（建议先了解使用方法[qBittorrent Web UI](https://github.com/blytzxdl/qbwebui)）
-3. 将qbittorrent的web端口设为8008（或修改本应用根目录下的配置文件settings.json中的qbHost为当前qbittorrent的webUI地址，详见下方配置项）
+3. 将qbittorrent的web端口设为8008（或修改本应用根目录下的配置文件settings.json中的qbHost为当前qbittorrent的webUI地址，详见下方配置项），关闭下方的“启用 Host header 属性验证”（以后改进）
 4. 可选，修改配置文件settings.json
-5. 运行本应用（win下为FileServer-for-qBittorrent.exe）
+5. 运行本应用（win下为FileServer-for-qBittorrent.exe,暂无主界面，仅有托盘图标以供退出）（其它环境未测试，理论上用node运行src目录下的server.js即可）
 6. 通过serverPort端口（默认地址http://localhost:9009）访问本应用，enjoy it！
 
 ### 配置项
@@ -34,11 +34,11 @@
 ```
 {
     
-	"qbHost": "http://localhost:8008",	//qBittorrent Web UI的地址，如需使用ssl/https，请设置对应的地址和端口号
+	"qbHost": "http://localhost:8008",	//必填，qBittorrent Web UI的地址，如需使用ssl/https，请设置对应的地址和端口号
 
-	"serverPort": 9009,             	//本应用端口
+	"serverPort": 9009,             	//必填，本应用端口
     
-	"tempPath": "./",					//视频缓存地址，默认在应用根目录生成output文件夹，可另外指定，指定路径末尾要带/号，会在指定路径生成output文件夹
+	"tempPath": "./",					//必填，视频缓存地址，默认在应用根目录生成output文件夹，可另外指定，指定路径末尾要带/号，会在指定路径生成output文件夹
 
 	"cert": "./ssl/domain.pem",     	//ssl证书路径，可手动修改
 
@@ -47,6 +47,8 @@
 	"secure": false,                 	//ssl安全设置，ssl配置成功后会自动使用true
 
 	"share":false,						//为false时会通过qBittorrent校验cookie，只能通过web UI播放，为true时，可将生成的hls地址粘贴到其它支持流媒体的app中播放(如vlc,mpc等),以提供更好的解码支持（如hevc)，但目前这会跳过cookie校验，请保护好隐私，后续会改进
+	
+	"ffmpegPath":""						//必填，配置好环境变量后无需填写，反斜杠'\'需换成'/'或'\\'
 
 	"platform": "nvidia",				//服务端显卡型号（详见转码说明）
 
@@ -57,6 +59,8 @@
 	"customInputCommand": ""			//自定义ffmpeg输入指令，接收string类型（纯文本）,按换行分隔（详见指令说明）
 	
 	"customOutputCommand": ""			//自定义ffmpeg输出指令
+	
+	"dandanplayPath":""					//弹弹play根目录，可关联刮削结果，包括番名、片名及海报图、缩略图
 }
 ```
 
@@ -186,9 +190,17 @@ qbittorrent未使用https时，本应用有无https皆可，qbittorrent开启htt
 
 
 
-服务器转码前会在控制台输出转码时用的指令，可将其复制后在终端运行，排查错误
+~~服务器转码前会在控制台输出转码时用的指令，可将其复制后在终端运行，排查错误~~	当前windows版本暂时不显示控制台
 
 
+
+### 已知问题
+
+---
+
+- amd显卡转码的视频在safari上播放时，可正常完整播放，但无法跳转进度条（zen2APU核显与a12+ios15测试结果，其它情况自行测试，可尝试用第三方播放器软解播放）
+- 保存在smb（网络驱动器）的文件无法读取，有已知解决方案，待更新
+- 多季合集的种子无法准确匹配番名，但其中的单集匹配无误（由弹弹play刮削结果决定）
 
 ### 更新计划（不分先后）
 
@@ -196,8 +208,8 @@ qbittorrent未使用https时，本应用有无https皆可，qbittorrent开启htt
 
 - 安全性改进
 - 封装qb原api，通过websocket向web传数据
-- 为种子建立本地数据库，提供刮削等功能
-- 跨平台支持（linux、openwrt）
+- 跨平台支持（linux、openwrt等）
+- 字幕匹配
 - 其它优化
 - 。。。
 

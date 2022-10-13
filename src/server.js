@@ -10,7 +10,7 @@
 // import kill from 'tree-kill';
 // import Ffmpeg from 'fluent-ffmpeg';
 // import path from 'path';
-var got
+var got = () => Promise.reject()
 // const got = require('got');
 import('got').then((result) => {
     got = result.default
@@ -26,8 +26,11 @@ const https = require('https');
 const kill = require('tree-kill');
 const Ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
-
-
+const FormData = require('form-data')
+const merger = require('./utils/merger');
+const url = require("url");
+const CookieJar = require('tough-cookie').CookieJar;
+const cookieJar = new CookieJar()
 const readFile = promisify(fs.readFile)
 const writeFile = promisify(fs.writeFile)
 const readdir = promisify(fs.readdir)
@@ -36,6 +39,7 @@ const mkdir = promisify(fs.mkdir)
 const stat = promisify(fs.stat)
 const proxy = proxyMw.createProxyMiddleware;
 const app = express();
+var io
 //配置
 var settings = {
     qbHost: 'http://localhost:8008',
@@ -47,15 +51,23 @@ var settings = {
     // burnSubtitle: true,
     // forceTranscode: false,
     share: false,
+    ffmpegPath: '',
     platform: 'nvidia',
     encode: 'h264',
     bitrate: 5,
     customInputCommand: '',
     customOutputCommand: '',
+    dandanplayPath: ''
 }
+
 try {
     settings = Object.assign(settings, JSON.parse(fs.readFileSync('./settings.json')))
-    console.log(__dirname);
+    if (settings.ffmpegPath) {
+        // settings.ffmpegPath = path.resolve(path.parse(settings.ffmpegPath).root, `"${path.parse(settings.ffmpegPath).dir.replace(path.parse(settings.ffmpegPath).root,'')}"`,path.basename(settings.ffmpegPath))
+        Ffmpeg.setFfmpegPath(path.resolve(settings.ffmpegPath, 'ffmpeg.exe'))
+        Ffmpeg.setFfprobePath(path.resolve(settings.ffmpegPath, 'ffprobe.exe'))
+    }
+    // console.log(__dirname);
     console.log('已加载本地配置', settings);
 } catch (error) {
     fs.writeFileSync('./settings.json', JSON.stringify(settings, '', '\t'))
@@ -66,12 +78,23 @@ try {
 var proxySettings = {
     target: settings.qbHost,
     changeOrigin: false,
-    secure: settings.secure
+    secure: settings.secure,
+    ssl: {
+    }
 }
-const fileCookie = {}
+try {
+    proxySettings.ssl.cert = fs.readFileSync(settings.cert, 'utf8')
+    proxySettings.ssl.key = fs.readFileSync(settings.key, 'utf8')
+} catch (error) {
+    // console.log(error);
+}
+
+
+// const fileCookie = {}
 // let qbCookie = { SID: undefined }
-let hlsTemp = ''
-let tryTimes = 0
+var SID
+var hlsTemp = ''
+var tryTimes = 0
 var fileRootPath = ''
 var subtitleList = []
 var checkTimeout
@@ -80,9 +103,14 @@ var currentProcess = null
 var writingSegmentId = null
 var processList = []
 var transState = 'false'
-let videoIndex = {}
-let lastTargetId
-let encoders = {
+var videoIndex = {}
+var lastTargetId
+var dandanplayLibrary = []
+var libraryIndex = {}
+var maindataCache = {}
+// console.log(dandanplayLibrary);
+
+const encoders = {
     h265: {
         nvidia: 'hevc_nvenc',
         intel: 'hevc_qsv',
@@ -96,11 +124,86 @@ let encoders = {
         // other: 'libx264',
     }
 }
-let decoders = {
-    nvidia: 'cuvid',
-    intel: 'qsv',
+const decoders = {
+    nvidia: '_cuvid',
+    intel: '_qsv',
+    // amd:''
 }
-
+const hwaccels = {
+    nvidia: 'cuda'
+    , intel: 'qsv'
+    , other: 'd3d11va'
+}
+// const specialCharacter = ['\\', '$', '(', ')', '*', '+', '.', '[', '?', '^', '{', '|']
+try {
+    libraryIndex = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'libraryIndex.json')))
+    console.log('已加载匹配数据');
+} catch (error) {
+}
+function updateLibrary(params) {
+    if (settings.dandanplayPath) {
+        dandanplayLibrary = JSON.parse(fs.readFileSync(path.resolve(settings.dandanplayPath, 'library.json'))).VideoFiles
+        console.log('已关联弹弹Play');
+        libraryIndex.animePathIndex = {}
+        dandanplayLibrary.forEach(v => {
+            let tempPath = path.resolve(v.Path)
+            libraryIndex[tempPath] = v
+            libraryIndex[tempPath].imgPath = path.resolve(settings.dandanplayPath, 'Cache', 'LibraryImage', `${v.Hash}.jpg`)
+            if (v.AnimeId != 0 || !libraryIndex.animePathIndex[path.parse(tempPath).dir]) {
+                libraryIndex.animePathIndex[path.parse(tempPath).dir] = {
+                    AnimeId: v.AnimeId,
+                    AnimeTitle: v.AnimeTitle
+                }
+            }
+        })
+        return got({
+            url: `${settings.qbHost}/api/v2/sync/maindata`,
+            method: 'get',
+            cookieJar
+        }).then((result) => {
+            let torrents = JSON.parse(result.body).torrents
+            libraryIndex.animeIndex = {}
+            for (const animePath in libraryIndex.animePathIndex) {
+                for (const hash in torrents) {
+                    if (path.resolve(animePath).includes(path.resolve(torrents[hash].content_path))) {
+                        if (!libraryIndex.animeIndex[hash]) {
+                            libraryIndex.animeIndex[hash] = libraryIndex.animePathIndex[animePath]
+                        }
+                    }
+                }
+            }
+            let searchQueue = []
+            for (const hash in libraryIndex.animeIndex) {
+                let task = got({
+                    url: `https://api.dandanplay.net/api/v2/search/anime?keyword=${encodeURIComponent(libraryIndex.animeIndex[hash].AnimeTitle)}`
+                    , method: 'get'
+                }).then((result) => {
+                    result = JSON.parse(result.body)
+                    if (result.success) {
+                        result.animes.forEach(v => {
+                            if (v.animeId == libraryIndex.animeIndex[hash].AnimeId) {
+                                // console.log(v);
+                                libraryIndex.animeIndex[hash] = v
+                            }
+                        })
+                    }
+                    return Promise.resolve()
+                }).catch((err) => {
+                    console.log(err);
+                    return Promise.resolve()
+                });
+                searchQueue.push(task)
+            }
+            return Promise.all(searchQueue).then((result) => {
+                return writeFile(path.resolve(__dirname, 'libraryIndex.json'), JSON.stringify(libraryIndex, '', '\t'))
+            }).then((result) => {
+                console.log('已匹配');
+            }).catch((err) => {
+                console.log(err);
+            })
+        })
+    }
+}
 
 
 //------------------------------------------------//
@@ -114,11 +217,11 @@ function handleVideoRequest(req, res, filePath) {
         .catch(err => {
             console.log('文件错误' + filePath);
             // throw new Error('文件错误' + filePath)
-        })
-        .then((result) => {
-            killAllProcess()
-            processList = []
+        }).then((result) => {
             currentProcess = null
+            return killCurrentProcess()
+        }).then((result) => {
+            processList = []
             writingSegmentId = null
             lastTargetId = null
             videoIndex = {}
@@ -157,7 +260,7 @@ function handleVideoRequest(req, res, filePath) {
 function getVideoInfo(filePath) {
     return new Promise((r, j) => {
         Ffmpeg.ffprobe(filePath, function (err, metadata) {
-
+            console.log(metadata);
             if (err) {
                 return j(err)
             }
@@ -188,7 +291,7 @@ function getVideoInfo(filePath) {
                 pix_fmt,
                 subtitleStream
             }
-            console.log(videoInfo);
+            // console.log(videoInfo);
             return r(videoInfo)
         })
     })
@@ -254,12 +357,13 @@ function generateTsQueue(videoInfo, subtitlePath) {
         ]
         // if (segment == 'index0') {
         // }
-        let process = () => {
-            killAllProcess(segment)
+        let process = async () => {
+            await killCurrentProcess(segment)
             if ((Number(segment.replace('index', '')) == Object.keys(videoIndex).length - 1) && FFmpegProcess[segment].state == 'done') {
                 return
             }
-            let ffmpeg = spawn('ffmpeg', params, {
+            console.log(path.resolve(settings.ffmpegPath, 'ffmpeg.exe'));
+            let ffmpeg = spawn(settings.ffmpegPath ? `"${path.resolve(settings.ffmpegPath, 'ffmpeg.exe')}"` : 'ffmpeg', params, {
                 shell: true,
                 //    stdio: 'inherit'
             })
@@ -334,7 +438,7 @@ function generateTsQueue(videoInfo, subtitlePath) {
                         return
                     }
                     if (FFmpegProcess[writingSegment].state == 'done') {
-                        killAllProcess()
+                        await killCurrentProcess()
                         console.log('breeeeeeeeeeeeeeeeeeak', writingSegment);
                         let nextProcessId = writingSegmentId + 1
                         if (FFmpegProcess[`index${nextProcessId}`]) {
@@ -364,15 +468,38 @@ function generateTsQueue(videoInfo, subtitlePath) {
     return FFmpegProcess
 }
 
-function killAllProcess(start) {
-    if (currentProcess) {
-        processList.forEach(v => {
-            kill(v.pid, 'SIGKILL')
-            console.log('kiiiiiiiiiiiiiiiiiiiill', v.id, start);
-
-        })
-    }
-
+function killCurrentProcess(start) {
+    console.log('dddddddddddddddd');
+    return new Promise((r, j) => {
+        let tempProcessList = JSON.parse(JSON.stringify(processList))
+        if (currentProcess) {
+            currentProcess.on('close', () => {
+                console.log('ccccccccccccccc');
+                return r()
+            })
+            currentProcess.on('exit', () => {
+                console.log('eeeeeeeeeeeeeeeee');
+                return r()
+            })
+            currentProcess.on('error', (err) => {
+                console.log('rrrrrrrrrrrrrrrrrr');
+                return j(err)
+            })
+            kill(currentProcess.pid, 'SIGKILL')
+        }
+        setTimeout(() => {
+            tempProcessList.forEach(v => {
+                kill(v.pid, 'SIGKILL')
+            })
+            console.log('kkkkkkk~~~~~~~~~');
+            return r()
+        }, 500);
+    }).then((result) => {
+        return result
+    }).catch((err) => {
+        console.log(err);
+        return
+    })
 }
 
 function handleSubtitle(filePath, videoInfo) {
@@ -393,7 +520,6 @@ function handleSubtitle(filePath, videoInfo) {
 
             }
         })
-        console.log()
         if (subtitleList[0]) {
             fs.copyFileSync(subtitleList[0], 'in.ass')
             return 'in.ass'
@@ -401,7 +527,7 @@ function handleSubtitle(filePath, videoInfo) {
             return new Promise((r, j) => {
                 if (subType.includes('.' + videoInfo.subtitleStream.codec_name)) {
                     // console.log('.'+videoInfo.subtitleStream.codec_name);
-                    let ffmpeg = spawn('ffmpeg', [
+                    let ffmpeg = spawn(settings.ffmpegPath ? `"${path.resolve(settings.ffmpegPath, 'ffmpeg.exe')}"` : 'ffmpeg', [
                         `-i "${filePath}"`,
                         '-y',
                         `in.ass`,
@@ -431,10 +557,12 @@ function generateFfmpegCommand(videoInfo, subtitlePath, segment) {
 
 
     let decoder = ''
-    if (decoders[settings.platform]) {
+    if (decoders.hasOwnProperty(settings.platform)) {
         if (!(videoInfo.codec == 'h264' && /yuv\d{3}p\d{0,2}/.exec(videoInfo.pix_fmt)[0].replace(/yuv\d{3}p/, '') >= 10)) {
-            decoder = `-c:v ${videoInfo.codec}_${decoders[settings.platform]}`
+            decoder = `-c:v ${videoInfo.codec}${decoders[settings.platform]}`
         }
+    } else if (hwaccels.hasOwnProperty(settings.platform)) {
+
     }
 
     let encoder = `-c:v ${encoders[settings.encode][settings.platform]}`
@@ -496,6 +624,7 @@ function generateFfmpegCommand(videoInfo, subtitlePath, segment) {
 
     let hlsParams = [
         '-f hls'
+        // , '-max_delay 5000000'
         , '-hls_time 3'
         , '-hls_segment_type mpegts'
         , '-hls_flags temp_file'
@@ -505,13 +634,29 @@ function generateFfmpegCommand(videoInfo, subtitlePath, segment) {
         , '-hls_list_size 0'
     ]
 
+    let inTest = [
+        '-extra_hw_frames 3',
+        '-autorotate 0'
+    ]
+
+    let outTest = [
+        '-map_metadata -1',
+        '-map_chapters -1',
+        '-threads 0',
+        '-start_at_zero',
+        // '-vsync -1',
+        '-max_muxing_queue_size 2048',
+        // '-sc_threshold:v:0 0',
+        '-profile:v:0 high'
+    ]
+
 
 
 
     inputParams = [
-        copyts,
         ss,
         decoder,
+        // ...inTest,
         ...customInputCommand,
     ]
     let inTemp = []
@@ -523,9 +668,11 @@ function generateFfmpegCommand(videoInfo, subtitlePath, segment) {
     inputParams = inTemp
 
     outputParams = [
+        // ...outTest,
         encoder,
         pix_fmt,
         tag,
+        copyts,
         ...sub,
         ...audio,
         ...segmentParams,
@@ -556,8 +703,8 @@ function generateFfmpegCommand(videoInfo, subtitlePath, segment) {
 
 
 
-app.use('/api/localFile', express.json())
-app.use('/api/localFile', cookieParser())
+app.use(express.json())
+app.use(cookieParser())
 
 //test
 // app.use('/test', (req, res) => {
@@ -571,18 +718,32 @@ app.use('/api/localFile', cookieParser())
 //     })
 // })
 
-
+app.use('/', (req, res, next) => {
+    // console.log(req.headers.cookie,req.cookies);
+    if (req.cookies) {
+        SID = req.cookies.SID
+        // console.log(SID);
+        cookieJar.setCookieSync(`SID=${req.cookies.SID}`, settings.qbHost)
+    }
+    if (settings.dandanplayPath && !libraryIndex.animePathIndex) {
+        updateLibrary().then(() => {
+            next()
+        })
+    } else next()
+})
 
 //权限验证
 app.use('/api/localFile', (req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
-    var SID = req.cookies.SID
+    // console.log(req.query.cookie);
+    if (req.query.cookie) {
+        cookieJar.setCookieSync(`SID=${req.query.cookie}`, settings.qbHost)
+    }
+    // console.log('check',cookieJar);
     got({
         url: `${settings.qbHost}/api/v2/auth/login`,
         method: 'POST',
-        headers: {
-            cookie: `SID=${SID}`
-        }
+        cookieJar
     }).then((result) => {
         result = result.body
         if (result == 'Ok.') {
@@ -604,8 +765,13 @@ app.use('/api/localFile/checkFileServer', (req, res) => {
     res.send(settings)
 })
 
+app.use('/api/localFile/updateLibrary', (req, res) => {
+    updateLibrary()
+    res.send('Ok.')
+})
+
 //更新配置项
-app.use('/api/localFile/changeFileServerSettings', (req, res) => {
+app.use('/api/localFile/changeFileServerSettings', async (req, res) => {
     let data = req.body
     let clean = ['burnSubtitle',
         'forceTranscode',
@@ -614,11 +780,12 @@ app.use('/api/localFile/changeFileServerSettings', (req, res) => {
         if (settings[val.name] != val.value) {
             settings[val.name] = val.value
             if (clean.includes(val.name) && currentProcess) {
-                killAllProcess()
                 hlsTemp = null
             }
         }
     })
+    currentProcess = null
+    await killCurrentProcess()
     writeFile('./settings.json', JSON.stringify(settings, '', '\t')).then((result) => {
         console.log('已更新配置');
         console.log(settings);
@@ -635,10 +802,11 @@ app.use('/api/localFile/output', (req, res, next) => {
     let targetSegment = path.parse(req.path).name
     console.log('-------------------->', targetSegment);
     if (req.path == '/index.m3u8') {
+        res.header('Content-Type', 'application/x-mpegURL')
         res.sendFile(path.resolve(`${settings.tempPath}output/index.m3u8`))
         return
     } else {
-        res.header('Content-Type', 'application/x-mpegURL')
+        res.header('Content-Type', 'video/m2pt')
         console.log(targetSegment, '-------', FFmpegProcess[targetSegment].state);
         let targetSegmentId = Number(targetSegment.replace('index', ''))
         let beforeSegment = `index${targetSegmentId - 1 >= 0 ? targetSegmentId - 1 : 0}`
@@ -741,9 +909,13 @@ app.use('/api/localFile/clearVideoTemp', (req, res, next) => {
                 console.log(err);
             })
         })
-    }, 2000);
+    }, 2000)
 })
 
+app.use('/api/localFile/stopProcess', async (req, res, next) => {
+    await killCurrentProcess()
+    res.send('Ok.')
+})
 // app.use('/api/localFile/killFFmpeg', (req, res, next) => {
 //     if (FFmpegProcess) {
 //         // spawn('taskkill',['-PID',FFmpegProcess.pid,'-F'])
@@ -763,7 +935,7 @@ app.use('/api/localFile/videoSrc', (req, res, next) => {
 
 //文件请求处理
 app.use('/api/localFile', async (req, res, next) => {
-
+    let filePath
     let formatList = {
         text: ['txt'],
         video: ['mkv', 'mp4', 'flv', 'ts', 'm3u8', 'mov', 'avi'],
@@ -779,21 +951,24 @@ app.use('/api/localFile', async (req, res, next) => {
                 fileType = key
             }
         }
-        var filePath = path.resolve(`${body.rootPath}\\${body.name}`)
+        filePath = path.resolve(body.rootPath, body.name)
     }
+    if (req.query.path) {
+        fileType = req.query.type
+        filePath = req.query.path
+    }
+    // console.log(req.query);
     try {
         if (fileType == 'text') {
-            readFile(`${filePath}`).then((result) => {
+            readFile(path.resolve(filePath)).then((result) => {
                 res.send(result)
             })
         } else if (fileType == 'video') {
             handleVideoRequest(req, res, filePath, suffix)
         } else if (fileType == 'picture') {
-            readFile(`${filePath}`).then((result) => {
-                res.send(result)
-            })
+            res.sendFile(path.resolve(filePath))
         } else if (fileType == 'audio') {
-            readFile(`${filePath}`).then((result) => {
+            readFile(path.resolve(filePath)).then((result) => {
                 res.send(result)
             })
         } else {
@@ -806,31 +981,128 @@ app.use('/api/localFile', async (req, res, next) => {
     }
 })
 
+// app.use("/", (req,res,next)=>{
 
-Promise.all([readFile(settings.cert, 'utf8'), readFile(settings.key, 'utf8')])
-    .then((result) => {
-        // console.log(result[0]);
-        proxySettings.ssl = {
-            cert: result[0],
-            key: result[1]
+// });
+
+app.use("/api/v2/sync/maindata", async (req, res, next) => {
+    got({
+        url: `${settings.qbHost}/api/v2/sync/maindata?rid=${req.query.rid}`,
+        method: 'get',
+        cookieJar
+    }).then((result) => {
+        let newData = JSON.parse(result.body)
+        res.header('Content-Type', 'application/json')
+        //处理删减
+        if (newData.torrents_removed) {
+            newData.torrents_removed.forEach((hash) => {
+                delete maindataCache.torrents[hash]
+            })
+        } else if (newData.full_update) {//处理完全更新
+            if (libraryIndex.animeIndex) {
+                for (const hash in newData.torrents) {
+                    newData.torrents[hash].animeInfo = libraryIndex.animeIndex[hash]
+                }
+            }
+            // console.log(newData);
+            maindataCache = {}
+            merger(maindataCache, newData)
+        } else {
+            merger(maindataCache, newData)
         }
-        proxySettings.secure = true
-        return 'https'
+        res.send(newData)
     }).catch((err) => {
-        return 'http'
-    }).then(sec => {
-        // console.log(proxySettings);
-        app.use("/", proxy(proxySettings));
-        if (sec == 'http') {
-            app.listen(settings.serverPort);
-            console.log(`HTTP Server is running on: http://localhost:${settings.serverPort}`);
-        } else if (sec == 'https') {
-            const httpsServer = https.createServer(proxySettings.ssl, app);
-            httpsServer.listen(settings.serverPort, () => {
-                console.log(`HTTPS Server is running on: https://localhost:${settings.serverPort}`);
-            });
-        }
-    })
+        console.log(err.message);
+    });
+});
 
+// app.use("/api/v2/sync/maindata", proxy({
+//     ...proxySettings,
+//     selfHandleResponse: true,
+//     onProxyRes:(proxyRes, req, res)=>{
+//         console.log(proxyRes.body);
+//         proxyRes.on('data', function (chunk) {
+//             console.log(chunk.toString());
+//         })
+//     }
+// }));
+app.use("/api/v2/torrents/files", express.urlencoded(), (req, res, next) => {
+    // console.log(req.body.hash);
+    // console.log(maindataCache);
+    let hash = req.body.hash
+    let form = new FormData()
+    form.append('hash', hash)
+    const serverPath = url.parse(req.headers.referer)
+    // console.log(req.headers.referer);
+    got({
+        url: `${settings.qbHost}/api/v2/torrents/files`,
+        method: 'post',
+        body: form,
+        cookieJar
+    }).then((result) => {
+        let file = JSON.parse(result.body)
+        // let tempSID = SID
+        // specialCharacter.map(v => {
+        //     let reg = new RegExp('\\' + v, 'gim')
+        //     tempSID = tempSID.replace(reg, '\\' + v)
+        // })
+        // console.log(maindataCache.torrents[hash]);
+        file.forEach(v => {
+            v.fullPath = path.resolve(maindataCache.torrents[hash].save_path, v.name)
+            if (libraryIndex[v.fullPath]) {
+                v.videoInfo = JSON.parse(JSON.stringify(libraryIndex[v.fullPath]))
+                v.videoInfo.imgUrl = `/api/localFile/img.jpg?cookie=${encodeURIComponent(SID)}&type=picture&path=${v.videoInfo.imgPath}`
+            }
+        })
+        // console.log(file);
+        res.send(file)
+    }).catch((err) => {
+        console.log(err);
+    });
+    // next()
+});
+// app.use("/api/v2/torrents/files",express.urlencoded());
+// app.use("/api/v2/torrents/files", proxy({
+//     ...proxySettings,
+//     onProxyRes:(proxyRes, req, res)=>{
+//         console.log(proxyRes.body,proxyRes.data,proxyRes.params,req.query);
+//         // console.log(proxyRes);
+//         // res.send(proxyRes)
+//         // proxyRes.on('data', function (chunk) {
+//         //     console.log(chunk.toString());
+//         // })
+//     }
+// }));
+
+app.use("/", proxy(proxySettings));
+
+
+
+
+if (!(proxySettings.ssl.cert && proxySettings.ssl.key)) {
+    app.listen(settings.serverPort);
+    console.log(`HTTP Server is running on: http://localhost:${settings.serverPort}`);
+} else {
+    const httpsServer = https.createServer(proxySettings.ssl, app);
+    io = require('socket.io')(httpsServer);
+    httpsServer.listen(settings.serverPort, () => {
+        console.log(`HTTPS Server is running on: https://localhost:${settings.serverPort}`);
+    });
+}
+
+
+// io.on('connection', function (socket) {
+//     console.log('cccccon');
+//     // 发送数据
+//     socket.emit('relogin', {
+//         msg: `你好`,
+//         code: 200
+//     });
+//     //接收数据
+//     socket.on('login', function (obj) {
+//         console.log(obj.username);
+//         console.log(obj);
+//     });
+// });
 // export default app
 module.exports = app
