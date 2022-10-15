@@ -1,4 +1,4 @@
-# File-server-for-qBittorrent
+# FileServer-for-qBittorrent
 
 ### 说明
 
@@ -40,6 +40,10 @@
     
 	"tempPath": "./",					//必填，视频缓存地址，默认在应用根目录生成output文件夹，可另外指定，指定路径末尾要带/号，会在指定路径生成output文件夹
 
+	"dandanplayPath":""					//弹弹play根目录，可关联刮削结果，包括番名、片名及海报图、缩略图
+
+	"ffmpegPath":""						//必填，配置好环境变量后无需填写，反斜杠'\'需换成'/'或'\\'
+
 	"cert": "./ssl/domain.pem",     	//ssl证书路径，可手动修改
 
 	"key": "./ssl/domain.key",      	//ssl密钥路径，可手动修改
@@ -48,8 +52,6 @@
 
 	"share":false,						//为false时会通过qBittorrent校验cookie，只能通过web UI播放，为true时，可将生成的hls地址粘贴到其它支持流媒体的app中播放(如vlc,mpc等),以提供更好的解码支持（如hevc)，但目前这会跳过cookie校验，请保护好隐私，后续会改进
 	
-	"ffmpegPath":""						//必填，配置好环境变量后无需填写，反斜杠'\'需换成'/'或'\\'
-
 	"platform": "nvidia",				//服务端显卡型号（详见转码说明）
 
 	"encode": "h264",					//目标编码格式（详见转码说明）
@@ -60,7 +62,6 @@
 	
 	"customOutputCommand": ""			//自定义ffmpeg输出指令
 	
-	"dandanplayPath":""					//弹弹play根目录，可关联刮削结果，包括番名、片名及海报图、缩略图
 }
 ```
 
@@ -199,7 +200,6 @@ qbittorrent未使用https时，本应用有无https皆可，qbittorrent开启htt
 ---
 
 - amd显卡转码的视频在safari上播放时，可正常完整播放，但无法跳转进度条（zen2APU核显与a12+ios15测试结果，其它情况自行测试，可尝试用第三方播放器软解播放）
-- 保存在smb（网络驱动器）的文件无法读取，有已知解决方案，待更新
 - 多季合集的种子无法准确匹配番名，但其中的单集匹配无误（由弹弹play刮削结果决定）
 
 ### 更新计划（不分先后）

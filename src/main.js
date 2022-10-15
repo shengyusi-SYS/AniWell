@@ -6,7 +6,11 @@ let tray
 app.whenReady().then(() => {
   let iconPath = path.resolve(__dirname, '../public', 'favicon.png')
   const contextMenu = Menu.buildFromTemplate([
-    { label: 'quit', type: 'normal', role: 'quit' },
+    {label: '重启', type: 'normal', click() {
+      app.relaunch();
+      app.quit();
+    }},
+    { label: '退出', type: 'normal', role: 'quit' },
   ])
   tray = new Tray(iconPath)
   tray.setContextMenu(contextMenu)

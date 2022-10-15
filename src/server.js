@@ -45,19 +45,19 @@ var settings = {
     qbHost: 'http://localhost:8008',
     serverPort: 9009,
     tempPath: './',
+    ffmpegPath: '',
+    dandanplayPath: '',
     cert: './ssl/domain.pem',
     key: './ssl/domain.key',
     secure: false,
     // burnSubtitle: true,
     // forceTranscode: false,
     share: false,
-    ffmpegPath: '',
     platform: 'nvidia',
     encode: 'h264',
     bitrate: 5,
     customInputCommand: '',
     customOutputCommand: '',
-    dandanplayPath: ''
 }
 
 try {
