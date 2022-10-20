@@ -28,7 +28,11 @@ const Ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
 const FormData = require('form-data')
 const merger = require('./utils/merger');
+const dd2nfo = require('./utils/dd2nfo');
+const trimPath = require('./utils/trimPath');
 const url = require("url");
+const xml2js = require('xml2js');
+const xmlParser = new xml2js.Parser();
 const CookieJar = require('tough-cookie').CookieJar;
 const cookieJar = new CookieJar()
 const readFile = promisify(fs.readFile)
@@ -56,22 +60,66 @@ var settings = {
     platform: 'nvidia',
     encode: 'h264',
     bitrate: 5,
+    autoBitrate: false,
     customInputCommand: '',
     customOutputCommand: '',
 }
-
+const settingsList = {
+    qbHost: { type: 'text' },
+    tempPath: { type: 'text' },
+    cert: { type: 'text' },
+    key: { type: 'text' },
+    ffmpegPath: { type: 'text' },
+    dandanplayPath: { type: 'text' },
+    secure: { type: 'switch' },
+    burnSubtitle: { type: 'switch' },
+    forceTranscode: { type: 'switch' },
+    share: { type: 'switch' },
+    autoBitrate: { type: 'switch' },
+    platform: { type: 'radio' },
+    encode: { type: 'radio' },
+    customInputCommand: { type: 'textarea' },
+    customOutputCommand: { type: 'textarea' },
+    serverPort: { type: 'number' },
+    bitrate: { type: 'number' },
+}
+const settingsType = {
+    text: [
+        "qbHost",
+        "tempPath",
+        "cert",
+        "key",
+        "ffmpegPath",
+        "dandanplayPath",
+    ],
+    switch: [
+        "secure",
+        "burnSubtitle",
+        "forceTranscode",
+        "share",
+        "autoBitrate",
+    ],
+    radio: ["platform", "encode"],
+    textarea: ["customInputCommand", "customOutputCommand"],
+    number: ["serverPort", "bitrate"],
+}
 try {
     settings = Object.assign(settings, JSON.parse(fs.readFileSync('./settings.json')))
     if (settings.ffmpegPath) {
-        // settings.ffmpegPath = path.resolve(path.parse(settings.ffmpegPath).root, `"${path.parse(settings.ffmpegPath).dir.replace(path.parse(settings.ffmpegPath).root,'')}"`,path.basename(settings.ffmpegPath))
+        // settings.ffmpegPath = path.resolve(path.parse(settings.ffmpegPath).root, `"${path.parse(settings.ffmpegPath).dir.replace(path.parse(settings.ffmpegPath).root, '')}"`, path.basename(settings.ffmpegPath))
         Ffmpeg.setFfmpegPath(path.resolve(settings.ffmpegPath, 'ffmpeg.exe'))
         Ffmpeg.setFfprobePath(path.resolve(settings.ffmpegPath, 'ffprobe.exe'))
     }
+    // fs.writeFileSync('./settings.json', JSON.stringify(settings, '', '\t'))
     // console.log(__dirname);
     console.log('已加载本地配置', settings);
 } catch (error) {
     fs.writeFileSync('./settings.json', JSON.stringify(settings, '', '\t'))
     console.log('已写入默认配置');
+}
+try {
+    fs.mkdirSync('./temp')
+} catch (error) {
 }
 // console.log(settings);
 //转发配置
@@ -93,6 +141,8 @@ try {
 // const fileCookie = {}
 // let qbCookie = { SID: undefined }
 var SID
+var cookieTimer
+var checkCookie = true
 var hlsTemp = ''
 var tryTimes = 0
 var fileRootPath = ''
@@ -105,10 +155,8 @@ var processList = []
 var transState = 'false'
 var videoIndex = {}
 var lastTargetId
-var dandanplayLibrary = []
-var libraryIndex = {}
+var libraryIndex = { allSeason: {}, episodes: {}, collections: {} }
 var maindataCache = {}
-// console.log(dandanplayLibrary);
 
 const encoders = {
     h265: {
@@ -136,73 +184,11 @@ const hwaccels = {
 }
 // const specialCharacter = ['\\', '$', '(', ')', '*', '+', '.', '[', '?', '^', '{', '|']
 try {
-    libraryIndex = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'libraryIndex.json')))
+    fs.stat('./temp/backup.json', (err) => { })
+    libraryIndex = JSON.parse(fs.readFileSync('./libraryIndex.json'))
     console.log('已加载匹配数据');
 } catch (error) {
-}
-function updateLibrary(params) {
-    if (settings.dandanplayPath) {
-        dandanplayLibrary = JSON.parse(fs.readFileSync(path.resolve(settings.dandanplayPath, 'library.json'))).VideoFiles
-        console.log('已关联弹弹Play');
-        libraryIndex.animePathIndex = {}
-        dandanplayLibrary.forEach(v => {
-            let tempPath = path.resolve(v.Path)
-            libraryIndex[tempPath] = v
-            libraryIndex[tempPath].imgPath = path.resolve(settings.dandanplayPath, 'Cache', 'LibraryImage', `${v.Hash}.jpg`)
-            if (v.AnimeId != 0 || !libraryIndex.animePathIndex[path.parse(tempPath).dir]) {
-                libraryIndex.animePathIndex[path.parse(tempPath).dir] = {
-                    AnimeId: v.AnimeId,
-                    AnimeTitle: v.AnimeTitle
-                }
-            }
-        })
-        return got({
-            url: `${settings.qbHost}/api/v2/sync/maindata`,
-            method: 'get',
-            cookieJar
-        }).then((result) => {
-            let torrents = JSON.parse(result.body).torrents
-            libraryIndex.animeIndex = {}
-            for (const animePath in libraryIndex.animePathIndex) {
-                for (const hash in torrents) {
-                    if (path.resolve(animePath).includes(path.resolve(torrents[hash].content_path))) {
-                        if (!libraryIndex.animeIndex[hash]) {
-                            libraryIndex.animeIndex[hash] = libraryIndex.animePathIndex[animePath]
-                        }
-                    }
-                }
-            }
-            let searchQueue = []
-            for (const hash in libraryIndex.animeIndex) {
-                let task = got({
-                    url: `https://api.dandanplay.net/api/v2/search/anime?keyword=${encodeURIComponent(libraryIndex.animeIndex[hash].AnimeTitle)}`
-                    , method: 'get'
-                }).then((result) => {
-                    result = JSON.parse(result.body)
-                    if (result.success) {
-                        result.animes.forEach(v => {
-                            if (v.animeId == libraryIndex.animeIndex[hash].AnimeId) {
-                                // console.log(v);
-                                libraryIndex.animeIndex[hash] = v
-                            }
-                        })
-                    }
-                    return Promise.resolve()
-                }).catch((err) => {
-                    console.log(err);
-                    return Promise.resolve()
-                });
-                searchQueue.push(task)
-            }
-            return Promise.all(searchQueue).then((result) => {
-                return writeFile(path.resolve(__dirname, 'libraryIndex.json'), JSON.stringify(libraryIndex, '', '\t'))
-            }).then((result) => {
-                console.log('已匹配');
-            }).catch((err) => {
-                console.log(err);
-            })
-        })
-    }
+    console.log(error);
 }
 
 
@@ -261,6 +247,7 @@ function getVideoInfo(filePath) {
     return new Promise((r, j) => {
         Ffmpeg.ffprobe(filePath, function (err, metadata) {
             console.log(metadata);
+            // console.log(metadata.streams[0]);
             if (err) {
                 return j(err)
             }
@@ -283,7 +270,7 @@ function getVideoInfo(filePath) {
             } = { ...vidoeStream }
             let videoInfo = {
                 codec: codec_name,
-                bitRate: bit_rate,
+                bitrate: bit_rate,
                 duration,
                 width,
                 height,
@@ -320,10 +307,10 @@ function generateM3U8(videoInfo) {
         start = Number(((start_pts - base_pts) / 90000).toFixed(6))
         if (i < segmentNum) {
             end = Number(((start_pts - base_pts + duration_ts) / 90000).toFixed(6))
-            M3U8 += `#EXTINF:${segmentDuration}\nindex${i}.ts\n`
+            M3U8 += `#EXTINF:${segmentDuration}\nindex${i}.ts?cookie=SID=${encodeURIComponent(SID)}\n`
         } else {
             end = duration
-            M3U8 += `#EXTINF:${lastSegmentDuration}\nindex${i}.ts\n#EXT-X-ENDLIST`
+            M3U8 += `#EXTINF:${lastSegmentDuration}\nindex${i}.ts?cookie=SID=${encodeURIComponent(SID)}\n#EXT-X-ENDLIST`
             endLoop = true
         }
         videoIndex[`index${i}`] = { start_pts, duration_ts, start, end, segmentDuration, id: i }
@@ -407,7 +394,7 @@ function generateTsQueue(videoInfo, subtitlePath) {
                     writingSegmentId = Number(writingSegment.replace('index', ''))
                     let nextSegment = `index${writingSegmentId + 1}`
 
-                    console.log(`${stderrLine}-------outtttttt`);
+                    // console.log(`${stderrLine}`);
 
                     // await checkSegment(writingSegment)
 
@@ -503,7 +490,7 @@ function killCurrentProcess(start) {
 }
 
 function handleSubtitle(filePath, videoInfo) {
-    let subType = ['.ass', '.ssa', '.srt', '.vtt']
+    let subType = ['.mks', '.ass', '.ssa', '.srt', '.vtt']
     // if (videoInfo.subtitleStream) {
 
     // } else {
@@ -593,6 +580,15 @@ function generateFfmpegCommand(videoInfo, subtitlePath, segment) {
         `-bufsize ${settings.bitrate * 2}M`,
         `-maxrate ${settings.bitrate}M`
     ]
+
+    if (settings.autoBitrate) {
+        bitrate = [
+            `-b:v ${videoInfo.bitrate}`,
+            `-bufsize ${videoInfo.bitrate * 2}`,
+            `-maxrate ${videoInfo.bitrate}`
+        ]
+    }
+
     let ss = `-ss ${videoIndex[segment].start}`
     let audio = [
         `-c:a aac`,
@@ -699,9 +695,90 @@ function generateFfmpegCommand(videoInfo, subtitlePath, segment) {
     return ffmpegCommand
 }
 
+function updateCollections(params) {
+    let fileQueue = []
+    for (const hash in libraryIndex.collections) {
+        let form = new FormData()
+        form.append('hash', hash)
+        let task = got({
+            url: `${settings.qbHost}/api/v2/torrents/files`,
+            method: 'post',
+            body: form,
+            cookieJar
+        }).then((result) => {
+            let fileTree = trimPath(JSON.parse(result.body))
+            let seasonList = Object.keys(libraryIndex.allSeason)
+            fileTree.sort((a, b) => {
+                try {
+                    var aPath = seasonList.find(v => a.label == path.parse(v).name)
+                    var aId = libraryIndex.allSeason[aPath].id
+                    var bPath = seasonList.find(v => b.label == path.parse(v).name)
+                    var bId = libraryIndex.allSeason[bPath].id
+                } catch (error) {
+                    // console.log(error);
+                    return a.label.length-b.label.length
+                }
+                return aId - bId
+            })
+            let collectionTitle = fileTree[0].label
+            let collectionPath = path.resolve(libraryIndex.collections[hash].rootPath, collectionTitle)
+            collectionTitle = libraryIndex.allSeason[collectionPath].title
+            // console.log(collectionTitle);
+            let collectionPoster = libraryIndex.allSeason[collectionPath].poster
+            libraryIndex.collections[hash].title = collectionTitle
+            libraryIndex.collections[hash].poster = collectionPoster
+            return true
+        }).catch((err) => {
+            return false
+        });
+        fileQueue.push(task)
+    }
+    fs.writeFileSync('./libraryIndex.json', JSON.stringify(libraryIndex, '', '\t'))
+    return Promise.all(fileQueue).then((fileQueue) => {
+        initMaindata()
+        console.log('合集匹配完成');
+    }).catch((err) => {
+    })
+}
 
+function initMaindata(params) {
+    got({
+        url: `${settings.qbHost}/api/v2/sync/maindata`,
+        method: 'get',
+        cookieJar
+    }).then((result) => {
+        let newData = JSON.parse(result.body)
+        let update = false
+        if (libraryIndex.allSeason) {
+            for (const hash in newData.torrents) {
+                if (libraryIndex.allSeason[newData.torrents[hash].content_path]) {
+                    newData.torrents[hash].mediaInfo = JSON.parse(JSON.stringify(libraryIndex.allSeason[newData.torrents[hash].content_path]))
+                    newData.torrents[hash].mediaInfo.poster = `/api/localFile/img.jpg?cookie=${encodeURIComponent(SID)}&type=picture&path=${encodeURIComponent(libraryIndex.allSeason[newData.torrents[hash].content_path].poster)}`
+                } else if (newData.torrents[hash].content_path == newData.torrents[hash].save_path) {
+                    if (!libraryIndex.collections[hash]) {
+                        libraryIndex.collections[hash] = { rootPath: path.resolve(newData.torrents[hash].save_path) }
+                        update = true
+                    } else if (libraryIndex.collections[hash].title) {
+                        newData.torrents[hash].mediaInfo = JSON.parse(JSON.stringify(libraryIndex.collections[hash]))
+                        newData.torrents[hash].mediaInfo.poster = `/api/localFile/img.jpg?cookie=${encodeURIComponent(SID)}&type=picture&path=${encodeURIComponent(newData.torrents[hash].mediaInfo.poster)}`
+                    }
+                }
+            }
+            if (update) {
+                updateCollections()
+            }
+            fs.writeFileSync('./libraryIndex.json', JSON.stringify(libraryIndex, '', '\t'))
+        }
+        maindataCache = {}
+        merger(maindataCache, newData)
+    }).catch((err) => {
+        console.log(err);
+    });
+}
 
-
+function generatePictureUrl(path) {
+    return `/api/localFile/img.jpg?cookie=${encodeURIComponent(SID)}&type=picture&path=${encodeURIComponent(path)}`
+}
 
 app.use(express.json())
 app.use(cookieParser())
@@ -721,43 +798,52 @@ app.use(cookieParser())
 app.use('/', (req, res, next) => {
     // console.log(req.headers.cookie,req.cookies);
     if (req.cookies) {
+        // console.log(SID,req.cookies.SID);
+        if (SID != req.cookies.SID) {
+            checkCookie = true
+        }
         SID = req.cookies.SID
         // console.log(SID);
         cookieJar.setCookieSync(`SID=${req.cookies.SID}`, settings.qbHost)
     }
-    if (settings.dandanplayPath && !libraryIndex.animePathIndex) {
-        updateLibrary().then(() => {
-            next()
-        })
-    } else next()
+    next()
 })
 
 //权限验证
 app.use('/api/localFile', (req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
-    // console.log(req.query.cookie);
-    if (req.query.cookie) {
-        cookieJar.setCookieSync(`SID=${req.query.cookie}`, settings.qbHost)
-    }
-    // console.log('check',cookieJar);
-    got({
-        url: `${settings.qbHost}/api/v2/auth/login`,
-        method: 'POST',
-        cookieJar
-    }).then((result) => {
-        result = result.body
-        if (result == 'Ok.') {
-            next()
-        } else if (settings.share && req.path.includes('/output/')) {
-            // console.log('goooooo');
-            next()
-        } else {
-            throw new Error('无权限，请重新登录')
+    if (checkCookie) {
+        if (req.query.cookie) {
+            let coo = req.query.cookie.replace("SID=", '')
+            // console.log(coo,'----------ccccccccc');
+            cookieJar.setCookieSync(`SID=${coo}`, settings.qbHost)
         }
-    }).catch((err) => {
-        res.status(403).send(err.message)
-        return
-    });
+        console.log('check');
+        got({
+            url: `${settings.qbHost}/api/v2/auth/login`,
+            method: 'POST',
+            cookieJar
+        }).then((result) => {
+            result = result.body
+            if (result == 'Ok.') {
+                checkCookie = false
+                clearTimeout(cookieTimer)
+                cookieTimer = setTimeout(() => { checkCookie = true }, 30 * 60 * 1000)
+                next()
+            } else if (settings.share && req.path.includes('/output/')) {
+                // console.log('goooooo');
+                next()
+            } else {
+                throw new Error('无权限，请重新登录')
+            }
+        }).catch((err) => {
+            // console.log(err);
+            res.status(403).send(err.message)
+            return
+        });
+    } else {
+        next()
+    }
 })
 
 //连接状态测试
@@ -766,16 +852,34 @@ app.use('/api/localFile/checkFileServer', (req, res) => {
 })
 
 app.use('/api/localFile/updateLibrary', (req, res) => {
-    updateLibrary()
+    if (req.query.fullUpdate === 'true') {
+        var fullUpdate = true
+    } else fullUpdate = false
+    if (req.query.overwrite === 'true') {
+        var overwrite = true
+    } else overwrite = false
     res.send('Ok.')
+    dd2nfo(settings.dandanplayPath, fullUpdate, overwrite).then((result) => {
+        libraryIndex = JSON.parse(fs.readFileSync('./libraryIndex.json'))
+        libraryIndex.allSeason = result
+        if (!libraryIndex.collections) {
+            libraryIndex.collections = {}
+        }
+        fs.writeFileSync('./libraryIndex.json', JSON.stringify(libraryIndex, '', '\t'))
+        return
+    }).catch((err) => {
+        console.log(err);
+    }).then((result) => {
+        updateCollections()
+    })
 })
 
 //更新配置项
 app.use('/api/localFile/changeFileServerSettings', async (req, res) => {
     let data = req.body
-    let clean = ['burnSubtitle',
-        'forceTranscode',
-        'encode', 'platform', 'customCommand']
+    let clean = ['customInputCommand',
+        'customOutputCommand',
+        'encode', 'platform', 'bitrate', 'autoBitrate']
     data.forEach(val => {
         if (settings[val.name] != val.value) {
             settings[val.name] = val.value
@@ -870,7 +974,7 @@ app.use('/api/localFile/output', (req, res, next) => {
     }
     function read() {
         tryTimes++
-        if (tryTimes >= 10) {
+        if (tryTimes >= 20) {
             res.status(404).send('not found')
             tryTimes = 0
             return
@@ -899,11 +1003,13 @@ app.use('/api/localFile/output', (req, res, next) => {
 
 //hls缓存清理
 app.use('/api/localFile/clearVideoTemp', (req, res, next) => {
+    killCurrentProcess()
     setTimeout(() => {
         rimraf(`${settings.tempPath}output`, (err) => {
             console.log(err);
             mkdir(`${settings.tempPath}output`).then((result) => {
                 console.log('clear');
+                hlsTemp = null
                 res.send('Ok.')
             }).catch((err) => {
                 console.log(err);
@@ -930,7 +1036,7 @@ app.use('/api/localFile/stopProcess', async (req, res, next) => {
 app.use('/api/localFile/videoSrc', (req, res, next) => {
     const path = req.headers.referer.split(':')
     // console.log('src', fileRootPath);
-    res.send(`${path[0]}:${path[1]}:${settings.serverPort}/api/localFile/output/index.m3u8`)
+    res.send(`${path[0]}:${path[1]}:${settings.serverPort}/api/localFile/output/index.m3u8?cookie=SID=${encodeURIComponent(SID)}`)
 })
 
 //文件请求处理
@@ -999,10 +1105,26 @@ app.use("/api/v2/sync/maindata", async (req, res, next) => {
                 delete maindataCache.torrents[hash]
             })
         } else if (newData.full_update) {//处理完全更新
-            if (libraryIndex.animeIndex) {
+            let update = false
+            if (libraryIndex.allSeason) {
                 for (const hash in newData.torrents) {
-                    newData.torrents[hash].animeInfo = libraryIndex.animeIndex[hash]
+                    if (libraryIndex.allSeason[newData.torrents[hash].content_path]) {
+                        newData.torrents[hash].mediaInfo = JSON.parse(JSON.stringify(libraryIndex.allSeason[newData.torrents[hash].content_path]))
+                        newData.torrents[hash].mediaInfo.poster = `/api/localFile/img.jpg?cookie=${encodeURIComponent(SID)}&type=picture&path=${encodeURIComponent(libraryIndex.allSeason[newData.torrents[hash].content_path].poster)}`
+                    } else if (newData.torrents[hash].content_path == newData.torrents[hash].save_path) {
+                        if (!libraryIndex.collections[hash]) {
+                            libraryIndex.collections[hash] = { rootPath: path.resolve(newData.torrents[hash].save_path) }
+                            update = true
+                        } else if (libraryIndex.collections[hash].title) {
+                            newData.torrents[hash].mediaInfo = JSON.parse(JSON.stringify(libraryIndex.collections[hash]))
+                            newData.torrents[hash].mediaInfo.poster = `/api/localFile/img.jpg?cookie=${encodeURIComponent(SID)}&type=picture&path=${encodeURIComponent(newData.torrents[hash].mediaInfo.poster)}`
+                        }
+                    }
                 }
+                if (update) {
+                    updateCollections()
+                }
+                fs.writeFileSync('./libraryIndex.json', JSON.stringify(libraryIndex, '', '\t'))
             }
             // console.log(newData);
             maindataCache = {}
@@ -1012,7 +1134,7 @@ app.use("/api/v2/sync/maindata", async (req, res, next) => {
         }
         res.send(newData)
     }).catch((err) => {
-        console.log(err.message);
+        // console.log(err);
     });
 });
 
@@ -1027,40 +1149,29 @@ app.use("/api/v2/sync/maindata", async (req, res, next) => {
 //     }
 // }));
 app.use("/api/v2/torrents/files", express.urlencoded(), (req, res, next) => {
-    // console.log(req.body.hash);
-    // console.log(maindataCache);
     let hash = req.body.hash
     let form = new FormData()
     form.append('hash', hash)
-    const serverPath = url.parse(req.headers.referer)
-    // console.log(req.headers.referer);
+    let file
     got({
         url: `${settings.qbHost}/api/v2/torrents/files`,
         method: 'post',
         body: form,
         cookieJar
     }).then((result) => {
-        let file = JSON.parse(result.body)
-        // let tempSID = SID
-        // specialCharacter.map(v => {
-        //     let reg = new RegExp('\\' + v, 'gim')
-        //     tempSID = tempSID.replace(reg, '\\' + v)
-        // })
-        // console.log(maindataCache.torrents[hash]);
+        file = JSON.parse(result.body)
         file.forEach(v => {
-            v.fullPath = path.resolve(maindataCache.torrents[hash].save_path, v.name)
-            if (libraryIndex[v.fullPath]) {
-                v.videoInfo = JSON.parse(JSON.stringify(libraryIndex[v.fullPath]))
-                v.videoInfo.imgUrl = `/api/localFile/img.jpg?cookie=${encodeURIComponent(SID)}&type=picture&path=${v.videoInfo.imgPath}`
+            let fullPath = path.resolve(maindataCache.torrents[hash].save_path, v.name)
+            if (libraryIndex.episodes[fullPath]) {
+                v.mediaInfo = JSON.parse(JSON.stringify(libraryIndex.episodes[fullPath]))
+                v.mediaInfo.poster = generatePictureUrl(v.mediaInfo.poster)
+                v.mediaInfo.seasonPoster = generatePictureUrl(v.mediaInfo.seasonPoster)
             }
         })
-        // console.log(file);
         res.send(file)
-    }).catch((err) => {
-        console.log(err);
-    });
-    // next()
-});
+    })
+})
+// next()
 // app.use("/api/v2/torrents/files",express.urlencoded());
 // app.use("/api/v2/torrents/files", proxy({
 //     ...proxySettings,

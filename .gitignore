@@ -105,7 +105,8 @@ dist
 
 /test
 /output
-/temp
+temp/
+/temp/
 /ssl
 /src/ssl
 settings.json
@@ -114,3 +115,4 @@ test.*
 /out
 /FileServer-for-qBittorrent-win32-x64
 libraryIndex.json
+sync.ffs*
