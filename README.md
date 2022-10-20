@@ -18,18 +18,19 @@
 
 ---
 
-1. 安装ffmpeg，配置好环境变量（在环境变量-系统变量-Path）（或稍后将ffmpeg目录添加到配置文件settings.json中，详见下方配置项）
+1. 安装ffmpeg，将ffmpeg.exe和ffprobe.exe放到本应用根目录下（或配置环境变量（在环境变量-系统变量-Path））
 2. qbittorrent配置好webUI（建议先了解使用方法[qBittorrent Web UI](https://github.com/blytzxdl/qbwebui)）
 3. 将qbittorrent的web端口设为8008（或修改本应用根目录下的配置文件settings.json中的qbHost为当前qbittorrent的webUI地址，详见下方配置项），关闭下方的“启用 Host header 属性验证”（以后改进）
-4. 可选，修改配置文件settings.json
-5. 运行本应用（win下为FileServer-for-qBittorrent.exe,暂无主界面，仅有托盘图标以供退出）（其它环境未测试，理论上用node运行src目录下的server.js即可）
-6. 通过serverPort端口（默认地址http://localhost:9009）访问本应用，enjoy it！
+4. 运行本应用（win下为FileServer-for-qBittorrent.exe,暂无主界面，仅有托盘图标以供退出）（其它环境未测试，理论上用node运行src目录下的server.js即可）
+5. 通过serverPort端口（默认地址http://localhost:9009）访问本应用（如果不显示登录界面，只显示一段文字，如403、无权限等，请尝试在qBittorrent Web UI验证中放宽连续失败次数并重启qBittorrent，以后改进）
+6. 修改FileServer配置，通过点击Web UI上方绿色FileServer打开配置界面（或在pc端修改本应用根目录下配置文件settings.json），如第一步将ffmpeg放到了本应用根目录下，则将ffmpegPath修改为"./",修改完成后右键托盘图标重启本应用，如已配置环境变量，则留空
+7. enjoy it！
 
 ### 配置项
 
 ---
 
-应用会自动在根目录生成默认配置文件settings.json，配置项如下
+应用会自动在根目录生成默认配置文件settings.json，配置项如下（所有路径请将反斜杠'\\'换成'/',避免产生错误）
 
 ```
 {
@@ -38,11 +39,11 @@
 
 	"serverPort": 9009,             	//必填，本应用端口
     
-	"tempPath": "./",					//必填，视频缓存地址，默认在应用根目录生成output文件夹，可另外指定，指定路径末尾要带/号，会在指定路径生成output文件夹
+	"tempPath": "./",					//必填，视频缓存路径，默认在应用根目录生成output文件夹，可另外指定，指定路径末尾要带/号，会在指定路径生成output文件夹
 
-	"dandanplayPath":""					//弹弹play根目录，可关联刮削结果，包括番名、片名及海报图、缩略图
+	"dandanplayPath":""					//弹弹play路径，可关联刮削结果，包括番名、片名及海报图、缩略图
 
-	"ffmpegPath":""						//必填，配置好环境变量后无需填写，反斜杠'\'需换成'/'或'\\'
+	"ffmpegPath":""						//必填，ffmpeg路径，配置好环境变量后无需填写
 
 	"cert": "./ssl/domain.pem",     	//ssl证书路径，可手动修改
 
@@ -50,19 +51,53 @@
 	
 	"secure": false,                 	//ssl安全设置，ssl配置成功后会自动使用true
 
-	"share":false,						//为false时会通过qBittorrent校验cookie，只能通过web UI播放，为true时，可将生成的hls地址粘贴到其它支持流媒体的app中播放(如vlc,mpc等),以提供更好的解码支持（如hevc)，但目前这会跳过cookie校验，请保护好隐私，后续会改进
+	"share":false,						//为true时，可将生成的hls地址中"m3u8"后的文本去除，形成固定的串流地址，但这会跳过cookie校验，自己权衡开关与否
 	
 	"platform": "nvidia",				//服务端显卡型号（详见转码说明）
 
 	"encode": "h264",					//目标编码格式（详见转码说明）
 
-	"bitrate": "5",						//视频码率限制（单位“M”，详见转码说明）
+	"bitrate": "5",						//目标视频码率（单位“M”，详见转码说明）
+	
+	"autoBitrate":false					//自动码率，为true时自动设置为源视频相同码率，尽量保持原画质，但会忽略bitrate设置
 					
-	"customInputCommand": ""			//自定义ffmpeg输入指令，接收string类型（纯文本）,按换行分隔（详见指令说明）
+	"customInputCommand": ""			//自定义ffmpeg输入指令，接收string类型（纯文本）,按空格分隔（详见指令说明）
 	
 	"customOutputCommand": ""			//自定义ffmpeg输出指令
 	
 }
+```
+
+## 刮削功能
+
+刮削功能基于”弹弹play“实现，与转码播放功能不挂钩，识别准确度由弹弹play决定
+
+弹弹play官网：[弹弹play - 全功能“本地视频+弹幕”播放器 (dandanplay.com)](https://www.dandanplay.com/)
+
+刮削后，会在视频文件同目录生成nfo文件，可供TMM、Jellyfin等识别
+
+网页端刮削完成后（即出现海报图后），建议刷新一次网页，避免数据更新机制过多消耗流量
+
+更新模式说明（常规默认为增量合并，初次运行为全量合并）：
+
+- 增量与全量
+  - 增量：对自上次更新后，弹弹play数据库中出现的变动进行更新
+  - 全量：按弹弹play当前的数据库完整更新
+- 合并与覆盖
+  - 合并：按弹弹play识别结果对已有nfo文件中的剧名、单集名、顺序等TMM、Jellyfin通常识别不准确的信息进行修改，其它信息保持不变，适合已通过TMM、Jellyfin等进行刮削但对准确度不满意的情况
+  - 覆盖：！！！谨慎使用！！！按弹弹play识别结果为所有关联视频生成全新的nfo文件（覆盖已存在的nfo），可通过TMM、Jellyfin等进一步完善刮削信息，适合完全初次使用
+
+媒体文件解析设为”基础“即可，本人常用排除项：
+
+```
+/\WNC(OP|ED)/
+/\WSPs/
+/\WCDs/
+/\WScans/
+/\WMenus/
+/\WOAD/
+/\WOVA/
+/\WPV\d{0,2}/
 ```
 
 ### 安全性
@@ -84,7 +119,7 @@ qbittorrent未使用https时，本应用有无https皆可，qbittorrent开启htt
 ---
 
 - 编码支持问题
-  - platform：可选"nvidia","intel","amd","other",选择对应的显卡品牌以使用显卡加速，没有对应显卡则选择"other"通过cpu编码
+  - platform：可选"nvidia","intel","amd"~~,"other"~~,选择对应的显卡品牌以使用显卡加速~~，没有对应显卡则选择"other"通过cpu编码~~当前版本停用other项，后续可能加入vaapi(Linux平台)支持
 
   - encode：可选"h264","h265"
 
@@ -101,7 +136,7 @@ qbittorrent未使用https时，本应用有无https皆可，qbittorrent开启htt
 	
 	    ~~解码器默认为cpu解码，经有限测试，与gpu解码速度各有胜负，因此未提供解码器指定，兼容性更好，如果cpu过于孱弱，可通过自定义ffmpeg指令来启用显卡解码（不建议，兼容性差）~~
 	
-	    有对应显卡及系统环境满足条件时，编码器默认启用硬件加速，速度主要受gpu限制
+	    有对应显卡及片源、系统环境满足条件时，编码器默认启用硬件加速，速度主要受gpu限制
 	
 	  - 画质：主要由源视频质量和视频码率决定，分辨率遵循源视频，不处理
 	
@@ -109,7 +144,17 @@ qbittorrent未使用https时，本应用有无https皆可，qbittorrent开启htt
 	
 	  - 体积：主要由编码格式和码率决定，相较源视频难以比较（因素复杂）
 	
-	    相同编码格式，码率越高，体积越大；相同码率，h265视频体积小于h264视频体积
+	    大致上相同编码格式，码率越高，体积越大；相同码率，h265视频体积小于h264视频体积
+	  
+	- 硬件加速（当前支持h265、h264编码的源视频）
+	
+	  - 解码加速：Intel、Nvidia显卡选好platform就行，AMD显卡请尝试在customInputCommand填入
+	
+	    ```-hwaccel d3d11va -hwaccel_device 0```
+	
+	    最后的0可能需要改为任务管理器性能界面下的GPU序号（不确定，无更多显卡测试）
+	
+	  - 编码加速：均支持h265、h264
 	
 - 网速需求/流量消耗问题
 
@@ -199,8 +244,9 @@ qbittorrent未使用https时，本应用有无https皆可，qbittorrent开启htt
 
 ---
 
-- amd显卡转码的视频在safari上播放时，可正常完整播放，但无法跳转进度条（zen2APU核显与a12+ios15测试结果，其它情况自行测试，可尝试用第三方播放器软解播放）
-- 多季合集的种子无法准确匹配番名，但其中的单集匹配无误（由弹弹play刮削结果决定）
+- amd显卡转码的视频在safari上播放时，可正常连续完整播放，但转码完成后无法跳转进度条（黑屏）（zen2APU核显与a12+ios15测试结果，其它情况自行测试，可尝试用第三方播放器软解播放）
+- ~~多季合集的种子无法准确匹配番名，但其中的单集匹配无误（由弹弹play刮削结果决定）~~已大幅改进，部分细节待优化，过于特殊的情况没办法
+- mkv内封多轨非文本字幕时，无法直接转码，请在同目录下放入同名外挂字幕（后续可能改进）
 
 ### 更新计划（不分先后）
 
@@ -209,7 +255,9 @@ qbittorrent未使用https时，本应用有无https皆可，qbittorrent开启htt
 - 安全性改进
 - 封装qb原api，通过websocket向web传数据
 - 跨平台支持（linux、openwrt等）
-- 字幕匹配
+- 字幕匹配、上传
+- 虚拟种子（将qB中没有，但弹弹play识别了的文件模拟成种子）
+- 安装向导
 - 其它优化
 - 。。。
 
