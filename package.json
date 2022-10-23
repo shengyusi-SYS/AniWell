@@ -27,7 +27,7 @@
   "scripts": {
     "serve": "nodemon ./src/server.js -i settings.json -i libraryIndex.json -i ./temp",
     "start": "electron ./src/main.js",
-    "build": "npx electron-packager . --overwrite --out=out --icon=public/favicon.ico --ignore='^(/ssl$)' --ignore='^(/out$)' --ignore='^(/temp$)' --ignore='.gitignore' --ignore='in.ass' --ignore='settings.json' --ignore='jsconfig.json' --ignore='^(test).js' --ignore='libraryIndex.json'"
-    ,"test":"node ./src/test.js"
+    "build": "npx electron-packager . --overwrite --out=out --icon=public/favicon.ico --ignore='^(/ssl$)' --ignore='^(/out$)' --ignore='^(/temp$)' --ignore='.gitignore' --ignore='in.ass' --ignore='settings.json' --ignore='jsconfig.json' --ignore='^(test).js' --ignore='libraryIndex.json' --ignore='sync.ffs_db' --ignore='^(/.vscode$)'",
+    "test": "node ./src/test.js"
   }
 }

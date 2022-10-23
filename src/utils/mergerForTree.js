@@ -1,7 +1,10 @@
 const treeMerger = (addA, toB) => {
     addA.forEach(addVal => {
         if (!addVal.children) {
-            toB.push(addVal)
+            let exist = toB.find(val => val.label == addVal.label)
+            if (!exist) {
+                toB.push(addVal)
+            }else Object.assign(exist,addVal)
         } else {
             let exist = toB.find(val => val.label == addVal.label)
             if (!exist) {

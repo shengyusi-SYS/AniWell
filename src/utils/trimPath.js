@@ -1,12 +1,18 @@
 
 const treeMerger = require('./mergerForTree');
+const path = require('path');
 const trimPath = (list) => {
     let res = []
     let branches = []
+    console.log(list);
     list.forEach((listVal) => {
-        let path = listVal.name.split('/')
+        let abs = path.isAbsolute(listVal.name)
+        let filePath
+        if (abs) {
+            filePath = listVal.name.split(path.sep)
+        }else filePath = listVal.name.split('/')
         let leaves = []
-        path.forEach((pathVal, ind, arr) => {
+        filePath.forEach((pathVal, ind, arr) => {
             leaves.push({ label: pathVal })
         })
         leaves.forEach((val, ind, arr) => {

@@ -716,7 +716,7 @@ function updateCollections(params) {
                     var bId = libraryIndex.allSeason[bPath].id
                 } catch (error) {
                     // console.log(error);
-                    return a.label.length-b.label.length
+                    return a.label.length - b.label.length
                 }
                 return aId - bId
             })
@@ -1039,6 +1039,15 @@ app.use('/api/localFile/videoSrc', (req, res, next) => {
     res.send(`${path[0]}:${path[1]}:${settings.serverPort}/api/localFile/output/index.m3u8?cookie=SID=${encodeURIComponent(SID)}`)
 })
 
+app.use("/api/localFile/library", (req, res, next) => {
+    try {
+        var library = JSON.parse(fs.readFileSync(path.resolve('libraryIndex.json')))
+        res.send(library.libraryTree)
+    } catch (error) {
+        res.status(404).send('未建立媒体库')
+    }
+})
+
 //文件请求处理
 app.use('/api/localFile', async (req, res, next) => {
     let filePath
@@ -1184,6 +1193,7 @@ app.use("/api/v2/torrents/files", express.urlencoded(), (req, res, next) => {
 //         // })
 //     }
 // }));
+
 
 app.use("/", proxy(proxySettings));
 

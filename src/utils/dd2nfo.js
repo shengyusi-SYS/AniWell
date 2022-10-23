@@ -2,6 +2,7 @@ const fs = require('fs');
 const xml2js = require('xml2js');
 const util = require('util');
 const path = require('path');
+const trimPath = require('./trimPath.js');
 var got
 import('got').then((result) => {
     got = result.default
@@ -47,7 +48,6 @@ function dd2nfo(dandanplayPath, fullUpdate = false, overwrite = false) {
         }
     }
     let update = {}
-    console.log(fullUpdate);
     if (!fullUpdate) {
         console.log('增量更新');
         for (const ap in library) {
@@ -58,6 +58,8 @@ function dd2nfo(dandanplayPath, fullUpdate = false, overwrite = false) {
     } else {
         console.log("全量更新");
         update = library
+        libraryIndex = { allSeason: {}, episodes: {}, collections: {} }
+        fs.writeFileSync('./libraryIndex.json', JSON.stringify(libraryIndex, '', '\t'))
     }
     try {
         backup = library
@@ -166,7 +168,8 @@ function dd2nfo(dandanplayPath, fullUpdate = false, overwrite = false) {
             allSeason[path.dirname(anime.Path)] = {
                 title: anime.AnimeTitle,
                 poster,
-                id:anime.AnimeId
+                id:anime.AnimeId,
+                name:path.dirname(anime.Path)
             }
         }
         libraryIndex.episodes[ap]={
@@ -174,15 +177,27 @@ function dd2nfo(dandanplayPath, fullUpdate = false, overwrite = false) {
             title:anime.EpisodeTitle,
             episode:anime.EpisodeId - anime.AnimeId * 10000,
             seasonTitle:anime.AnimeTitle,
-            seasonPoster:poster
+            seasonPoster:poster,
+            hash:anime.Hash
         }
         try {
             libraryIndex.episodes[ap].seasonPoster = allSeason[path.dirname(anime.Path)].poster
         } catch (error) {
             console.log(error,ap);
         }
-
+        for (const ap in dropped) {
+            delete libraryIndex.episodes[ap]
+        }
     }
+    let episodes = JSON.parse(JSON.stringify(libraryIndex.episodes))
+    for (const episodePath in episodes) {
+        let episode = episodes[episodePath]
+        episode.name = episodePath
+        episode.poster = path.resolve(dandanplayPath, 'Cache', 'LibraryImage', `${episode.hash}.jpg`)
+        delete episode.seasonTitle
+        delete episode.seasonPoster
+      }
+    libraryIndex.libraryTree = trimPath([...Object.values(episodes),...Object.values(allSeason)])
     try {
         fs.writeFileSync('./libraryIndex.json', JSON.stringify(libraryIndex, '', '\t'))
         console.log('已更新索引');

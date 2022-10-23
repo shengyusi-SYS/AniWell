@@ -116,3 +116,4 @@ test.*
 /FileServer-for-qBittorrent-win32-x64
 libraryIndex.json
 sync.ffs*
+.vscode
