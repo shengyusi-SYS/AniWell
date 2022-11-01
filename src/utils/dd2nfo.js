@@ -104,6 +104,7 @@ function dd2nfo(dandanplayPath, fullUpdate = false, overwrite = false) {
                 }
                 parser.parseString(oldNfo, (err, res) => {
                    Object.assign(res.episodedetails, obj.episodedetails)
+                //    delete res.title
                    newNfo = res
                 })
                 let xml = builder.buildObject(newNfo);
@@ -122,19 +123,30 @@ function dd2nfo(dandanplayPath, fullUpdate = false, overwrite = false) {
             fs.writeFileSync(path.resolve(path.dirname(anime.Path), `${path.parse(anime.Name).name}.nfo`), xml)
         }
         if (!season[path.dirname(anime.Path)]) {
-            season[path.dirname(anime.Path)] = {
+            let objs = {
                 tvshow: {
                     title: anime.AnimeTitle,
                     runtime: 1,
                     art: [
                         {
-                            poster: path.resolve(path.dirname(anime.Path), 'poster.jpg')
+                            poster: path.resolve(path.dirname(anime.Path), 'folder.jpg')
                         }
                     ],
                     season: 1,
                     episode: -1,
                 }
             }
+            try {
+                fs.statSync(path.resolve(path.dirname(anime.Path), 'folder.jpg'))
+            } catch (error) {
+                try {
+                    fs.statSync(path.resolve(path.dirname(anime.Path), 'poster.jpg'))
+                    objs.tvshow.art=[{poster:path.resolve(path.dirname(anime.Path), 'poster.jpg')}]
+                } catch (error) {
+                    
+                }
+            }
+            season[path.dirname(anime.Path)] = objs
             // if (anime.AnimeTitle.includes('第二季')) {
             //     obj.episodedetails.season = 2
             //     season[path.dirname(anime.Path)].tvshow.season = 2
@@ -155,12 +167,12 @@ function dd2nfo(dandanplayPath, fullUpdate = false, overwrite = false) {
         let poster
         if (!allSeason[path.dirname(anime.Path)]) {
             try {
-                fs.statSync(path.resolve(path.dirname(anime.Path), 'poster.jpg'))
-                poster = path.resolve(path.dirname(anime.Path), 'poster.jpg')
-            } catch (error) {
-                try {
                 fs.statSync(path.resolve(path.dirname(anime.Path), 'folder.jpg'))
                 poster = path.resolve(path.dirname(anime.Path), 'folder.jpg')
+            } catch (error) {
+                try {
+                    fs.statSync(path.resolve(path.dirname(anime.Path), 'poster.jpg'))
+                    poster = path.resolve(path.dirname(anime.Path), 'poster.jpg')
                 } catch (error) {
                     
                 }
@@ -211,20 +223,28 @@ function dd2nfo(dandanplayPath, fullUpdate = false, overwrite = false) {
         let tv = builder.buildObject(season[aniPath])
         fs.writeFileSync(path.resolve(aniPath, `tvshow.nfo`), tv)
         // fs.writeFileSync(path.resolve(aniPath, `season.nfo`), tv)
-        let task = got({
-            url: `https://api.dandanplay.net/api/v2/search/anime?keyword=${encodeURIComponent(season[aniPath].tvshow.title)}`
-            , method: 'get'
-        }).then((result) => {
-            result = JSON.parse(result.body)
-            if (result.animes[0]) {
-                return result.animes[0].imageUrl
+        try {
+            fs.statSync(path.resolve(aniPath, `folder.jpg`))
+        } catch (error) {
+            try {
+                fs.statSync(path.resolve(aniPath, `poster.jpg`))
+            } catch (error) {
+                let task = got({
+                    url: `https://api.dandanplay.net/api/v2/search/anime?keyword=${encodeURIComponent(season[aniPath].tvshow.title)}`
+                    , method: 'get'
+                }).then((result) => {
+                    result = JSON.parse(result.body)
+                    if (result.animes[0]) {
+                        return result.animes[0].imageUrl
+                    }
+                }).catch((err) => {
+                    console.log(err);
+                    return false
+                });
+                searchQueue.push(task)
+                pathQueue.push(path.resolve(aniPath, 'poster.jpg'))
             }
-        }).catch((err) => {
-            console.log(err);
-            return false
-        });
-        searchQueue.push(task)
-        pathQueue.push(path.resolve(aniPath, 'poster.jpg'))
+        }
     }
     return Promise.all(searchQueue).catch((err) => {
         console.log(err);

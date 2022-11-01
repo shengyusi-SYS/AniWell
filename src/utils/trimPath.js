@@ -4,7 +4,7 @@ const path = require('path');
 const trimPath = (list) => {
     let res = []
     let branches = []
-    console.log(list);
+    // console.log(list);
     list.forEach((listVal) => {
         let abs = path.isAbsolute(listVal.name)
         let filePath

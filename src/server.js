@@ -1,17 +1,4 @@
-// import got from 'got';
-// import fs from 'fs';
-// import cookieParser from 'cookie-parser';
-// import { promisify } from 'util';
-// import { spawn } from 'child_process';
-// import express from 'express';
-// import proxyMw from 'http-proxy-middleware';
-// import rimraf from 'rimraf';
-// import https from 'https';
-// import kill from 'tree-kill';
-// import Ffmpeg from 'fluent-ffmpeg';
-// import path from 'path';
 var got = () => Promise.reject()
-// const got = require('got');
 import('got').then((result) => {
     got = result.default
 })
@@ -27,14 +14,40 @@ const kill = require('tree-kill');
 const Ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
 const FormData = require('form-data')
+const url = require("url");
+const CookieJar = require('tough-cookie').CookieJar;
+const cookieJar = new CookieJar()
+// const xml2js = require('xml2js');
+// const xmlParser = new xml2js.Parser();
+// const logger = require('morgan');
+const history = require('connect-history-api-fallback');
+
 const merger = require('./utils/merger');
 const dd2nfo = require('./utils/dd2nfo');
 const trimPath = require('./utils/trimPath');
-const url = require("url");
-const xml2js = require('xml2js');
-const xmlParser = new xml2js.Parser();
-const CookieJar = require('tough-cookie').CookieJar;
-const cookieJar = new CookieJar()
+const getGPU = require('./utils/getGPU');
+const os = require('os');
+var osPlatform
+var ffmpegSuffix = ''
+var gpus
+switch (os.type()) {
+    case 'Linux':
+        osPlatform = 'lin'
+        break;
+    case 'Darwin':
+        osPlatform = 'mac'
+        break;
+    case 'Windows_NT':
+        osPlatform = 'win'
+        ffmpegSuffix = '.exe'
+        break
+}
+getGPU(osPlatform).then((result) => {
+    gpus = result
+}).catch((err) => {
+})
+
+
 const readFile = promisify(fs.readFile)
 const writeFile = promisify(fs.writeFile)
 const readdir = promisify(fs.readdir)
@@ -46,10 +59,10 @@ const app = express();
 var io
 //配置
 var settings = {
-    qbHost: 'http://localhost:8008',
+    qbHost: 'http://localhost:8080',
     serverPort: 9009,
-    tempPath: './',
-    ffmpegPath: '',
+    tempPath: os.tmpdir(),
+    ffmpegPath: './',
     dandanplayPath: '',
     cert: './ssl/domain.pem',
     key: './ssl/domain.key',
@@ -61,6 +74,7 @@ var settings = {
     encode: 'h264',
     bitrate: 5,
     autoBitrate: false,
+    advAccel: true,
     customInputCommand: '',
     customOutputCommand: '',
 }
@@ -103,23 +117,68 @@ const settingsType = {
     textarea: ["customInputCommand", "customOutputCommand"],
     number: ["serverPort", "bitrate"],
 }
+
 try {
-    settings = Object.assign(settings, JSON.parse(fs.readFileSync('./settings.json')))
-    if (settings.ffmpegPath) {
-        // settings.ffmpegPath = path.resolve(path.parse(settings.ffmpegPath).root, `"${path.parse(settings.ffmpegPath).dir.replace(path.parse(settings.ffmpegPath).root, '')}"`, path.basename(settings.ffmpegPath))
-        Ffmpeg.setFfmpegPath(path.resolve(settings.ffmpegPath, 'ffmpeg.exe'))
-        Ffmpeg.setFfprobePath(path.resolve(settings.ffmpegPath, 'ffprobe.exe'))
+    fs.accessSync('./settings.json')
+    try {
+        var newSettings = JSON.parse(fs.readFileSync('./settings.json'))
+        if (newSettings) {
+            settings = Object.assign(settings, newSettings)
+            fs.writeFileSync('./settings.json', JSON.stringify(settings, '', '\t'))
+            fs.writeFileSync(path.resolve(settings.tempPath, './settings_backup.json'), JSON.stringify(settings, '', '\t'))
+            console.log('已加载本地配置', settings);
+        } else {
+            newSettings = JSON.parse(fs.readFileSync(path.resolve(settings.tempPath, './settings_backup.json')))
+            settings = Object.assign(settings, newSettings)
+            console.log('配置项错误，请检查1');
+        }
+        if (settings.ffmpegPath) {
+            // settings.ffmpegPath = path.resolve(path.parse(settings.ffmpegPath).root, `"${path.parse(settings.ffmpegPath).dir.replace(path.parse(settings.ffmpegPath).root, '')}"`, path.basename(settings.ffmpegPath))
+            console.log(path.resolve(settings.ffmpegPath, `ffmpeg${ffmpegSuffix}`));
+            try {
+                Ffmpeg.setFfmpegPath(path.resolve(settings.ffmpegPath, `ffmpeg${ffmpegSuffix}`))
+                Ffmpeg.setFfprobePath(path.resolve(settings.ffmpegPath, `ffprobe${ffmpegSuffix}`))
+            } catch (error) {
+                console.log('ffmpeg路径错误，请检查');
+            }
+        }
+    } catch (error) {
+        console.log('配置项错误，请检查2', error);
     }
-    // fs.writeFileSync('./settings.json', JSON.stringify(settings, '', '\t'))
-    // console.log(__dirname);
-    console.log('已加载本地配置', settings);
 } catch (error) {
+    try {
+        const defaultDandanplayPath = path.resolve(os.homedir(), 'AppData', 'Roaming', '弹弹play')
+        fs.accessSync(path.resolve(defaultDandanplayPath, 'library.json'))
+        console.log('在默认位置找到弹弹play');
+        settings.dandanplayPath = defaultDandanplayPath
+    } catch (error) {
+        console.log('未在默认位置找到弹弹play');
+    }
+    try {
+        let defaultFFmpegPath
+        if (osPlatform == 'win') {
+            defaultFFmpegPath = path.resolve('src', 'thirdParty', 'win')
+            try {
+                fs.accessSync(path.resolve(defaultFFmpegPath, 'ffmpeg.exe'))
+                settings.ffmpegPath = defaultFFmpegPath
+            } catch (error) {
+
+            }
+        }
+        if (osPlatform == 'lin') {
+            defaultFFmpegPath = path.resolve('/usr/share/jellyfin-ffmpeg/')
+            try {
+                fs.accessSync(defaultFFmpegPath, 'ffmpeg')
+                settings.ffmpegPath = defaultFFmpegPath
+            } catch (error) {
+
+            }
+        }
+    } catch (error) {
+
+    }
     fs.writeFileSync('./settings.json', JSON.stringify(settings, '', '\t'))
     console.log('已写入默认配置');
-}
-try {
-    fs.mkdirSync('./temp')
-} catch (error) {
 }
 // console.log(settings);
 //转发配置
@@ -147,7 +206,7 @@ var hlsTemp = ''
 var tryTimes = 0
 var fileRootPath = ''
 var subtitleList = []
-var checkTimeout
+var cleanTimeout
 var FFmpegProcess = {}
 var currentProcess = null
 var writingSegmentId = null
@@ -163,24 +222,17 @@ const encoders = {
         nvidia: 'hevc_nvenc',
         intel: 'hevc_qsv',
         amd: 'hevc_amf',
-        // other: 'libx265',
     },
     h264: {
         nvidia: 'h264_nvenc',
         intel: 'h264_qsv',
         amd: 'h264_amf',
-        // other: 'libx264',
+        vaapi: 'h264_vaapi',
     }
 }
 const decoders = {
     nvidia: '_cuvid',
     intel: '_qsv',
-    // amd:''
-}
-const hwaccels = {
-    nvidia: 'cuda'
-    , intel: 'qsv'
-    , other: 'd3d11va'
 }
 // const specialCharacter = ['\\', '$', '(', ')', '*', '+', '.', '[', '?', '^', '{', '|']
 try {
@@ -195,13 +247,13 @@ try {
 //------------------------------------------------//
 function handleVideoRequest(req, res, filePath) {
     // console.log(hlsTemp, filePath);
-    let subtitlePath
+    let subtitleList
     if (hlsTemp == filePath) {
         console.log('exist');
         res.send('Ok.')
-    } else return stat(`${filePath}`)
+    } else return stat(path.resolve(filePath))
         .catch(err => {
-            console.log('文件错误' + filePath);
+            console.log('文件错误' + path.resolve(filePath));
             // throw new Error('文件错误' + filePath)
         }).then((result) => {
             currentProcess = null
@@ -217,40 +269,57 @@ function handleVideoRequest(req, res, filePath) {
                 res.status(404).send('文件错误')
                 return Promise.reject()
             }).then((info) => {
+                if (!info.codec) {
+                    res.status(404).send('文件错误')
+                    throw new Error('文件错误')
+                }
                 videoInfo = info
-                return handleSubtitle(filePath, videoInfo)
+                return handleSubtitle(filePath, videoInfo).catch(e => console.log(e))
             }).then((result) => {
-                subtitlePath = result
+                subtitleList = result
                 // console.log('------------------~~~~~~~~~~~~~~~~~~~~~',result[0]);
                 return generateM3U8(videoInfo)
             }).then(() => {
                 hlsTemp = filePath
-                return generateTsQueue(videoInfo, subtitlePath)
+                return generateTsQueue(videoInfo, subtitleList)
             }).then((queue) => {
                 if (FFmpegProcess.index0.state = 'init') {
                     FFmpegProcess.index0.state = 'doing'
                     FFmpegProcess.index0.process()
                 }
-                return writeFile(`${settings.tempPath}/videoIndex.json`, JSON.stringify(videoIndex, '', '\t')).then((result) => {
+                return writeFile(path.resolve(settings.tempPath, 'output', 'videoIndex.json'), JSON.stringify(videoIndex, '', '\t')).then((result) => {
                     // console.log(videoIndex);
                     res.send("Ok.")
                 }).catch((err) => {
                     console.log(err);
                 });
-            })
+            }).catch()
         })
 }
 
+function continueFFmpegProgress(params) {
+    if (transState == 'stop') {
+        transState = 'continue'
+        // console.log('>>>>>>>>>>!~~~~~~~~~~~',transState);
+        for (const index in FFmpegProcess) {
+            if (FFmpegProcess[index].state == 'init') {
+                FFmpegProcess[index].process()
+                console.log('>>>>>>>>>>!~~~~~~~~~~~', index, FFmpegProcess[index]);
+                break
+            }
+        }
+    }
+}
 
 
 function getVideoInfo(filePath) {
     return new Promise((r, j) => {
         Ffmpeg.ffprobe(filePath, function (err, metadata) {
-            console.log(metadata);
-            // console.log(metadata.streams[0]);
+            // console.log(metadata);
             if (err) {
                 return j(err)
             }
+            console.log(metadata.streams[0]);
             let {
                 bit_rate,
                 duration
@@ -258,39 +327,104 @@ function getVideoInfo(filePath) {
             let vidoeStream = metadata.streams.find((v) => {
                 return v.codec_type == 'video'
             })
-            let subtitleStream = metadata.streams.find((v) => {
-                return v.codec_type == 'subtitle'
+            let audioStream = metadata.streams.find((v) => {
+                return v.codec_type == 'audio'
+            })
+            let subtitleStream = []
+            metadata.streams.forEach((v) => {
+                if (v.codec_type == 'subtitle') {
+                    subtitleStream.push(v)
+                }
             })
             let {
                 codec_name,
                 width,
                 height,
                 pix_fmt,
-                r_frame_rate
+                r_frame_rate,
+                color_space,
+                index
             } = { ...vidoeStream }
             let videoInfo = {
+                index,
                 codec: codec_name,
+                audioCodec: audioStream.codec_name,
                 bitrate: bit_rate,
                 duration,
                 width,
                 height,
                 frame_rate: r_frame_rate.split('/')[0] / 1000,
                 pix_fmt,
+                colorSpace: color_space,
                 subtitleStream
             }
             // console.log(videoInfo);
             return r(videoInfo)
         })
+    }).catch(e => console.log(e))
+}
+
+function handleSubtitle(filePath, videoInfo) {
+    let videoSub = ['pgs']
+    let textSub = ['ass', 'ssa', 'srt', 'vtt', 'mks', 'subrip']
+    let specialCharacter = [':', `'`, '"', '`', '.', '?', '(', ')', '*', '^', '{', '$', '|']
+    let videoName = path.parse(filePath).name
+    subtitleList = []
+    fileRootPath = path.dirname(filePath)
+    return readdir(fileRootPath).catch((err) => {
+        console.log(err)
+    }).then((dir) => {
+        dir.forEach(v => {
+            let suffix = path.extname(v).replace('.', '')
+            if (v.includes(videoName) && [...videoSub, ...textSub].includes(suffix)) {
+                let sub = { path: path.join(fileRootPath, v), source: 'out', codec: suffix }
+                if (textSub.includes(suffix)) {
+                    sub.type = 'text'
+                } else sub.type = 'video'
+                try {
+                    // let tempSubPath = path.resolve(settings.tempPath,'output',`in.${suffix}`)
+                    let tempSubPath = path.resolve(`in.${suffix}`)
+                    let end = false
+                    specialCharacter.forEach(v => {
+                        if (end) {
+                            return
+                        }
+                        console.log('~~~~~~~~~~~~~~~~~~~~~~', v);
+                        if (sub.path.includes(v)) {
+                            console.log('copy', sub.path);
+                            fs.copyFileSync(sub.path, tempSubPath)
+                            sub.path = tempSubPath
+                            console.log('to', sub.path);
+                            end = true
+                        }
+                    })
+                } catch (error) {
+                    console.log(error);
+                }
+                subtitleList.push(sub)
+            }
+        })
+        if (videoInfo.subtitleStream[0]) {
+            videoInfo.subtitleStream.forEach((v, i) => {
+                let sub = { path: filePath, source: 'in', codec: v.codec_name, details: v, subStreamIndex: i }
+                if (textSub.includes(v.codec_name)) {
+                    sub.type = 'text'
+                } else sub.type = 'video'
+                subtitleList.push(sub)
+            })
+        }
+        console.log(subtitleList[0]);
+        return subtitleList
     })
 }
 
-
-
 function generateM3U8(videoInfo) {
+    console.log(videoInfo);
     let { duration } = videoInfo
     let segmentLength = 3
     let segmentDuration = Number((segmentLength * 1001 / 1000).toFixed(3))
-    let duration_ts = segmentDuration * 90000
+    // let duration_ts = 268393
+    let duration_ts = segmentDuration * 90000 - 1
     let lastSegmentDuration = (duration % segmentLength * 1001 / 1000).toFixed(3)
     let segmentNum = parseInt(duration / 1.001 / segmentLength)
     // let { timeList, header } = { ...example.listExample }
@@ -316,41 +450,42 @@ function generateM3U8(videoInfo) {
         videoIndex[`index${i}`] = { start_pts, duration_ts, start, end, segmentDuration, id: i }
     }
     return new Promise((r, j) => {
-        rimraf(`${settings.tempPath}output`, (err) => {
+        rimraf(path.resolve(settings.tempPath, 'output'), (err) => {
             console.log(err);
             r()
         })
     }).then((result) => {
-        return mkdir(`${settings.tempPath}output`)
+        return mkdir(path.resolve(settings.tempPath, 'output'))
     }).then((result) => {
         console.log('clear');
-        return writeFile(settings.tempPath + 'output/index.m3u8', M3U8).catch(err => { console.log(err); })
+        return writeFile(path.resolve(settings.tempPath, 'output', 'index.m3u8'), M3U8).catch(err => { console.log(err); })
     }).catch((err) => {
         console.log(err);
     })
 }
 
 
-function generateTsQueue(videoInfo, subtitlePath) {
+function generateTsQueue(videoInfo, subtitleList) {
     let filePath = hlsTemp
     let lastWriteId = -1
     for (const segment in videoIndex) {
-        let { inputParams, outputParams } = generateFfmpegCommand(videoInfo, subtitlePath, segment)
+        let { inputParams, outputParams } = generateFfmpegCommand(videoInfo, subtitleList, segment)
         let params = [
             ...inputParams,
             `-i "${filePath}"`,
             ...outputParams,
-            `${settings.tempPath}output/tempList/${segment}.m3u8`
+            path.resolve(settings.tempPath, 'output', 'tempList', `${segment}.m3u8`)
         ]
         // if (segment == 'index0') {
         // }
         let process = async () => {
             await killCurrentProcess(segment)
+            transState = 'doing'
             if ((Number(segment.replace('index', '')) == Object.keys(videoIndex).length - 1) && FFmpegProcess[segment].state == 'done') {
                 return
             }
-            console.log(path.resolve(settings.ffmpegPath, 'ffmpeg.exe'));
-            let ffmpeg = spawn(settings.ffmpegPath ? `"${path.resolve(settings.ffmpegPath, 'ffmpeg.exe')}"` : 'ffmpeg', params, {
+            console.log(path.resolve(settings.ffmpegPath, `ffmpeg${ffmpegSuffix}`));
+            let ffmpeg = spawn(settings.ffmpegPath ? `"${path.resolve(settings.ffmpegPath, `ffmpeg${ffmpegSuffix}`)}"` : 'ffmpeg', params, {
                 shell: true,
                 //    stdio: 'inherit'
             })
@@ -388,6 +523,7 @@ function generateTsQueue(videoInfo, subtitlePath) {
             ffmpeg.stderr.on('data', async function (stderrLine) {
                 currentProcess = ffmpeg
                 stderrLine = stderrLine.toString()
+                // console.log(`~${stderrLine}`);
                 // console.log(`${stderrLine} ${Boolean(stderrLine.match(/Opening.*for writing/))} ${stderrLine.search(/m3u8/) == -1}`);
                 if (/Opening.*for writing/.test(stderrLine) && !/m3u8/i.test(stderrLine)) {
                     let writingSegment = path.parse(path.parse(/'.*'/.exec(stderrLine)[0]).name).name
@@ -399,17 +535,20 @@ function generateTsQueue(videoInfo, subtitlePath) {
                     // await checkSegment(writingSegment)
 
                     if (lastWriteId != writingSegmentId - 1 && lastWriteId >= ffmpeg.id) {
-                        tempLostSegment = `index${lastWriteId}`
-                        console.log('lossssssssssssssssssssst', lastWriteId);
-                        stat(path.resolve(settings.tempPath, 'output', `${tempLostSegment}.ts`)).then((result) => {
-                            FFmpegProcess[tempLostSegment].state = 'done'
-                            console.log('reloaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaad', result, tempLostSegment, FFmpegProcess[tempLostSegment]);
-                        }).catch((err) => {
-                            console.log('errrrrrrrrrrrrr', FFmpegProcess[tempLostSegment], err);
-                        });
+                        for (; lastWriteId <= writingSegmentId - 1; lastWriteId++) {
+                            let tempLostSegment = `index${lastWriteId}`
+                            console.log('lossssssssssssssssssssst', lastWriteId);
+                            stat(path.resolve(settings.tempPath, 'output', `${tempLostSegment}.ts`)).then((result) => {
+                                FFmpegProcess[tempLostSegment].state = 'done'
+                                console.log('reloaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaad', result, tempLostSegment, FFmpegProcess[tempLostSegment]);
+                            }).catch((err) => {
+                                console.log('errrrrrrrrrrrrr', FFmpegProcess[tempLostSegment], err);
+                            });
+                        }
                         // await checkSegment(`index${lastWriteId}`)
                     }
-                    writingSegmentId = Number(writingSegment.replace('index', ''))
+                    lastWriteId = writingSegmentId
+
                     // console.log(writingSegmentId);
                     if (writingSegmentId != ffmpeg.id) {
                         let completedSegment = `index${writingSegmentId - 1 >= 0 ? writingSegmentId - 1 : 0}`
@@ -417,7 +556,6 @@ function generateTsQueue(videoInfo, subtitlePath) {
                         FFmpegProcess[completedSegment].state = 'done'
                         console.log(completedSegment, 'done');
                     }
-                    lastWriteId = writingSegmentId
 
                     if (writingSegmentId == Object.keys(videoIndex).length - 1) {
                         console.log('end~~~~~~~~~~~~~~~~~~', writingSegmentId);
@@ -482,6 +620,7 @@ function killCurrentProcess(start) {
             return r()
         }, 500);
     }).then((result) => {
+        transState = 'stop'
         return result
     }).catch((err) => {
         console.log(err);
@@ -489,116 +628,366 @@ function killCurrentProcess(start) {
     })
 }
 
-function handleSubtitle(filePath, videoInfo) {
-    let subType = ['.mks', '.ass', '.ssa', '.srt', '.vtt']
-    // if (videoInfo.subtitleStream) {
-
-    // } else {
-    let videoName = path.parse(filePath).name
-    let suffix = path.extname(filePath)
-    subtitleList = []
-    fileRootPath = path.dirname(filePath)
-    return readdir(fileRootPath).catch((err) => {
-        console.log(err)
-    }).then((dir) => {
-        dir.forEach(v => {
-            if (v.includes(videoName) && subType.includes(path.extname(v))) {
-                subtitleList.push(path.join(fileRootPath, v))
-
-            }
-        })
-        if (subtitleList[0]) {
-            fs.copyFileSync(subtitleList[0], 'in.ass')
-            return 'in.ass'
-        } else if (videoInfo.subtitleStream) {
-            return new Promise((r, j) => {
-                if (subType.includes('.' + videoInfo.subtitleStream.codec_name)) {
-                    // console.log('.'+videoInfo.subtitleStream.codec_name);
-                    let ffmpeg = spawn(settings.ffmpegPath ? `"${path.resolve(settings.ffmpegPath, 'ffmpeg.exe')}"` : 'ffmpeg', [
-                        `-i "${filePath}"`,
-                        '-y',
-                        `in.ass`,
-                    ], {
-                        shell: true,
-                        //    stdio: 'inherit'
-                    })
-                    ffmpeg.on('close', function (stderrLine) {
-                        r('in.ass')
-                    })
-                } else {
-                    r(null)
-                }
-            })
+function cleanNull(arr) {
+    let temp = []
+    arr.forEach(v => {
+        if (v.length > 0) {
+            temp.push(v)
         }
-        return null
     })
-    // }
-
+    return temp
 }
 
-function generateFfmpegCommand(videoInfo, subtitlePath, segment) {
+function generateFfmpegCommand(videoInfo, subtitleList, segment) {
+    // settings.advAccel = false
     let inputParams = [
     ]
     let outputParams = [
     ]
 
-
-    let decoder = ''
-    if (decoders.hasOwnProperty(settings.platform)) {
-        if (!(videoInfo.codec == 'h264' && /yuv\d{3}p\d{0,2}/.exec(videoInfo.pix_fmt)[0].replace(/yuv\d{3}p/, '') >= 10)) {
-            decoder = `-c:v ${videoInfo.codec}${decoders[settings.platform]}`
-        }
-    } else if (hwaccels.hasOwnProperty(settings.platform)) {
-
-    }
-
-    let encoder = `-c:v ${encoders[settings.encode][settings.platform]}`
-    // if (settings.encode == 'h265'&& videoInfo.codec=='hevc') {
-    //     encoder = '-c:v copy'
-    // }
-    let pix_fmt = ''
-    if (settings.encode == 'h264') {
-        pix_fmt = `-pix_fmt yuv420p`
-    }
-    let tag = ''
-    if (settings.encode == 'h265') {
-        tag = '-tag:v hvc1'
-    }
-
-    let copyts = '-copyts'
-    let sub = []
-    if (subtitlePath) {
-        sub = [
-            '-sn',
-            `-vf subtitles=${subtitlePath}`,
-            // `-c:s ass`,
-        ]
-    }
+    let map = [
+        '-map v:0',
+        '-map a:0',
+        // '-map s:0'
+    ]
 
     let bitrate = [
         `-b:v ${settings.bitrate}M`,
         `-bufsize ${settings.bitrate * 2}M`,
         `-maxrate ${settings.bitrate}M`
     ]
-
+    let bitrateVal = settings.bitrate
     if (settings.autoBitrate) {
+        if (videoInfo.bitrate * 1.5 <= settings.bitrate * 1000000) {
+            bitrateVal = settings.bitrate * 1000000
+        } else if (videoInfo.bitrate >= settings.bitrate * 1000000 * 1.5) {
+            bitrateVal = settings.bitrate * 1000000 * 1.5
+        } else {
+            bitrateVal = videoInfo.bitrate * 1.2
+        }
         bitrate = [
-            `-b:v ${videoInfo.bitrate}`,
-            `-bufsize ${videoInfo.bitrate * 2}`,
-            `-maxrate ${videoInfo.bitrate}`
+            `-b:v ${bitrateVal}`,
+            `-bufsize ${bitrateVal * 2}`,
+            `-maxrate ${bitrateVal}`
         ]
     }
 
+    let decoder = ''
+    let advAccel = settings.advAccel
+    let hwaccelParams = []
+    let hwDeviceId = ''
+    let hwaccels = {
+        win: {
+            nvidia: {
+                hwDevice: 'cuda',
+                hwDeviceName: 'cu',
+                flHwDevice: 'cuda',
+                flHwDeviceName: 'cu',
+                hwaccel: 'cuda',
+                hwOutput: 'cuda',
+                pixFormat: 'yuv420p',
+                subFormat: 'yuva420p',
+                scaleHw: 'cuda',
+                scaleFormat: 'yuv420p',
+                hwmap: 'cuda',
+                hwmapFormat: 'cuda',
+            },
+            intel: {
+                hwDevice: 'd3d11va',
+                hwDeviceName: 'dx11',
+                flHwDevice: 'qsv',
+                flHwDeviceName: 'qs',
+                hwaccel: 'qsv',
+                hwOutput: 'qsv',
+                pixFormat: 'nv12',
+                subFormat: 'bgra',
+                scaleHw: 'qsv',
+                scaleFormat: 'nv12',
+                hwmap: 'qsv',
+                hwmapFormat: 'nv12',
+            },
+            amd: {
+                hwDevice: 'd3d11va',
+                hwDeviceName: 'dx11',
+                flHwDevice: 'opencl',
+                flHwDeviceName: 'oc',
+                hwaccel: 'd3d11va',
+                hwOutput: 'd3d11',
+                pixFormat: 'nv12',
+                subFormat: 'yuva420p',
+                scaleHw: 'opencl',
+                scaleFormat: 'nv12',
+                hwmap: 'opencl',
+                hwmapFormat: 'nv12',
+            },
+        },
+        lin: {
+            nvidia: {
+                hwDevice: 'cuda',
+                hwDeviceName: 'cu',
+                flHwDevice: 'cuda',
+                flHwDeviceName: 'cu',
+                hwaccel: 'cuda',
+                hwOutput: 'cuda',
+                pixFormat: 'yuv420p',
+                subFormat: 'yuva420p',
+                scaleHw: 'cuda',
+                scaleFormat: 'yuv420p',
+                hwmap: 'cuda',
+                hwmapFormat: 'cuda',
+            },
+            intel: {
+                hwDevice: 'vaapi',
+                hwDeviceName: 'va',
+                hwaccel: 'vaapi',
+                hwOutput: 'vaapi',
+                flHwDevice: 'qsv',
+                flHwDeviceName: 'qs',
+                scaleHw: 'vaapi',
+                scaleFormat: 'nv12',
+                hwmap: 'qsv',
+                hwmapFormat: 'qsv',
+                pixFormat: 'nv12',
+                subFormat: 'bgra'
+            },
+            amd: {
+                hwDevice: 'null',
+                hwDeviceName: 'null',
+                flHwDevice: 'null',
+                flHwDeviceName: 'null',
+                flFormat: 'null',
+                hwaccel: 'null',
+                hwOutput: 'null',
+                pixFormat: 'yuv420p',
+                subFormat: 'yuva420p'
+            },
+            vaapi: {
+                hwDevice: 'vaapi',
+                hwDeviceName: 'va',
+                hwaccel: 'vaapi',
+                hwOutput: 'vaapi',
+                flHwDevice: 'vaapi',
+                flHwDeviceName: 'va',
+                scaleHw: 'vaapi',
+                scaleFormat: 'nv12',
+                hwmap: 'vaapi',
+                hwmapFormat: 'vaapi',
+                pixFormat: 'nv12',
+                subFormat: 'nv12'
+            }
+        }
+    }
+    for (const key in gpus) {
+        let reg = new RegExp(settings.platform, 'i')
+        if (key.match(reg)) {
+            hwDeviceId = gpus[key]
+        }
+        // console.log(hwDeviceId);
+    }
+    // console.log(hwaccels[osPlatform][settings.platform]);
+    let { hwDevice, hwDeviceName, flHwDevice, flHwDeviceName, scaleHw, scaleFormat, hwmap, hwmapFormat, hwaccel, hwOutput, pixFormat, subFormat } = hwaccels[osPlatform][settings.platform]
+    if (hwaccel == 'cuda') {
+        hwaccelParams = [
+            `-init_hw_device ${hwDevice}=${hwDeviceName}`,
+            `-filter_hw_device ${hwDeviceName}`,
+            `-hwaccel ${hwaccel}`,
+            `-hwaccel_output_format ${hwOutput}`
+        ]
+    } else if (hwaccel == 'qsv' || hwaccel == 'd3d11va' || hwaccel == 'vaapi') {
+        hwaccelParams = [
+            `-init_hw_device ${hwDevice}=${hwDeviceName}${hwDeviceId}`,
+            `${settings.platform != 'vaapi' ? `-init_hw_device ${flHwDevice}=${flHwDeviceName}@${hwDeviceName}` : ''}`,
+            `-filter_hw_device ${flHwDeviceName}`,
+            `-hwaccel ${hwaccel}`,
+            `-hwaccel_output_format ${hwOutput}`,
+        ]
+    }
+    let notSupport = /yuv\d{3}p\d{0,2}/.exec(videoInfo.pix_fmt)[0].replace(/yuv\d{3}p/, '') >= 10
+    if (decoders.hasOwnProperty(settings.platform)) {
+        if (!(videoInfo.codec == 'h264' && notSupport)) {
+            decoder = `-c:v ${videoInfo.codec}${decoders[settings.platform]}`
+        }
+    }
+    if (hwaccel == 'vaapi') {
+        decoder = ''
+    } else {
+
+    }
+
+    let threads = '-threads 0'
+    let encoder = `-c:v ${encoders[settings.encode][settings.platform]}`
+    // let copyVideo = false
+    // if ((settings.encode == 'h264'&& videoInfo.codec=='h264')&&(videoInfo.bitrate<=bitrateVal)&&!videoInfo.subtitleStream[0]) {
+    //     encoder = '-c:v copy'
+    //     copyVideo = true
+    // }
+    let pix_fmt = ''
+    // if (settings.encode == 'h264') {
+    //     pix_fmt = `yuv420p`
+    // }
+    // if (hwaccels[settings.platform] == 'd3d11va') {
+    //     pix_fmt = `nv12`
+    // }
+
+    let tag = ''
+    if (settings.encode == 'h265') {
+        tag = '-tag:v hvc1'
+    }
+    let copyts = '-copyts'
+
+    let filter = []
+    let videoFilter = []
+    let subtitleFilter = []
+    let overlayFilter = []
+    let subtitleListIndex = 0
+    let overlay = false
+    let sub
+    let subtitlePath
+    let fontsDir = path.resolve(settings.tempPath, 'fonts').replace(/\\/gim, '/').replace(':', '\\:')
+    if (subtitleList[subtitleListIndex]) {
+        overlay = true
+        sub = subtitleList[subtitleListIndex]
+        subtitlePath = sub.path.replace(/\\/gim, '/').replace(':', '\\:')
+        if (sub.source == 'out') {
+            if (sub.type == 'text') {
+                subtitleFilter = [
+                    `alphasrc=s=${videoInfo.width}x${videoInfo.height}:r=10:start='${videoIndex[segment].start}'`
+                    , `format=${subFormat}`
+                    , `subtitles=f='${subtitlePath}':charenc=utf-8:alpha=1:sub2video=1:fontsdir='${fontsDir}'`
+                ]
+            } else {
+                subtitleFilter = [
+                    , `format=${subFormat}`
+                    , `subtitles=f='${subtitlePath}'`
+                ]
+            }
+        } else if (sub.source == 'in') {
+            if (sub.type == 'text') {
+                // subtitleFilter = [
+                //     `alphasrc=s=${videoInfo.width}x${videoInfo.height}:r=10:start='${videoIndex[segment].start}'`
+                //     , `format=${subFormat}`
+                // ]
+                // if (hwaccel == 'vaapi') {
+                subtitleFilter = [
+                    `alphasrc=s=${videoInfo.width}x${videoInfo.height}:r=10:start='${videoIndex[segment].start}'`
+                    , `format=${subFormat}`
+                    , `subtitles=f='${subtitlePath}':si=${sub.subStreamIndex}:charenc=utf-8:alpha=1:sub2video=1:fontsdir='${fontsDir}'`
+                ]
+                // }
+            } else {
+                subtitleFilter = [
+                    `[0:${sub.details.index}]scale=s=${videoInfo.width}x${videoInfo.height}:flags=fast_bilinear`
+                    , `format=${subFormat}`
+                ]
+            }
+        }
+        subtitleFilter.push(`hwupload=derive_device=${flHwDevice}:extra_hw_frames=64[sub]`)
+        subtitleFilter = cleanNull(subtitleFilter).join(',')
+    }
+
+    if (hwaccel == 'd3d11va') {
+        videoFilter.push(`hwmap=derive_device=${hwmap}`)
+    }
+    videoFilter.push(`scale_${scaleHw}=format=${scaleFormat}`)
+    if ((hwaccel == 'd3d11va' && !overlay) || hwaccel == 'vaapi') {
+        // if (flHwDevice != 'vaapi') {
+        videoFilter.push(`hwmap=derive_device=${hwmap}${hwaccel == 'd3d11va' ? ':reverse=1' : ''},format=${hwmapFormat}`)
+        // }
+    }
+    videoFilter = cleanNull(videoFilter).join(',')
+    if (overlay) {
+        videoFilter = `[0:${videoInfo.index}]${videoFilter}[main]`
+    }
+
+    if (overlay) {
+        overlayFilter.push(`[main][sub]overlay_${flHwDevice}=eof_action=endall`)
+        if (hwaccel == 'd3d11va') {
+            overlayFilter = [
+                ...overlayFilter
+                , `hwmap=derive_device=${hwmap}${hwaccel == 'd3d11va' ? ':reverse=1' : ''}`
+                , `format=${hwmapFormat}`
+            ]
+        }
+    }
+    overlayFilter = cleanNull(overlayFilter).join(',')
+
+    filter = cleanNull([subtitleFilter, videoFilter, overlayFilter])
+    // if (!overlay) {
+    //     filter = `-vf "${filter.join(';')}"`
+    // } else {
+    filter = `-filter_complex "${filter.join(';')}"`
+    if (settings.platform == 'vaapi') {
+        filter = `-vf "scale_vaapi=format=nv12${sub ? ',hwmap,format=nv12' : ''}${sub ? `,subtitles=f='${subtitlePath}'${sub.source == 'in' ? `:si=${sub.subStreamIndex}` : ''}:fontsdir='${fontsDir}',hwmap,format=vaapi` : ''}"`
+    }
+    if (osPlatform == 'lin' && settings.platform == 'amd') {
+        hwaccelParams = []
+        filter = `-vf "format=yuv420p${sub ? `,subtitles=f='${subtitlePath}'${sub.source == 'in' ? `:si=${sub.subStreamIndex}` : ''}${sub.type == 'text' ? `:fontsdir='${fontsDir}'` : ''}` : ''}"`
+    }
+    // }
+    if ((videoInfo.codec == 'h264' && notSupport) || !advAccel) {
+        // filter = `-vf "format=yuv420p"`
+        filter = ''
+        // hwaccelParams=[]
+        if (hwaccel == 'vaapi') {
+            pix_fmt = ''
+        } else pix_fmt = '-pix_fmt yuv420p'
+
+        if (sub) {
+            if (sub.source == 'out') {
+                if (sub.type == 'text') {
+                    filter = `-vf "format=${subFormat},subtitles=f='${subtitlePath}':alpha=1:fontsdir='${fontsDir}'${settings.platform == 'vaapi' ? ',hwupload_vaapi' : ''}"`
+                } else {
+                    filter = `-vf "format=${subFormat},subtitles=f='${subtitlePath}'${settings.platform == 'vaapi' ? ',hwupload_vaapi' : ''}"`
+                }
+            } else if (sub.source == 'in') {
+                if (sub.type == 'text') {
+                    filter = `-filter_complex "[0:${sub.details.index}]format=${subFormat}${settings.platform == 'vaapi' ? ',hwupload_vaapi' : ''}"`
+                } else {
+                    filter = `-filter_complex "[0:${sub.details.index}]format=${subFormat},scale=s=${videoInfo.width}x${videoInfo.height}:flags=fast_bilinear${settings.platform == 'vaapi' ? ',hwupload_vaapi' : ''}"`
+                }
+            }
+            // pix_fmt = ''
+        }
+        if (!advAccel) {
+            hwaccelParams = []
+            if (sub) {
+                filter = `-vf "subtitles=f='${sub.path.replace(/\\/gim, '/').replace(':', '\\:')}'${sub.source == 'in' ? `:si=${sub.subStreamIndex}` : ''}:fontsdir='${fontsDir}'"`
+            }
+        }
+    }
+    if (videoInfo.colorSpace != 'bt709') {
+        // filter = ''
+        // hwaccelParams = [
+        //     `-init_hw_device ${hwDevice}=${hwDeviceName}:,vendor=0x${hwDeviceId}`,
+        //     `-hwaccel ${hwaccel}`,
+        // ]
+        // hwaccelParams=[]
+        // threads = ''
+        // pix_fmt = '-pix_fmt yuv420p'
+        // if (sub) {
+        // pix_fmt = ''
+        //     let subtitlePath = sub.path
+        //     filter = `-vf "subtitles=f='${subtitlePath}':alpha=1:fontsdir='${path.resolve(settings.tempPath, 'fonts').replace(/\\\\/gim, '/').replace(':', '\\:')}'"`
+        // }
+    }
+
+
+
     let ss = `-ss ${videoIndex[segment].start}`
-    let audio = [
-        `-c:a aac`,
+    let audio = []
+    // if (videoInfo.audioCodec == 'aac') {
+    //     audio = ['-c:a copy']
+    // } else 
+    audio = [
+        `-c:a libfdk_aac`,
         '-ac 2 ',
-        '-ab 384000'
+        '-ab 192000'
     ]
     let segmentParams = [
         '-avoid_negative_ts disabled',
         `-g ${videoInfo.frame_rate * 3}`,
-        `-keyint_min:v:0 ${videoInfo.frame_rate * 3}`,
+        `-keyint_min ${videoInfo.frame_rate * 3}`,
+        '-bf 1',
     ]
     let customInputCommand = []
     let customOutputCommand = []
@@ -607,6 +996,7 @@ function generateFfmpegCommand(videoInfo, subtitlePath, segment) {
 
     if (customInputCommand[0].length > 0) {
         decoder = ''
+        hwaccel = []
         console.log('~~~~~~~~' + customInputCommand);
     }
     if (customOutputCommand[0].length > 0) {
@@ -625,34 +1015,48 @@ function generateFfmpegCommand(videoInfo, subtitlePath, segment) {
         , '-hls_segment_type mpegts'
         , '-hls_flags temp_file'
         , `-start_number ${videoIndex[segment].id}`
-        , `-hls_segment_filename "${settings.tempPath}output/index%d.ts"`
+        , `-hls_segment_filename "${path.resolve(settings.tempPath, 'output', `index%d.ts`)}"`
         , '-hls_playlist_type event'
         , '-hls_list_size 0'
     ]
 
     let inTest = [
-        '-extra_hw_frames 3',
-        '-autorotate 0'
+        '-analyzeduration 200M',
+        // '-extra_hw_frames 64',
+        // '-autorotate 0',
     ]
 
     let outTest = [
         '-map_metadata -1',
         '-map_chapters -1',
-        '-threads 0',
+        // '-threads 0',
         '-start_at_zero',
         // '-vsync -1',
-        '-max_muxing_queue_size 2048',
-        // '-sc_threshold:v:0 0',
-        '-profile:v:0 high'
+        // '-max_muxing_queue_size 2048',
+        // '-sc_threshold 0',
+        // '-b_strategy 0'
+        // '-profile:v:0 high',
+        // '-flags +cgop',
+        // `-segment_time_delta ${1 / (2 * videoInfo.frame_rate)}`,
+        // '-quality speed',
+        '-rc cbr',
+        // '-force_key_frames expr:gte(t,n_forced*3)',
+        // '-force_key_frames expr:if(isnan(prev_forced_n),eq(n,prev_forced_n+71))'
     ]
 
-
+    // if (copyVideo) {
+    //     filter = []
+    //     decoder = []
+    //     hwaccel = []
+    //     bitrate = []
+    // }
 
 
     inputParams = [
         ss,
+        ...hwaccelParams,
         decoder,
-        // ...inTest,
+        ...inTest,
         ...customInputCommand,
     ]
     let inTemp = []
@@ -664,13 +1068,15 @@ function generateFfmpegCommand(videoInfo, subtitlePath, segment) {
     inputParams = inTemp
 
     outputParams = [
-        // ...outTest,
+        ...outTest,
+        ...map,
+        threads,
         encoder,
         pix_fmt,
+        filter,
         tag,
-        copyts,
-        ...sub,
         ...audio,
+        copyts,
         ...segmentParams,
         ...bitrate,
         ...customOutputCommand,
@@ -753,14 +1159,14 @@ function initMaindata(params) {
             for (const hash in newData.torrents) {
                 if (libraryIndex.allSeason[newData.torrents[hash].content_path]) {
                     newData.torrents[hash].mediaInfo = JSON.parse(JSON.stringify(libraryIndex.allSeason[newData.torrents[hash].content_path]))
-                    newData.torrents[hash].mediaInfo.poster = `/api/localFile/img.jpg?cookie=${encodeURIComponent(SID)}&type=picture&path=${encodeURIComponent(libraryIndex.allSeason[newData.torrents[hash].content_path].poster)}`
+                    newData.torrents[hash].mediaInfo.poster = `/api/localFile/img.jpg?type=picture&path=${encodeURIComponent(libraryIndex.allSeason[newData.torrents[hash].content_path].poster)}`
                 } else if (newData.torrents[hash].content_path == newData.torrents[hash].save_path) {
                     if (!libraryIndex.collections[hash]) {
                         libraryIndex.collections[hash] = { rootPath: path.resolve(newData.torrents[hash].save_path) }
                         update = true
                     } else if (libraryIndex.collections[hash].title) {
                         newData.torrents[hash].mediaInfo = JSON.parse(JSON.stringify(libraryIndex.collections[hash]))
-                        newData.torrents[hash].mediaInfo.poster = `/api/localFile/img.jpg?cookie=${encodeURIComponent(SID)}&type=picture&path=${encodeURIComponent(newData.torrents[hash].mediaInfo.poster)}`
+                        newData.torrents[hash].mediaInfo.poster = `/api/localFile/img.jpg?type=picture&path=${encodeURIComponent(newData.torrents[hash].mediaInfo.poster)}`
                     }
                 }
             }
@@ -777,7 +1183,7 @@ function initMaindata(params) {
 }
 
 function generatePictureUrl(path) {
-    return `/api/localFile/img.jpg?cookie=${encodeURIComponent(SID)}&type=picture&path=${encodeURIComponent(path)}`
+    return `/api/localFile/img.jpg?type=picture&path=${encodeURIComponent(path)}`
 }
 
 app.use(express.json())
@@ -794,8 +1200,15 @@ app.use(cookieParser())
 //         res.status(404).send('not found')
 //     })
 // })
+// app.use(logger('dev'));
+// app.use(express.static(path.join(__dirname, 'public')));
+// app.get('/',(req,res)=>{
+//     res.sendFile(path.resolve(__dirname,'dist','index.html'))
+// })
 
-app.use('/', (req, res, next) => {
+
+
+app.use('/api', (req, res, next) => {
     // console.log(req.headers.cookie,req.cookies);
     if (req.cookies) {
         // console.log(SID,req.cookies.SID);
@@ -888,7 +1301,6 @@ app.use('/api/localFile/changeFileServerSettings', async (req, res) => {
             }
         }
     })
-    currentProcess = null
     await killCurrentProcess()
     writeFile('./settings.json', JSON.stringify(settings, '', '\t')).then((result) => {
         console.log('已更新配置');
@@ -905,9 +1317,12 @@ app.use('/api/localFile/output', (req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     let targetSegment = path.parse(req.path).name
     console.log('-------------------->', targetSegment);
+    // if (transState=='stop') {
+    //         continueFFmpegProgress() 
+    // }
     if (req.path == '/index.m3u8') {
         res.header('Content-Type', 'application/x-mpegURL')
-        res.sendFile(path.resolve(`${settings.tempPath}output/index.m3u8`))
+        res.sendFile(path.resolve(settings.tempPath, 'output', 'index.m3u8'))
         return
     } else {
         res.header('Content-Type', 'video/m2pt')
@@ -984,6 +1399,10 @@ app.use('/api/localFile/output', (req, res, next) => {
                     console.log('seeeeeeeeeeeeeeeeeeeend', targetSegment);
                     tryTimes = 0
                     res.sendFile(path.resolve(settings.tempPath, 'output', targetSegment + '.ts'))
+                    // clearTimeout(cleanTimeout)
+                    // cleanTimeout = setTimeout(() => {
+                    //     killCurrentProcess()
+                    // }, 1000*15);
                     return
                 } else {
                     setTimeout(() => {
@@ -1005,9 +1424,9 @@ app.use('/api/localFile/output', (req, res, next) => {
 app.use('/api/localFile/clearVideoTemp', (req, res, next) => {
     killCurrentProcess()
     setTimeout(() => {
-        rimraf(`${settings.tempPath}output`, (err) => {
+        rimraf(path.resolve(settings.tempPath, 'output'), (err) => {
             console.log(err);
-            mkdir(`${settings.tempPath}output`).then((result) => {
+            mkdir(path.resolve(settings.tempPath, 'output')).then((result) => {
                 console.log('clear');
                 hlsTemp = null
                 res.send('Ok.')
@@ -1119,14 +1538,14 @@ app.use("/api/v2/sync/maindata", async (req, res, next) => {
                 for (const hash in newData.torrents) {
                     if (libraryIndex.allSeason[newData.torrents[hash].content_path]) {
                         newData.torrents[hash].mediaInfo = JSON.parse(JSON.stringify(libraryIndex.allSeason[newData.torrents[hash].content_path]))
-                        newData.torrents[hash].mediaInfo.poster = `/api/localFile/img.jpg?cookie=${encodeURIComponent(SID)}&type=picture&path=${encodeURIComponent(libraryIndex.allSeason[newData.torrents[hash].content_path].poster)}`
+                        newData.torrents[hash].mediaInfo.poster = `/api/localFile/img.jpg?type=picture&path=${encodeURIComponent(libraryIndex.allSeason[newData.torrents[hash].content_path].poster)}`
                     } else if (newData.torrents[hash].content_path == newData.torrents[hash].save_path) {
                         if (!libraryIndex.collections[hash]) {
                             libraryIndex.collections[hash] = { rootPath: path.resolve(newData.torrents[hash].save_path) }
                             update = true
                         } else if (libraryIndex.collections[hash].title) {
                             newData.torrents[hash].mediaInfo = JSON.parse(JSON.stringify(libraryIndex.collections[hash]))
-                            newData.torrents[hash].mediaInfo.poster = `/api/localFile/img.jpg?cookie=${encodeURIComponent(SID)}&type=picture&path=${encodeURIComponent(newData.torrents[hash].mediaInfo.poster)}`
+                            newData.torrents[hash].mediaInfo.poster = `/api/localFile/img.jpg?type=picture&path=${encodeURIComponent(newData.torrents[hash].mediaInfo.poster)}`
                         }
                     }
                 }
@@ -1178,7 +1597,7 @@ app.use("/api/v2/torrents/files", express.urlencoded(), (req, res, next) => {
             }
         })
         res.send(file)
-    })
+    }).catch(e => console.log(e))
 })
 // next()
 // app.use("/api/v2/torrents/files",express.urlencoded());
@@ -1193,10 +1612,17 @@ app.use("/api/v2/torrents/files", express.urlencoded(), (req, res, next) => {
 //         // })
 //     }
 // }));
-
-
-app.use("/", proxy(proxySettings));
-
+try {
+    fs.accessSync(path.resolve('dist'))
+    app.use(express.static(path.resolve('dist')));
+    app.use(history());
+    app.use("/api", proxy(proxySettings));
+    console.log('~~~本地WebUI');
+} catch (error) {
+    app.use("/", proxy(proxySettings));
+    console.log('~~~qBittorrent Web UI');
+}
+console.log(__dirname,path.resolve('./'));
 
 
 
