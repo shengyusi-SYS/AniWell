@@ -157,12 +157,11 @@ try {
     try {
         let defaultFFmpegPath
         if (osPlatform == 'win') {
-            defaultFFmpegPath = path.resolve('src', 'thirdParty', 'win')
+            defaultFFmpegPath = path.resolve(__dirname, 'thirdParty', 'win')
             try {
                 fs.accessSync(path.resolve(defaultFFmpegPath, 'ffmpeg.exe'))
                 settings.ffmpegPath = defaultFFmpegPath
             } catch (error) {
-
             }
         }
         if (osPlatform == 'lin') {
@@ -177,6 +176,9 @@ try {
     } catch (error) {
 
     }
+    // settings.dir = __dirname
+    // settings.base = path.resolve('')
+    fs.mkdirSync('./temp')
     fs.writeFileSync('./settings.json', JSON.stringify(settings, '', '\t'))
     console.log('已写入默认配置');
 }
@@ -383,7 +385,7 @@ function handleSubtitle(filePath, videoInfo) {
                 } else sub.type = 'video'
                 try {
                     // let tempSubPath = path.resolve(settings.tempPath,'output',`in.${suffix}`)
-                    let tempSubPath = path.resolve(`in.${suffix}`)
+                    let tempSubPath = path.resolve('temp',`in.${suffix}`)
                     let end = false
                     specialCharacter.forEach(v => {
                         if (end) {
@@ -1613,8 +1615,9 @@ app.use("/api/v2/torrents/files", express.urlencoded(), (req, res, next) => {
 //     }
 // }));
 try {
-    fs.accessSync(path.resolve('dist'))
-    app.use(express.static(path.resolve('dist')));
+    let wwwroot=path.resolve(__dirname,'../dist/public')
+    fs.accessSync(wwwroot)
+    app.use(express.static(wwwroot));
     app.use(history());
     app.use("/api", proxy(proxySettings));
     console.log('~~~本地WebUI');
@@ -1622,7 +1625,7 @@ try {
     app.use("/", proxy(proxySettings));
     console.log('~~~qBittorrent Web UI');
 }
-console.log(__dirname,path.resolve('./'));
+console.log('dir',__dirname,'resolve',path.resolve(''));
 
 
 

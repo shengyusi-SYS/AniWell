@@ -2,9 +2,10 @@
   "name": "FileServer-for-qBittorrent",
   "version": "1.0.0",
   "main": "./src/main.js",
+  "bin": "./src/server.js",
   "repository": "https://github.com/blytzxdl/File-server-for-qBittorrent.git",
   "author": "西都凉 <shengyss@163.com>",
-  "license": "GPL3",
+  "license": "GPL-3.0-or-later",
   "dependencies": {
     "body-parser": "^1.20.1",
     "connect-history-api-fallback": "^2.0.0",
@@ -24,12 +25,18 @@
   "devDependencies": {
     "electron": "21.0.1",
     "electron-packager": "^16.0.0",
-    "electron-squirrel-startup": "^1.0.0"
+    "electron-squirrel-startup": "^1.0.0",
+    "pkg": "^5.8.0"
   },
   "scripts": {
     "serve": "nodemon ./src/server.js -i settings.json -i libraryIndex.json -i ./temp",
     "start": "electron ./src/main.js",
-    "build": "npx electron-packager . --overwrite --out=out --icon=public/favicon.ico --ignore='^(/ssl$)' --ignore='^(/out$)' --ignore='^(/temp$)' --ignore='.gitignore' --ignore='in.ass' --ignore='settings.json' --ignore='jsconfig.json' --ignore='^(test).js' --ignore='libraryIndex.json' --ignore='sync.ffs_db' --ignore='^(/.vscode$)'",
-    "test": "node ./src/test.js"
+    "build": "npx electron-packager . --overwrite --out=out --icon=public/favicon.ico --ignore='^(/ssl$)' --ignore='^(/out$)' --ignore='^(/temp$)' --ignore='.gitignore' --ignore='settings.json' --ignore='jsconfig.json' --ignore='^(test).js' --ignore='libraryIndex.json' --ignore='sync.ffs_db' --ignore='^(/.vscode$)' --ignore='settings_backup.json'",
+    "test": "node ./src/test.js",
+    "pkg:lin":"pkg . -t linux-x64 --out-path out/ --debug"
+  },
+  "pkg": {
+    "assets": ["public/**/*","views/**/*"],
+    "scripts": "workers/**/*.js"
   }
 }
