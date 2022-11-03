@@ -2,7 +2,7 @@
   "name": "FileServer-for-qBittorrent",
   "version": "1.0.0",
   "main": "./src/main.js",
-  "bin": "./src/server.js",
+  "bin": "./middle/middle.js",
   "repository": "https://github.com/blytzxdl/File-server-for-qBittorrent.git",
   "author": "西都凉 <shengyss@163.com>",
   "license": "GPL-3.0-or-later",
@@ -22,6 +22,10 @@
     "xml2js": "^0.4.23"
   },
   "devDependencies": {
+    "@babel/core": "^7.19.6",
+    "@babel/preset-env": "^7.19.4",
+    "@babel/runtime": "^7.20.1",
+    "babel-loader": "^9.0.1",
     "electron": "21.0.1",
     "electron-packager": "^16.0.0",
     "electron-squirrel-startup": "^1.0.0",
@@ -32,10 +36,10 @@
   "scripts": {
     "serve": "nodemon ./src/server.js -i settings.json -i libraryIndex.json -i ./temp",
     "start": "electron ./src/main.js",
-    "build": "npx electron-packager . --overwrite --out=out --icon=public/favicon.ico --ignore='^(/ssl$)' --ignore='^(/out$)' --ignore='^(/temp$)' --ignore='.gitignore' --ignore='settings.json' --ignore='jsconfig.json' --ignore='^(test).js' --ignore='libraryIndex.json' --ignore='sync.ffs_db' --ignore='^(/.vscode$)' --ignore='settings_backup.json'",
+    "build": "npx electron-packager . --overwrite --out=out --icon=public/favicon.ico --ignore='^(/ssl$)' --ignore='^(/out$)' --ignore='^(/temp$)' --ignore='.gitignore' --ignore='settings.json' --ignore='jsconfig.json' --ignore='^(test).js' --ignore='libraryIndex.json' --ignore='sync.ffs_db' --ignore='^(/.vscode$)' --ignore='settings_backup.json' --ignore='webpack.config.js' --ignore='yarn-error.log'",
     "test": "node ./src/test.js",
     "pkg:lin": "pkg . -t linux-x64 --out-path out/ --debug",
-    "middle": "set NODE_ENV=production && webpack --config webpack.config.js --mode=production"
+    "middle": "webpack --config webpack.config.js"
   },
   "pkg": {
     "assets": [],

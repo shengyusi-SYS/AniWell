@@ -134,10 +134,10 @@ try {
         }
         if (settings.ffmpegPath) {
             // settings.ffmpegPath = path.resolve(path.parse(settings.ffmpegPath).root, `"${path.parse(settings.ffmpegPath).dir.replace(path.parse(settings.ffmpegPath).root, '')}"`, path.basename(settings.ffmpegPath))
-            console.log(path.resolve(settings.ffmpegPath, `ffmpeg${ffmpegSuffix}`));
             try {
                 Ffmpeg.setFfmpegPath(path.resolve(settings.ffmpegPath, `ffmpeg${ffmpegSuffix}`))
                 Ffmpeg.setFfprobePath(path.resolve(settings.ffmpegPath, `ffprobe${ffmpegSuffix}`))
+                console.log(path.resolve(settings.ffmpegPath, `ffmpeg${ffmpegSuffix}`));
             } catch (error) {
                 console.log('ffmpeg路径错误，请检查');
             }
@@ -178,9 +178,13 @@ try {
     }
     // settings.dir = __dirname
     // settings.base = path.resolve('')
-    fs.mkdirSync('./temp')
+    try {
+        fs.accessSync('./temp')
+    } catch (error) {
+        fs.mkdirSync('./temp')
+    }
     fs.writeFileSync('./settings.json', JSON.stringify(settings, '', '\t'))
-    console.log('已写入默认配置');
+    console.log('已写入默认配置');      
 }
 // console.log(settings);
 //转发配置
@@ -277,7 +281,7 @@ function handleVideoRequest(req, res, filePath) {
                 }
                 videoInfo = info
                 return handleSubtitle(filePath, videoInfo).catch(e => console.log(e))
-            }).then((result) => {
+            }).catch().then((result) => {
                 subtitleList = result
                 // console.log('------------------~~~~~~~~~~~~~~~~~~~~~',result[0]);
                 return generateM3U8(videoInfo)
@@ -295,7 +299,7 @@ function handleVideoRequest(req, res, filePath) {
                 }).catch((err) => {
                     console.log(err);
                 });
-            }).catch()
+            })
         })
 }
 
