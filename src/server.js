@@ -184,7 +184,7 @@ try {
         fs.mkdirSync('./temp')
     }
     fs.writeFileSync('./settings.json', JSON.stringify(settings, '', '\t'))
-    console.log('已写入默认配置');      
+    console.log('已写入默认配置');
 }
 // console.log(settings);
 //转发配置
@@ -212,7 +212,7 @@ var hlsTemp = ''
 var tryTimes = 0
 var fileRootPath = ''
 var subtitleList = []
-var cleanTimeout
+var killTimeout
 var FFmpegProcess = {}
 var currentProcess = null
 var writingSegmentId = null
@@ -389,7 +389,7 @@ function handleSubtitle(filePath, videoInfo) {
                 } else sub.type = 'video'
                 try {
                     // let tempSubPath = path.resolve(settings.tempPath,'output',`in.${suffix}`)
-                    let tempSubPath = path.resolve('temp',`in.${suffix}`)
+                    let tempSubPath = path.resolve('temp', `in.${suffix}`)
                     let end = false
                     specialCharacter.forEach(v => {
                         if (end) {
@@ -568,7 +568,7 @@ function generateTsQueue(videoInfo, subtitleList) {
                         FFmpegProcess[writingSegment].state = 'done'
                         return
                     }
-                    if (FFmpegProcess[writingSegment].state == 'done') {
+                    if (FFmpegProcess[writingSegment].state == 'done' && transState != 'changing') {
                         await killCurrentProcess()
                         console.log('breeeeeeeeeeeeeeeeeeak', writingSegment);
                         let nextProcessId = writingSegmentId + 1
@@ -600,6 +600,7 @@ function generateTsQueue(videoInfo, subtitleList) {
 }
 
 function killCurrentProcess(start) {
+    transState = 'changing'
     console.log('dddddddddddddddd');
     return new Promise((r, j) => {
         let tempProcessList = JSON.parse(JSON.stringify(processList))
@@ -617,18 +618,22 @@ function killCurrentProcess(start) {
                 return j(err)
             })
             kill(currentProcess.pid, 'SIGKILL')
-        }
-        setTimeout(() => {
-            tempProcessList.forEach(v => {
-                kill(v.pid, 'SIGKILL')
-            })
-            console.log('kkkkkkk~~~~~~~~~');
+        } else {
             return r()
-        }, 500);
+        }
+        killTimeout = setTimeout(() => {
+        tempProcessList.forEach(v => {
+            kill(v.pid, 'SIGKILL')
+        })
+        console.log('kkkkkkk~~~~~~~~~',currentProcess.id);
+        return r()
+        }, 3000);
     }).then((result) => {
+        clearTimeout(killTimeout)
         transState = 'stop'
         return result
     }).catch((err) => {
+        clearTimeout(killTimeout)
         console.log(err);
         return
     })
@@ -1116,7 +1121,7 @@ function updateCollections(params) {
             url: `${settings.qbHost}/api/v2/torrents/files`,
             method: 'post',
             // body: form,
-            form:{'hash':hash},
+            form: { 'hash': hash },
             cookieJar
         }).then((result) => {
             let fileTree = trimPath(JSON.parse(result.body))
@@ -1583,7 +1588,7 @@ app.use("/api/v2/sync/maindata", async (req, res, next) => {
 //         })
 //     }
 // }));
-app.use("/api/v2/torrents/files", express.urlencoded({extended:false}), (req, res, next) => {
+app.use("/api/v2/torrents/files", express.urlencoded({ extended: false }), (req, res, next) => {
     let hash = req.body.hash
     // let form = new FormData()
     // form.append('hash', hash)
@@ -1591,7 +1596,7 @@ app.use("/api/v2/torrents/files", express.urlencoded({extended:false}), (req, re
     got({
         url: `${settings.qbHost}/api/v2/torrents/files`,
         method: 'post',
-        form: {'hash':hash},
+        form: { 'hash': hash },
         cookieJar
     }).then((result) => {
         file = JSON.parse(result.body)
@@ -1620,7 +1625,7 @@ app.use("/api/v2/torrents/files", express.urlencoded({extended:false}), (req, re
 //     }
 // }));
 try {
-    let wwwroot=path.resolve(__dirname,'../dist/public')
+    let wwwroot = path.resolve(__dirname, '../dist/public')
     fs.accessSync(wwwroot)
     app.use(express.static(wwwroot));
     app.use(history());
@@ -1630,7 +1635,7 @@ try {
     app.use("/", proxy(proxySettings));
     console.log('~~~qBittorrent Web UI');
 }
-console.log('dir',__dirname,'resolve',path.resolve(''));
+console.log('dir', __dirname, 'resolve', path.resolve(''));
 
 
 
