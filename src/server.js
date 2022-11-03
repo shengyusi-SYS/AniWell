@@ -13,7 +13,7 @@ const https = require('https');
 const kill = require('tree-kill');
 const Ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
-const FormData = require('form-data')
+// const FormData = require('form-data')
 const url = require("url");
 const CookieJar = require('tough-cookie').CookieJar;
 const cookieJar = new CookieJar()
@@ -1106,12 +1106,13 @@ function generateFfmpegCommand(videoInfo, subtitleList, segment) {
 function updateCollections(params) {
     let fileQueue = []
     for (const hash in libraryIndex.collections) {
-        let form = new FormData()
-        form.append('hash', hash)
+        // let form = new FormData()
+        // form.append('hash', hash)
         let task = got({
             url: `${settings.qbHost}/api/v2/torrents/files`,
             method: 'post',
-            body: form,
+            // body: form,
+            form:{'hash':hash},
             cookieJar
         }).then((result) => {
             let fileTree = trimPath(JSON.parse(result.body))
@@ -1578,15 +1579,15 @@ app.use("/api/v2/sync/maindata", async (req, res, next) => {
 //         })
 //     }
 // }));
-app.use("/api/v2/torrents/files", express.urlencoded(), (req, res, next) => {
+app.use("/api/v2/torrents/files", express.urlencoded({extended:false}), (req, res, next) => {
     let hash = req.body.hash
-    let form = new FormData()
-    form.append('hash', hash)
+    // let form = new FormData()
+    // form.append('hash', hash)
     let file
     got({
         url: `${settings.qbHost}/api/v2/torrents/files`,
         method: 'post',
-        body: form,
+        form: {'hash':hash},
         cookieJar
     }).then((result) => {
         file = JSON.parse(result.body)
