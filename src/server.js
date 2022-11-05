@@ -1,8 +1,16 @@
+const fs = require('fs');
+const path = require('path');
+try { fs.accessSync(path.join('log')) }
+catch (error) { fs.mkdirSync(path.join('log')) }
+const log4js = require('log4js');
+log4js.configure(path.join(__dirname, 'config', 'log4js.json'));
+const logger = log4js.getLogger('maxInfo')
+const transcodeLogger = log4js.getLogger('transcode')
+
 var got = () => Promise.reject()
 import('got').then((result) => {
     got = result.default
 })
-const fs = require('fs');
 const cookieParser = require('cookie-parser');
 const { promisify } = require('util');
 const { spawn } = require('child_process');
@@ -12,15 +20,15 @@ const rimraf = require('rimraf');
 const https = require('https');
 const kill = require('tree-kill');
 const Ffmpeg = require('fluent-ffmpeg');
-const path = require('path');
 // const FormData = require('form-data')
 const url = require("url");
 const CookieJar = require('tough-cookie').CookieJar;
 const cookieJar = new CookieJar()
 // const xml2js = require('xml2js');
 // const xmlParser = new xml2js.Parser();
-// const logger = require('morgan');
 const history = require('connect-history-api-fallback');
+
+
 
 const merger = require('./utils/merger');
 const dd2nfo = require('./utils/dd2nfo');
@@ -126,33 +134,33 @@ try {
             settings = Object.assign(settings, newSettings)
             fs.writeFileSync('./settings.json', JSON.stringify(settings, '', '\t'))
             fs.writeFileSync(path.resolve(settings.tempPath, './settings_backup.json'), JSON.stringify(settings, '', '\t'))
-            console.log('已加载本地配置', settings);
+            logger.debug('init', '已加载本地配置', settings);
         } else {
             newSettings = JSON.parse(fs.readFileSync(path.resolve(settings.tempPath, './settings_backup.json')))
             settings = Object.assign(settings, newSettings)
-            console.log('配置项错误，请检查1');
+            logger.debug('init', '配置项错误，请检查1');
         }
         if (settings.ffmpegPath) {
             // settings.ffmpegPath = path.resolve(path.parse(settings.ffmpegPath).root, `"${path.parse(settings.ffmpegPath).dir.replace(path.parse(settings.ffmpegPath).root, '')}"`, path.basename(settings.ffmpegPath))
             try {
                 Ffmpeg.setFfmpegPath(path.resolve(settings.ffmpegPath, `ffmpeg${ffmpegSuffix}`))
                 Ffmpeg.setFfprobePath(path.resolve(settings.ffmpegPath, `ffprobe${ffmpegSuffix}`))
-                console.log(path.resolve(settings.ffmpegPath, `ffmpeg${ffmpegSuffix}`));
+                logger.debug('debug', path.resolve(settings.ffmpegPath, `ffmpeg${ffmpegSuffix}`));
             } catch (error) {
-                console.log('ffmpeg路径错误，请检查');
+                logger.debug('init', 'ffmpeg路径错误，请检查2');
             }
         }
     } catch (error) {
-        console.log('配置项错误，请检查2', error);
+        logger.debug('init', '配置项错误，请检查2', error);
     }
 } catch (error) {
     try {
         const defaultDandanplayPath = path.resolve(os.homedir(), 'AppData', 'Roaming', '弹弹play')
         fs.accessSync(path.resolve(defaultDandanplayPath, 'library.json'))
-        console.log('在默认位置找到弹弹play');
+        logger.debug('init', '在默认位置找到弹弹play');
         settings.dandanplayPath = defaultDandanplayPath
     } catch (error) {
-        console.log('未在默认位置找到弹弹play');
+        logger.debug('init', '未在默认位置找到弹弹play');
     }
     try {
         let defaultFFmpegPath
@@ -167,10 +175,11 @@ try {
         if (osPlatform == 'lin') {
             defaultFFmpegPath = path.resolve('/usr/share/jellyfin-ffmpeg/')
             try {
-                fs.accessSync(defaultFFmpegPath, 'ffmpeg')
+                fs.accessSync(path.resolve(defaultFFmpegPath, 'ffmpeg'))
                 settings.ffmpegPath = defaultFFmpegPath
+                logger.debug('init', '已在默认位置找到ffmpeg')
             } catch (error) {
-
+                logger.error('error', '未在默认位置找到ffmpeg')
             }
         }
     } catch (error) {
@@ -184,9 +193,9 @@ try {
         fs.mkdirSync('./temp')
     }
     fs.writeFileSync('./settings.json', JSON.stringify(settings, '', '\t'))
-    console.log('已写入默认配置');
+    logger.debug('init', '已写入默认配置');
 }
-// console.log(settings);
+// logger.debug('debug',settings);
 //转发配置
 var proxySettings = {
     target: settings.qbHost,
@@ -199,7 +208,7 @@ try {
     proxySettings.ssl.cert = fs.readFileSync(settings.cert, 'utf8')
     proxySettings.ssl.key = fs.readFileSync(settings.key, 'utf8')
 } catch (error) {
-    // console.log(error);
+    logger.error('error', error);
 }
 
 
@@ -217,6 +226,7 @@ var FFmpegProcess = {}
 var currentProcess = null
 var writingSegmentId = null
 var processList = []
+var lastProcessList
 var transState = 'false'
 var videoIndex = {}
 var lastTargetId
@@ -244,34 +254,35 @@ const decoders = {
 try {
     fs.stat('./temp/backup.json', (err) => { })
     libraryIndex = JSON.parse(fs.readFileSync('./libraryIndex.json'))
-    console.log('已加载匹配数据');
+    logger.debug('debug', '已加载匹配数据');
 } catch (error) {
-    console.log(error);
+    // logger.debug('debug',error);
 }
 
 
 //------------------------------------------------//
 function handleVideoRequest(req, res, filePath) {
-    // console.log(hlsTemp, filePath);
+    // logger.debug('debug',hlsTemp, filePath);
     let subtitleList
     if (hlsTemp == filePath) {
-        console.log('exist');
+        logger.debug('debug', 'exist');
         res.send('Ok.')
     } else return stat(path.resolve(filePath))
         .catch(err => {
-            console.log('文件错误' + path.resolve(filePath));
+            logger.debug('debug', '文件错误' + path.resolve(filePath));
             // throw new Error('文件错误' + filePath)
-        }).then((result) => {
+        }).then(async (result) => {
             currentProcess = null
-            return killCurrentProcess()
+            await killCurrentProcess()
         }).then((result) => {
+            lastProcessList = processList
             processList = []
             writingSegmentId = null
             lastTargetId = null
             videoIndex = {}
             let videoInfo
             getVideoInfo(filePath).catch((err) => {
-                console.log(err);
+                logger.error('error', err);
                 res.status(404).send('文件错误')
                 return Promise.reject()
             }).then((info) => {
@@ -280,10 +291,10 @@ function handleVideoRequest(req, res, filePath) {
                     throw new Error('文件错误')
                 }
                 videoInfo = info
-                return handleSubtitle(filePath, videoInfo).catch(e => console.log(e))
-            }).catch().then((result) => {
+                return handleSubtitle(filePath, videoInfo).catch(e => logger.error('error', e))
+            }).then((result) => {
                 subtitleList = result
-                // console.log('------------------~~~~~~~~~~~~~~~~~~~~~',result[0]);
+                // logger.debug('debug','------------------~~~~~~~~~~~~~~~~~~~~~',result[0]);
                 return generateM3U8(videoInfo)
             }).then(() => {
                 hlsTemp = filePath
@@ -294,10 +305,10 @@ function handleVideoRequest(req, res, filePath) {
                     FFmpegProcess.index0.process()
                 }
                 return writeFile(path.resolve(settings.tempPath, 'output', 'videoIndex.json'), JSON.stringify(videoIndex, '', '\t')).then((result) => {
-                    // console.log(videoIndex);
+                    // logger.debug('debug',videoIndex);
                     res.send("Ok.")
                 }).catch((err) => {
-                    console.log(err);
+                    logger.error('error', err);
                 });
             })
         })
@@ -306,11 +317,11 @@ function handleVideoRequest(req, res, filePath) {
 function continueFFmpegProgress(params) {
     if (transState == 'stop') {
         transState = 'continue'
-        // console.log('>>>>>>>>>>!~~~~~~~~~~~',transState);
+        // logger.debug('debug','>>>>>>>>>>!~~~~~~~~~~~',transState);
         for (const index in FFmpegProcess) {
             if (FFmpegProcess[index].state == 'init') {
                 FFmpegProcess[index].process()
-                console.log('>>>>>>>>>>!~~~~~~~~~~~', index, FFmpegProcess[index]);
+                logger.debug('debug', '>>>>>>>>>>!~~~~~~~~~~~', index, FFmpegProcess[index]);
                 break
             }
         }
@@ -321,11 +332,11 @@ function continueFFmpegProgress(params) {
 function getVideoInfo(filePath) {
     return new Promise((r, j) => {
         Ffmpeg.ffprobe(filePath, function (err, metadata) {
-            // console.log(metadata);
+            // logger.debug('debug',metadata);
             if (err) {
                 return j(err)
             }
-            console.log(metadata.streams[0]);
+            logger.debug('debug', metadata.streams[0]);
             let {
                 bit_rate,
                 duration
@@ -364,25 +375,25 @@ function getVideoInfo(filePath) {
                 colorSpace: color_space,
                 subtitleStream
             }
-            // console.log(videoInfo);
+            // logger.debug('debug',videoInfo);
             return r(videoInfo)
         })
-    }).catch(e => console.log(e))
+    }).catch(e => logger.error('error', e))
 }
 
 function handleSubtitle(filePath, videoInfo) {
     let videoSub = ['pgs']
-    let textSub = ['ass', 'ssa', 'srt', 'vtt', 'mks', 'subrip']
+    let textSub = ['ass', 'ssa', 'srt', 'vtt', 'mks', 'sub', 'sup', 'subrip']
     let specialCharacter = [':', `'`, '"', '`', '.', '?', '(', ')', '*', '^', '{', '$', '|']
     let videoName = path.parse(filePath).name
     subtitleList = []
     fileRootPath = path.dirname(filePath)
     return readdir(fileRootPath).catch((err) => {
-        console.log(err)
+        logger.error('error', err)
     }).then((dir) => {
         dir.forEach(v => {
             let suffix = path.extname(v).replace('.', '')
-            if (v.includes(videoName) && [...videoSub, ...textSub].includes(suffix)) {
+            if ((v.includes(videoName) || videoName.includes(path.parse(v).name)) && [...videoSub, ...textSub].includes(suffix)) {
                 let sub = { path: path.join(fileRootPath, v), source: 'out', codec: suffix }
                 if (textSub.includes(suffix)) {
                     sub.type = 'text'
@@ -395,17 +406,17 @@ function handleSubtitle(filePath, videoInfo) {
                         if (end) {
                             return
                         }
-                        console.log('~~~~~~~~~~~~~~~~~~~~~~', v);
+                        logger.debug('debug', '~~~~~~~~~~~~~~~~~~~~~~', v);
                         if (sub.path.includes(v)) {
-                            console.log('copy', sub.path);
+                            logger.debug('debug', 'copy', sub.path);
                             fs.copyFileSync(sub.path, tempSubPath)
                             sub.path = tempSubPath
-                            console.log('to', sub.path);
+                            logger.debug('debug', 'to', sub.path);
                             end = true
                         }
                     })
                 } catch (error) {
-                    console.log(error);
+                    logger.error('error', error);
                 }
                 subtitleList.push(sub)
             }
@@ -419,13 +430,13 @@ function handleSubtitle(filePath, videoInfo) {
                 subtitleList.push(sub)
             })
         }
-        console.log(subtitleList[0]);
+        logger.debug('debug', subtitleList[0]);
         return subtitleList
     })
 }
 
 function generateM3U8(videoInfo) {
-    console.log(videoInfo);
+    logger.debug('debug', videoInfo);
     let { duration } = videoInfo
     let segmentLength = 3
     let segmentDuration = Number((segmentLength * 1001 / 1000).toFixed(3))
@@ -457,16 +468,16 @@ function generateM3U8(videoInfo) {
     }
     return new Promise((r, j) => {
         rimraf(path.resolve(settings.tempPath, 'output'), (err) => {
-            console.log(err);
+            logger.error('error', err);
             r()
         })
     }).then((result) => {
         return mkdir(path.resolve(settings.tempPath, 'output'))
     }).then((result) => {
-        console.log('clear');
-        return writeFile(path.resolve(settings.tempPath, 'output', 'index.m3u8'), M3U8).catch(err => { console.log(err); })
+        logger.debug('debug', 'clear');
+        return writeFile(path.resolve(settings.tempPath, 'output', 'index.m3u8'), M3U8).catch(err => { logger.debug('debug', err); })
     }).catch((err) => {
-        console.log(err);
+        logger.error('error', err);
     })
 }
 
@@ -490,7 +501,7 @@ function generateTsQueue(videoInfo, subtitleList) {
             if ((Number(segment.replace('index', '')) == Object.keys(videoIndex).length - 1) && FFmpegProcess[segment].state == 'done') {
                 return
             }
-            console.log(path.resolve(settings.ffmpegPath, `ffmpeg${ffmpegSuffix}`));
+            logger.debug('debug', path.resolve(settings.ffmpegPath, `ffmpeg${ffmpegSuffix}`));
             let ffmpeg = spawn(settings.ffmpegPath ? `"${path.resolve(settings.ffmpegPath, `ffmpeg${ffmpegSuffix}`)}"` : 'ffmpeg', params, {
                 shell: true,
                 //    stdio: 'inherit'
@@ -498,8 +509,8 @@ function generateTsQueue(videoInfo, subtitleList) {
             processList.push(ffmpeg)
             ffmpeg.queue = []
             ffmpeg.id = Number(segment.replace('index', ''))
-            console.log('start------------------------' + segment);
-            console.log([params.join(' ')]);
+            logger.debug('debug', 'start------------------------' + segment);
+            logger.debug('debug', [params.join(' ')]);
             // function checkSegment(segment) {
             //     let checkTimes = 0
             //     function check(segment) {
@@ -507,13 +518,13 @@ function generateTsQueue(videoInfo, subtitleList) {
             //             stat(path.resolve(settings.tempPath, 'output', `${segment}.ts`)).then((result) => {
             //                 FFmpegProcess[segment].state = 'done'
             //                 ffmpeg.queue.push(segment)
-            //                 console.log(segment, 'done');
+            //                 logger.debug('debug',segment, 'done');
             //                 checkTimes = 0
             //                 r(true)
             //             }).catch((err) => {
             //                 if (checkTimes < 10) {
             //                     setTimeout(() => {
-            //                         console.log('cccccccccccccckkkkkkkkk');
+            //                         logger.debug('debug','cccccccccccccckkkkkkkkk');
             //                         checkTimes++
             //                         check(segment)
             //                     }, 500)
@@ -522,67 +533,67 @@ function generateTsQueue(videoInfo, subtitleList) {
             //                 }
             //             })
 
-            //         }).catch(err=>console.log(err))
+            //         }).catch(err=>logger.debug('debug',err))
             //     }
             //     return check()
             // }
             ffmpeg.stderr.on('data', async function (stderrLine) {
                 currentProcess = ffmpeg
                 stderrLine = stderrLine.toString()
-                // console.log(`~${stderrLine}`);
-                // console.log(`${stderrLine} ${Boolean(stderrLine.match(/Opening.*for writing/))} ${stderrLine.search(/m3u8/) == -1}`);
+                transcodeLogger.debug('debug', `~${stderrLine}`);
+                // logger.debug('debug',`${stderrLine} ${Boolean(stderrLine.match(/Opening.*for writing/))} ${stderrLine.search(/m3u8/) == -1}`);
                 if (/Opening.*for writing/.test(stderrLine) && !/m3u8/i.test(stderrLine)) {
                     let writingSegment = path.parse(path.parse(/'.*'/.exec(stderrLine)[0]).name).name
                     writingSegmentId = Number(writingSegment.replace('index', ''))
                     let nextSegment = `index${writingSegmentId + 1}`
 
-                    // console.log(`${stderrLine}`);
+                    // logger.debug('debug',`${stderrLine}`);
 
                     // await checkSegment(writingSegment)
 
                     if (lastWriteId != writingSegmentId - 1 && lastWriteId >= ffmpeg.id) {
                         for (; lastWriteId <= writingSegmentId - 1; lastWriteId++) {
                             let tempLostSegment = `index${lastWriteId}`
-                            console.log('lossssssssssssssssssssst', lastWriteId);
+                            logger.debug('debug', 'lossssssssssssssssssssst', lastWriteId);
                             stat(path.resolve(settings.tempPath, 'output', `${tempLostSegment}.ts`)).then((result) => {
                                 FFmpegProcess[tempLostSegment].state = 'done'
-                                console.log('reloaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaad', result, tempLostSegment, FFmpegProcess[tempLostSegment]);
+                                logger.debug('debug', 'reloaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaad', result, tempLostSegment, FFmpegProcess[tempLostSegment]);
                             }).catch((err) => {
-                                console.log('errrrrrrrrrrrrr', FFmpegProcess[tempLostSegment], err);
+                                logger.error('error', 'errrrrrrrrrrrrr', FFmpegProcess[tempLostSegment], err);
                             });
                         }
                         // await checkSegment(`index${lastWriteId}`)
                     }
                     lastWriteId = writingSegmentId
 
-                    // console.log(writingSegmentId);
+                    // logger.debug('debug',writingSegmentId);
                     if (writingSegmentId != ffmpeg.id) {
                         let completedSegment = `index${writingSegmentId - 1 >= 0 ? writingSegmentId - 1 : 0}`
                         ffmpeg.queue.push(completedSegment)
                         FFmpegProcess[completedSegment].state = 'done'
-                        console.log(completedSegment, 'done');
+                        logger.debug('debug', completedSegment, 'done');
                     }
 
                     if (writingSegmentId == Object.keys(videoIndex).length - 1) {
-                        console.log('end~~~~~~~~~~~~~~~~~~', writingSegmentId);
+                        logger.debug('debug', 'end~~~~~~~~~~~~~~~~~~', writingSegmentId);
                         FFmpegProcess[writingSegment].state = 'done'
                         return
                     }
                     if (FFmpegProcess[writingSegment].state == 'done' && transState != 'changing') {
                         await killCurrentProcess()
-                        console.log('breeeeeeeeeeeeeeeeeeak', writingSegment);
+                        logger.debug('debug', 'breeeeeeeeeeeeeeeeeeak', writingSegment);
                         let nextProcessId = writingSegmentId + 1
                         if (FFmpegProcess[`index${nextProcessId}`]) {
                             while (FFmpegProcess[`index${nextProcessId}`].state == 'done') {
                                 if (nextProcessId >= Object.keys(videoIndex).length - 1) {
-                                    console.log('end-------------------', nextProcessId);
+                                    logger.debug('debug', 'end-------------------', nextProcessId);
                                     break
                                 } else { nextProcessId++ }
                             }
-                            console.log('coooooooooooooooooooon', nextProcessId);
+                            logger.debug('debug', 'coooooooooooooooooooon', nextProcessId);
                             FFmpegProcess[`index${nextProcessId}`].process()
                         } else {
-                            console.log('end-------------------', nextProcessId);
+                            logger.debug('debug', 'end-------------------', nextProcessId);
                         }
                     }
                 }
@@ -594,27 +605,32 @@ function generateTsQueue(videoInfo, subtitleList) {
             process,
             state: 'init'
         }
-        // console.log('generate'+process);
+        // logger.debug('debug','generate'+process);
     }
     return FFmpegProcess
 }
 
 function killCurrentProcess(start) {
     transState = 'changing'
-    console.log('dddddddddddddddd');
+    logger.debug('debug', 'dddddddddddddddd');
+    if (lastProcessList) {
+        lastProcessList.forEach(v => {
+            kill(v.pid, 'SIGKILL')
+        })      
+    }
     return new Promise((r, j) => {
         let tempProcessList = JSON.parse(JSON.stringify(processList))
         if (currentProcess) {
             currentProcess.on('close', () => {
-                console.log('ccccccccccccccc');
+                logger.debug('debug', 'ccccccccccccccc');
                 return r()
             })
             currentProcess.on('exit', () => {
-                console.log('eeeeeeeeeeeeeeeee');
+                logger.debug('debug', 'eeeeeeeeeeeeeeeee');
                 return r()
             })
             currentProcess.on('error', (err) => {
-                console.log('rrrrrrrrrrrrrrrrrr');
+                logger.debug('debug', 'rrrrrrrrrrrrrrrrrr');
                 return j(err)
             })
             kill(currentProcess.pid, 'SIGKILL')
@@ -622,11 +638,11 @@ function killCurrentProcess(start) {
             return r()
         }
         killTimeout = setTimeout(() => {
-        tempProcessList.forEach(v => {
-            kill(v.pid, 'SIGKILL')
-        })
-        console.log('kkkkkkk~~~~~~~~~',currentProcess.id);
-        return r()
+            tempProcessList.forEach(v => {
+                kill(v.pid, 'SIGKILL')
+            })
+            logger.debug('debug', 'kkkkkkk~~~~~~~~~', currentProcess.id);
+            return r()
         }, 3000);
     }).then((result) => {
         clearTimeout(killTimeout)
@@ -634,7 +650,7 @@ function killCurrentProcess(start) {
         return result
     }).catch((err) => {
         clearTimeout(killTimeout)
-        console.log(err);
+        logger.error('error', err);
         return
     })
 }
@@ -793,9 +809,9 @@ function generateFfmpegCommand(videoInfo, subtitleList, segment) {
         if (key.match(reg)) {
             hwDeviceId = gpus[key]
         }
-        // console.log(hwDeviceId);
+        // logger.debug('debug',hwDeviceId);
     }
-    // console.log(hwaccels[osPlatform][settings.platform]);
+    // logger.debug('debug',hwaccels[osPlatform][settings.platform]);
     let { hwDevice, hwDeviceName, flHwDevice, flHwDeviceName, scaleHw, scaleFormat, hwmap, hwmapFormat, hwaccel, hwOutput, pixFormat, subFormat } = hwaccels[osPlatform][settings.platform]
     if (hwaccel == 'cuda') {
         hwaccelParams = [
@@ -1008,7 +1024,7 @@ function generateFfmpegCommand(videoInfo, subtitleList, segment) {
     if (customInputCommand[0].length > 0) {
         decoder = ''
         hwaccel = []
-        console.log('~~~~~~~~' + customInputCommand);
+        logger.debug('debug', '~~~~~~~~' + customInputCommand);
     }
     if (customOutputCommand[0].length > 0) {
         encoder = ''
@@ -1016,7 +1032,7 @@ function generateFfmpegCommand(videoInfo, subtitleList, segment) {
         bitrate = []
         audio = []
         sub = []
-        console.log('~~~~~~~~' + customOutputCommand);
+        logger.debug('debug', '~~~~~~~~' + customOutputCommand);
     }
 
     let hlsParams = [
@@ -1108,7 +1124,7 @@ function generateFfmpegCommand(videoInfo, subtitleList, segment) {
         inputParams,
         outputParams
     }
-    // console.log(ffmpegCommand);
+    // logger.debug('debug',ffmpegCommand);
     return ffmpegCommand
 }
 
@@ -1133,7 +1149,7 @@ function updateCollections(params) {
                     var bPath = seasonList.find(v => b.label == path.parse(v).name)
                     var bId = libraryIndex.allSeason[bPath].id
                 } catch (error) {
-                    // console.log(error);
+                    // logger.debug('debug',error);
                     return a.label.length - b.label.length
                 }
                 return aId - bId
@@ -1141,7 +1157,7 @@ function updateCollections(params) {
             let collectionTitle = fileTree[0].label
             let collectionPath = path.resolve(libraryIndex.collections[hash].rootPath, collectionTitle)
             collectionTitle = libraryIndex.allSeason[collectionPath].title
-            // console.log(collectionTitle);
+            // logger.debug('debug',collectionTitle);
             let collectionPoster = libraryIndex.allSeason[collectionPath].poster
             libraryIndex.collections[hash].title = collectionTitle
             libraryIndex.collections[hash].poster = collectionPoster
@@ -1154,7 +1170,7 @@ function updateCollections(params) {
     fs.writeFileSync('./libraryIndex.json', JSON.stringify(libraryIndex, '', '\t'))
     return Promise.all(fileQueue).then((fileQueue) => {
         initMaindata()
-        console.log('合集匹配完成');
+        logger.debug('debug', '合集匹配完成');
     }).catch((err) => {
     })
 }
@@ -1190,7 +1206,7 @@ function initMaindata(params) {
         maindataCache = {}
         merger(maindataCache, newData)
     }).catch((err) => {
-        console.log(err);
+        logger.error('error', err);
     });
 }
 
@@ -1198,17 +1214,21 @@ function generatePictureUrl(path) {
     return `/api/localFile/img.jpg?type=picture&path=${encodeURIComponent(path)}`
 }
 
+process.on('uncaughtException', function (err) {
+    console.log('Caught exception: ' + err);
+});
+app.use(log4js.connectLogger(log4js.getLogger("http"), { level: 'trace' }));
 app.use(express.json())
 app.use(cookieParser())
 
 //test
 // app.use('/test', (req, res) => {
 //     readFile(`${settings.tempPath}output${req.path}`).then((result) => {
-//         console.log('sent', [req.path]);
-//         // console.log(result.toString());
+//         logger.debug('debug','sent', [req.path]);
+//         // logger.debug('debug',result.toString());
 //         res.send(result)
 //     }).catch(err => {
-//         console.log(err);
+//         logger.debug('debug',err);
 //         res.status(404).send('not found')
 //     })
 // })
@@ -1221,14 +1241,14 @@ app.use(cookieParser())
 
 
 app.use('/api', (req, res, next) => {
-    // console.log(req.headers.cookie,req.cookies);
+    // logger.debug('debug',req.headers.cookie,req.cookies);
     if (req.cookies) {
-        // console.log(SID,req.cookies.SID);
+        // logger.debug('debug',SID,req.cookies.SID);
         if (SID != req.cookies.SID) {
             checkCookie = true
         }
         SID = req.cookies.SID
-        // console.log(SID);
+        // logger.debug('debug',SID);
         cookieJar.setCookieSync(`SID=${req.cookies.SID}`, settings.qbHost)
     }
     next()
@@ -1238,12 +1258,17 @@ app.use('/api', (req, res, next) => {
 app.use('/api/localFile', (req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     if (checkCookie) {
+        if (settings.share && req.path.includes('/output/')) {
+            // logger.debug('debug','goooooo');
+            next()
+            return
+        }
         if (req.query.cookie) {
             let coo = req.query.cookie.replace("SID=", '')
-            // console.log(coo,'----------ccccccccc');
+            // logger.debug('debug',coo,'----------ccccccccc');
             cookieJar.setCookieSync(`SID=${coo}`, settings.qbHost)
         }
-        console.log('check');
+        logger.debug('debug', 'check');
         got({
             url: `${settings.qbHost}/api/v2/auth/login`,
             method: 'POST',
@@ -1255,14 +1280,11 @@ app.use('/api/localFile', (req, res, next) => {
                 clearTimeout(cookieTimer)
                 cookieTimer = setTimeout(() => { checkCookie = true }, 30 * 60 * 1000)
                 next()
-            } else if (settings.share && req.path.includes('/output/')) {
-                // console.log('goooooo');
-                next()
             } else {
                 throw new Error('无权限，请重新登录')
             }
         }).catch((err) => {
-            // console.log(err);
+            // logger.debug('debug',err);
             res.status(403).send(err.message)
             return
         });
@@ -1293,7 +1315,7 @@ app.use('/api/localFile/updateLibrary', (req, res) => {
         fs.writeFileSync('./libraryIndex.json', JSON.stringify(libraryIndex, '', '\t'))
         return
     }).catch((err) => {
-        console.log(err);
+        logger.error('error', err);
     }).then((result) => {
         updateCollections()
     })
@@ -1313,13 +1335,13 @@ app.use('/api/localFile/changeFileServerSettings', async (req, res) => {
             }
         }
     })
-    await killCurrentProcess()
+    killCurrentProcess()
     writeFile('./settings.json', JSON.stringify(settings, '', '\t')).then((result) => {
-        console.log('已更新配置');
-        console.log(settings);
+        logger.debug('debug', '已更新配置');
+        logger.debug('debug', settings);
         res.send('Ok.')
     }).catch((err) => {
-        console.log(err);
+        logger.error('error', err);
         res.send('Fails.')
     });
 })
@@ -1328,7 +1350,7 @@ app.use('/api/localFile/changeFileServerSettings', async (req, res) => {
 app.use('/api/localFile/output', (req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     let targetSegment = path.parse(req.path).name
-    console.log('-------------------->', targetSegment);
+    logger.debug('debug', '-------------------->', targetSegment);
     // if (transState=='stop') {
     //         continueFFmpegProgress() 
     // }
@@ -1338,63 +1360,63 @@ app.use('/api/localFile/output', (req, res, next) => {
         return
     } else {
         res.header('Content-Type', 'video/m2pt')
-        console.log(targetSegment, '-------', FFmpegProcess[targetSegment].state);
+        logger.debug('debug', targetSegment, '-------', FFmpegProcess[targetSegment].state);
         let targetSegmentId = Number(targetSegment.replace('index', ''))
         let beforeSegment = `index${targetSegmentId - 1 >= 0 ? targetSegmentId - 1 : 0}`
         let endId = Object.keys(videoIndex).length - 1
         if (targetSegmentId < Number(lastTargetId)) {
             if (FFmpegProcess[targetSegment].state != 'done') {
-                console.log('backkkkkkkkkkkkkkkkkkkkkkk', targetSegmentId, lastTargetId);
+                logger.debug('debug', 'backkkkkkkkkkkkkkkkkkkkkkk', targetSegmentId, lastTargetId);
                 FFmpegProcess[targetSegment].process()
             } else {
                 if (currentProcess.id <= targetSegmentId) {
-                    console.log('connnnnnnnnnnnnnnnnnnnntinue', targetSegment);
+                    logger.debug('debug', 'connnnnnnnnnnnnnnnnnnnntinue', targetSegment);
                 } else {
-                    console.log('baaaaaaaaaackeeeeeeeeeek', targetSegment);
+                    logger.debug('debug', 'baaaaaaaaaackeeeeeeeeeek', targetSegment);
                     let nextProcessId = Number(targetSegment.replace('index', ''))
-                    // console.log(FFmpegProcess[`index${nextProcessId}`]);
+                    // logger.debug('debug',FFmpegProcess[`index${nextProcessId}`]);
                     while (FFmpegProcess[`index${nextProcessId}`].state == 'done') {
                         if (nextProcessId < endId) {
                             nextProcessId++
 
                         } else { break }
-                        console.log(nextProcessId);
+                        logger.debug('debug', nextProcessId);
                     }
                     if (nextProcessId > endId) {
-                        console.log('eeeeeeeeeeennnnnnnnnnnndddddddd', nextProcessId);
+                        logger.debug('debug', 'eeeeeeeeeeennnnnnnnnnnndddddddd', nextProcessId);
                     } else {
-                        console.log('baccccccccckooooooooooooooooooon', nextProcessId);
+                        logger.debug('debug', 'baccccccccckooooooooooooooooooon', nextProcessId);
                         FFmpegProcess[`index${nextProcessId}`].process()
                     }
                 }
             }
         } else if (targetSegmentId > Number(lastTargetId) + 1) {
             if (FFmpegProcess[targetSegment].state != 'done') {
-                console.log('juuuuuuuuuuuuuuuuuuuuuuuuump', targetSegment);
+                logger.debug('debug', 'juuuuuuuuuuuuuuuuuuuuuuuuump', targetSegment);
                 FFmpegProcess[targetSegment].process()
             } else {
                 if (currentProcess.id <= targetSegmentId) {
-                    console.log('seeeeeeeeeeeeeeeeeeeeeeeeeek', targetSegment);
+                    logger.debug('debug', 'seeeeeeeeeeeeeeeeeeeeeeeeeek', targetSegment);
                 } else {
-                    console.log('juuuuuuuunnnnnnpcccccccheck', targetSegment);
+                    logger.debug('debug', 'juuuuuuuunnnnnnpcccccccheck', targetSegment);
                     // FFmpegProcess[targetSegment].process()
                     let nextProcessId = Number(targetSegment.replace('index', ''))
                     while (FFmpegProcess[`index${nextProcessId}`].state == 'done') {
                         if (nextProcessId < endId) {
                             nextProcessId++
                         } else { break }
-                        console.log(nextProcessId);
+                        logger.debug('debug', nextProcessId);
                     }
                     if (nextProcessId > endId) {
-                        console.log('eeeeeeeeeeennnnnnnnnnnndddddddd', nextProcessId);
+                        logger.debug('debug', 'eeeeeeeeeeennnnnnnnnnnndddddddd', nextProcessId);
                     } else {
-                        console.log('jumpccccccooooooooooooooon', nextProcessId);
+                        logger.debug('debug', 'jumpccccccooooooooooooooon', nextProcessId);
                         FFmpegProcess[`index${nextProcessId}`].process()
                     }
                 }
             }
         } else {
-            // console.log('teeeeee---------eeeeeest', targetSegmentId, lastTargetId);
+            // logger.debug('debug','teeeeee---------eeeeeest', targetSegmentId, lastTargetId);
         }
         lastTargetId = targetSegmentId
         read()
@@ -1408,7 +1430,7 @@ app.use('/api/localFile/output', (req, res, next) => {
         } else {
             return stat(path.resolve(settings.tempPath, 'output', targetSegment + '.ts')).then((result) => {
                 if (FFmpegProcess[targetSegment].state == 'done') {
-                    console.log('seeeeeeeeeeeeeeeeeeeend', targetSegment);
+                    logger.debug('debug', 'seeeeeeeeeeeeeeeeeeeend', targetSegment);
                     tryTimes = 0
                     res.sendFile(path.resolve(settings.tempPath, 'output', targetSegment + '.ts'))
                     // clearTimeout(cleanTimeout)
@@ -1423,7 +1445,7 @@ app.use('/api/localFile/output', (req, res, next) => {
                 }
             }).catch((err) => {
                 setTimeout(() => {
-                    console.log('rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrread', targetSegment, FFmpegProcess[targetSegment]);
+                    logger.debug('debug', 'rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrread', targetSegment, FFmpegProcess[targetSegment]);
                     return read()
                 }, 300)
 
@@ -1437,13 +1459,13 @@ app.use('/api/localFile/clearVideoTemp', (req, res, next) => {
     killCurrentProcess()
     setTimeout(() => {
         rimraf(path.resolve(settings.tempPath, 'output'), (err) => {
-            console.log(err);
+            logger.debug('debug', err);
             mkdir(path.resolve(settings.tempPath, 'output')).then((result) => {
-                console.log('clear');
+                logger.debug('debug', 'clear');
                 hlsTemp = null
                 res.send('Ok.')
             }).catch((err) => {
-                console.log(err);
+                logger.error('error', err);
             })
         })
     }, 2000)
@@ -1457,7 +1479,7 @@ app.use('/api/localFile/stopProcess', async (req, res, next) => {
 //     if (FFmpegProcess) {
 //         // spawn('taskkill',['-PID',FFmpegProcess.pid,'-F'])
 //         kill(FFmpegProcess.pid, 'SIGKILL')
-//         console.log(FFmpegProcess);
+//         logger.debug('debug',FFmpegProcess);
 //     }
 //     res.send('Ok.')
 // })
@@ -1466,7 +1488,7 @@ app.use('/api/localFile/stopProcess', async (req, res, next) => {
 //hls地址生成
 app.use('/api/localFile/videoSrc', (req, res, next) => {
     const path = req.headers.referer.split(':')
-    // console.log('src', fileRootPath);
+    // logger.debug('debug','src', fileRootPath);
     res.send(`${path[0]}:${path[1]}:${settings.serverPort}/api/localFile/output/index.m3u8?cookie=SID=${encodeURIComponent(SID)}`)
 })
 
@@ -1503,7 +1525,7 @@ app.use('/api/localFile', async (req, res, next) => {
         fileType = req.query.type
         filePath = req.query.path
     }
-    // console.log(req.query);
+    // logger.debug('debug',req.query);
     try {
         if (fileType == 'text') {
             readFile(path.resolve(filePath)).then((result) => {
@@ -1566,7 +1588,7 @@ app.use("/api/v2/sync/maindata", async (req, res, next) => {
                 }
                 fs.writeFileSync('./libraryIndex.json', JSON.stringify(libraryIndex, '', '\t'))
             }
-            // console.log(newData);
+            // logger.debug('debug',newData);
             maindataCache = {}
             merger(maindataCache, newData)
         } else {
@@ -1574,7 +1596,7 @@ app.use("/api/v2/sync/maindata", async (req, res, next) => {
         }
         res.send(newData)
     }).catch((err) => {
-        // console.log(err);
+        // logger.debug('debug',err);
     });
 });
 
@@ -1582,9 +1604,9 @@ app.use("/api/v2/sync/maindata", async (req, res, next) => {
 //     ...proxySettings,
 //     selfHandleResponse: true,
 //     onProxyRes:(proxyRes, req, res)=>{
-//         console.log(proxyRes.body);
+//         logger.debug('debug',proxyRes.body);
 //         proxyRes.on('data', function (chunk) {
-//             console.log(chunk.toString());
+//             logger.debug('debug',chunk.toString());
 //         })
 //     }
 // }));
@@ -1609,18 +1631,18 @@ app.use("/api/v2/torrents/files", express.urlencoded({ extended: false }), (req,
             }
         })
         res.send(file)
-    }).catch(e => console.log(e))
+    }).catch(e => logger.error('error', e))
 })
 // next()
 // app.use("/api/v2/torrents/files",express.urlencoded());
 // app.use("/api/v2/torrents/files", proxy({
 //     ...proxySettings,
 //     onProxyRes:(proxyRes, req, res)=>{
-//         console.log(proxyRes.body,proxyRes.data,proxyRes.params,req.query);
-//         // console.log(proxyRes);
+//         logger.debug('debug',proxyRes.body,proxyRes.data,proxyRes.params,req.query);
+//         // logger.debug('debug',proxyRes);
 //         // res.send(proxyRes)
 //         // proxyRes.on('data', function (chunk) {
-//         //     console.log(chunk.toString());
+//         //     logger.debug('debug',chunk.toString());
 //         // })
 //     }
 // }));
@@ -1630,29 +1652,29 @@ try {
     app.use(express.static(wwwroot));
     app.use(history());
     app.use("/api", proxy(proxySettings));
-    console.log('~~~本地WebUI');
+    logger.debug('debug', '~~~本地WebUI');
 } catch (error) {
     app.use("/", proxy(proxySettings));
-    console.log('~~~qBittorrent Web UI');
+    logger.debug('debug', '~~~qBittorrent Web UI');
 }
-console.log('dir', __dirname, 'resolve', path.resolve(''));
+logger.debug('debug', 'dir', __dirname, 'resolve', path.resolve(''));
 
 
 
 if (!(proxySettings.ssl.cert && proxySettings.ssl.key)) {
     app.listen(settings.serverPort);
-    console.log(`HTTP Server is running on: http://localhost:${settings.serverPort}`);
+    logger.debug('debug', `HTTP Server is running on: http://localhost:${settings.serverPort}`);
 } else {
     const httpsServer = https.createServer(proxySettings.ssl, app);
     io = require('socket.io')(httpsServer);
     httpsServer.listen(settings.serverPort, () => {
-        console.log(`HTTPS Server is running on: https://localhost:${settings.serverPort}`);
+        logger.debug('debug', `HTTPS Server is running on: https://localhost:${settings.serverPort}`);
     });
 }
 
 
 // io.on('connection', function (socket) {
-//     console.log('cccccon');
+//     logger.debug('debug','cccccon');
 //     // 发送数据
 //     socket.emit('relogin', {
 //         msg: `你好`,
@@ -1660,8 +1682,8 @@ if (!(proxySettings.ssl.cert && proxySettings.ssl.key)) {
 //     });
 //     //接收数据
 //     socket.on('login', function (obj) {
-//         console.log(obj.username);
-//         console.log(obj);
+//         logger.debug('debug',obj.username);
+//         logger.debug('debug',obj);
 //     });
 // });
 // export default app

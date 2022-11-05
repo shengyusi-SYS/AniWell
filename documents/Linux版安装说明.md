@@ -1,30 +1,36 @@
-1. **以Ubuntu Desktop版为例，不适合server版**（electron需要图形环境）,非root用户，root用户未测试
+1. **以Ubuntu Desktop版为例，不完全适合server版或其它linux发行版**（electron需要图形环境）,非root用户，root用户未测试，该安装说明部分内容是根据回忆记录，可能有不准确的地方，等有空了再重装试试，总之绝大部分问题在于驱动和权限
 
 2. intel显卡自带驱动，nvidia和amd需要正确安装显卡驱动，可参考jellyfin官方的[安装说明](https://jellyfin.org/docs/general/administration/hardware-acceleration)。
 
-   nvidia显卡可在附加驱动界面中安装最新驱动，这里"简单"说明amd显卡驱动的安装：
+   nvidia显卡可在附加驱动界面中安装最新驱动，
 
-   - ！！！amd显卡需要安装**amdgpu-pro**驱动！！！，这是[官方文档地址](https://amdgpu-install.readthedocs.io/en/latest/install-prereq.html#downloading-the-installer-package)，最新安装包应该是在[repo.radeon.com](http://repo.radeon.com/amdgpu-install/latest)里
+   如果使用vaapi，可不安装amd驱动，跳到第3步，
+
+   这里"简单"说明amd显卡驱动的安装：
+
+   - ！！！amd显卡需要安装**amdgpu-pro**驱动！！！，这是[官方文档地址](https://amdgpu-install.readthedocs.io/en/latest/install-prereq.html#downloading-the-installer-package)，也可以参考前面jellyfin的安装说明，最新安装包应该是在[repo.radeon.com](http://repo.radeon.com/amdgpu-install/latest)里
 
    - 下载并安装好amdgpu-install后，执行`amdgpu-install --usecase=workstation -y --vulkan=pro --opencl=rocr,legacy`
 
    - 如果报错显示udev依赖不满足等,执行`apt search amdgpu-pro`，确认能找到**amdgpu-pro**包后
-- 执行`sudo apt install amdgpu-pro `
+
+   - 执行`sudo apt install amdgpu-pro `
+
    - 安装最后阶段，命令行会停止一段时间，不要关闭，这是在收集随机数据进行加密，等待一段时间后它会继续完成
 
-   - ！！！在我的测试中，安装此驱动会导致Ubuntu图形界面出错，出现花屏、无法通过正常登录界面登录等问题（可以ssh连接），不确定是由于多个显卡驱动冲突还是什么配置项的问题，但这让我重装了好几次系统...
 
+   - ！！！在我的测试中，安装此驱动会导致Ubuntu图形界面出错，出现花屏、无法通过正常登录界面登录等问题（可以ssh连接），不确定是由于多个显卡驱动冲突还是什么配置项的问题，但这让我重装了好几次系统...
 3. 安装jellyfin-ffmpeg5，可参考[官方文档](https://jellyfin.org/docs/general/administration/installing#ffmpeg-installation)
 
    ubuntu系统可使用下方单行命令
 
-   没安装curl的需要先`sudo apt install curl`
+   没安装curl的需要先`sudo apt install curl -y` 
 
    ```sh
-   curl -fsSL https://repo.jellyfin.org/ubuntu/jellyfin_team.gpg.key | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/debian-jellyfin.gpg && echo "deb [arch=$( dpkg --print-architecture )] https://repo.jellyfin.org/ubuntu $( lsb_release -c -s ) main" | sudo tee /etc/apt/sources.list.d/jellyfin.list && sudo apt update && sudo apt install jellyfin-ffmpeg5
+   curl -fsSL https://repo.jellyfin.org/ubuntu/jellyfin_team.gpg.key | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/debian-jellyfin.gpg && echo "deb [arch=$( dpkg --print-architecture )] https://repo.jellyfin.org/ubuntu $( lsb_release -c -s ) main" | sudo tee /etc/apt/sources.list.d/jellyfin.list && sudo apt update && sudo apt install jellyfin-ffmpeg5 -y 
    ```
 
-   安装成功后在`/usr/share/jellyfin-ffmpeg`目录下看到ffmpeg、ffprobe、vainfo三个文件就说明安装成功了
+   安装完成后在`/usr/share/jellyfin-ffmpeg`目录下看到ffmpeg、ffprobe、vainfo三个文件就说明安装成功了，再执行`sudo chown -R <用户名> /usr/share/jellyfin-ffmpeg/`防止权限错误,可执行`sudo /usr/share/jellyfin-ffmpeg/vainfo `查看是否能显示正确的显卡及驱动
 
 4. 为ffmpeg添加使用显卡的权限，将下面的用户名替换为你自己的，也就是终端最开头的@符前的字符
 

@@ -14,6 +14,7 @@
     "fluent-ffmpeg": "^2.1.2",
     "got": "^12.3.1",
     "http-proxy-middleware": "^2.0.6",
+    "log4js": "^6.7.0",
     "node-wmi": "^0.0.5",
     "rimraf": "^3.0.2",
     "socket.io": "^4.5.2",
@@ -36,7 +37,7 @@
   "scripts": {
     "serve": "nodemon ./src/server.js -i settings.json -i libraryIndex.json -i ./temp",
     "start": "electron ./src/main.js",
-    "build": "npx electron-packager . --overwrite --out=out --icon=public/favicon.ico --ignore='^(/ssl$)' --ignore='^(/out$)' --ignore='^(/temp$)' --ignore='.gitignore' --ignore='settings.json' --ignore='jsconfig.json' --ignore='^(test).js' --ignore='libraryIndex.json' --ignore='sync.ffs_db' --ignore='^(/.vscode$)' --ignore='settings_backup.json' --ignore='webpack.config.js' --ignore='yarn-error.log'",
+    "build": "npx electron-packager . --overwrite --out=out --icon=public/favicon.ico --ignore='^(/ssl$)' --ignore='^(/out$)' --ignore='^(/temp$)' --ignore='.gitignore' --ignore='settings.json' --ignore='jsconfig.json' --ignore='^(test).js' --ignore='libraryIndex.json' --ignore='sync.ffs_db' --ignore='^(/.vscode$)' --ignore='settings_backup.json' --ignore='webpack.config.js' --ignore='^(/log$)' --ignore='.log$'",
     "test": "node ./src/test.js",
     "pkg:lin": "pkg . -t linux-x64 --out-path out/ --debug",
     "middle": "webpack --config webpack.config.js"
