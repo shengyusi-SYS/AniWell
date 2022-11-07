@@ -3,11 +3,11 @@ const {Ffmpeg} = require('../../../utils/init');
 function getVideoInfo(filePath) {
     return new Promise((r, j) => {
         Ffmpeg.ffprobe(filePath, function (err, metadata) {
-            // logger.debug('debug',metadata);
+            logger.debug('getVideoInfo metadata',metadata);
             if (err) {
                 return j(err)
             }
-            logger.debug('debug', metadata.streams[0]);
+            logger.info('getVideoInfo streams[0]', metadata.streams[0]);
             let {
                 bit_rate,
                 duration
@@ -46,10 +46,10 @@ function getVideoInfo(filePath) {
                 colorSpace: color_space,
                 subtitleStream
             }
-            // logger.debug('debug',videoInfo);
+            logger.info('getVideoInfo videoInfo',videoInfo);
             return r(videoInfo)
         })
-    }).catch(e => logger.error('error', e))
+    }).catch(e => logger.error('getVideoInfo', e))
 }
 
 module.exports = getVideoInfo

@@ -1,25 +1,38 @@
+const {logger} = require('../../utils/logger');
 const getVideoInfo = require('./getVideoInfo');
 const handleSubtitles = require('./handleSubtitles');
 const selectMethod = require('./selectMethod');
 const handleHlsRequest = require('./handleHlsRequest');
 const handleTranscode = require('./handleTranscode');
-async function handleVideoRequest(res,params) {
-    let {filePath,bitrate,autoBitrate,resolution}=params
-    let videoInfo = await getVideoInfo(filePath)
-    let subtitleList = await handleSubtitles(filePath)
-    let method = selectMethod(params,videoInfo,subtitleList)
-    method = {name:'transcode',targetBitrate:5,targetResolution:'1080p',exist:false}
-    let handler
-    if (method.name == 'direct') {
-    } else if (method.name == 'transcode') {
-        if (method.exist) {
-        }else{
-           let FFmpegProcess =  await handleTranscode(method,videoInfo,subtitleList)
-           handler=handleHlsRequest().setFFmpegProcess(FFmpegProcess)
-        }
+//处理视频请求，返回一个接收app的handler
+async function handleVideoRequest(params) {
+    try {
+        logger.debug('handleVideoRequest params',params)
+        let { filePath, bitrate, autoBitrate, resolution,SID } = params
+        let videoInfo = await getVideoInfo(filePath)
+        logger.debug('handleVideoRequest videoInfo',videoInfo)
+        let subtitleList = await handleSubtitles(filePath,videoInfo)
+        logger.debug('handleVideoRequest handleSubtitles',subtitleList)
+        videoInfo = selectMethod(videoInfo, subtitleList,params)
+        logger.debug('handleVideoRequest selectMethod')
+        let handler
+        if (videoInfo.method == 'direct') {
+        } else if (videoInfo.method == 'transcode') {
+            if (videoInfo.exist) {
+            } else {
+                logger.info('handleVideoRequest','start transcode')
+                let FFmpegProcess = await handleTranscode(videoInfo, subtitleList)
+                FFmpegProcess.index0.process()
+                logger.debug('handleVideoRequest handleTranscode',FFmpegProcess['index0'])
+                handler = handleHlsRequest().setFFmpegProcess(FFmpegProcess).setVideoIndex(videoInfo.videoIndex).handler
+                logger.info('handleVideoRequest','end transcode',handler)
+                return handler
+            }
+        } 
+    } catch (error) {
+        logger.error('handleVideoRequest',error)
     }
-    res.send("Ok.")
-    return handler
+
 }
 
-module.exports = handleVideoRequest(res,filePath)
+module.exports = handleVideoRequest

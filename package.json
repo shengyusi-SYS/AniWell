@@ -4,7 +4,7 @@
   "main": "./src/main.js",
   "bin": "./middle/middle.js",
   "repository": "https://github.com/blytzxdl/File-server-for-qBittorrent.git",
-  "author": "西都凉 <shengyss@163.com>",
+  "author": "生于斯 <shengyss@163.com>",
   "license": "GPL-3.0-or-later",
   "dependencies": {
     "body-parser": "^1.20.1",

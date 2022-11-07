@@ -2,8 +2,7 @@ const {logger} = require('./logger');
 var wmi = require('node-wmi');
 const osPlatform = require('./init').osPlatform;
 var gpus
-var ffmpegSuffix = ''
-function getGPU() {
+async function getGPU() {
     if (osPlatform == 'win') {
         return new Promise((r,j)=>{
             wmi.Query({
@@ -32,7 +31,7 @@ function getGPU() {
 getGPU().then((result) => {
     gpus = result
     logger.info('gpus',gpus)
+    module.exports = gpus
 }).catch((err) => {
     logger.error('gpuErr',err)
 });
-module.exports = gpus

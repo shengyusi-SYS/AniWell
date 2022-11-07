@@ -161,5 +161,6 @@ module.exports = {
     proxySettings,
     libraryIndex,
     osPlatform,
-    ffmpegSuffix
+    ffmpegSuffix,
 }
+module.exports.gpus = require('./getGPU')

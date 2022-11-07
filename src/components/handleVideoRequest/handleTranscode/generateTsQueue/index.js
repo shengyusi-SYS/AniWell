@@ -1,23 +1,76 @@
-const {logger} = require('../../../../utils/logger');
-const generateFFmpegCommand = require('../generateFFmpegCommand');
-const {hlsTemp} = require('../../old');
-const {videoIndex} = require('../generateM3U8');
-var {FFmpegProcess} = require('../../old');
-function generateTsQueue(videoInfo, subtitleList) {
-    let filePath = hlsTemp
+const {logger,transcodeLogger} = require('../../../../utils/logger');
+const {settings,ffmpegSuffix} = require('../../../../utils/init');
+const {event,stat} = require('../../../../utils');
+const path = require('path');
+const { spawn } = require('child_process');
+const kill = require('tree-kill');
+
+var FFmpegProcess = {}
+var lastProcessList = []
+var killTimeout = {}
+var processList = []
+var currentProcess
+function killCurrentProcess(start) {
+    try {
+           transState = 'changing'
+    logger.debug('debug', 'dddddddddddddddd');
+    if (lastProcessList) {
+        lastProcessList.forEach(v => {
+            kill(v.pid, 'SIGKILL')
+        })
+    }
+    return new Promise((r, j) => {
+        let tempProcessList = JSON.parse(JSON.stringify(processList))
+        if (currentProcess) {
+            currentProcess.on('close', () => {
+                logger.debug('debug', 'ccccccccccccccc');
+                return r()
+            })
+            currentProcess.on('exit', () => {
+                logger.debug('debug', 'eeeeeeeeeeeeeeeee');
+                return r()
+            })
+            currentProcess.on('error', (err) => {
+                logger.debug('debug', 'rrrrrrrrrrrrrrrrrr');
+                return j(err)
+            })
+            kill(currentProcess.pid, 'SIGKILL')
+        } else {
+            return r()
+        }
+        killTimeout = setTimeout(() => {
+            tempProcessList.forEach(v => {
+                kill(v.pid, 'SIGKILL')
+            })
+            logger.debug('debug', 'kkkkkkk~~~~~~~~~', currentProcess.id);
+            return r()
+        }, 3000);
+    }).then((result) => {
+        clearTimeout(killTimeout)
+        transState = 'stop'
+        return result
+    }).catch((err) => {
+        clearTimeout(killTimeout)
+        logger.error('error', err);
+        return
+    }) 
+    } catch (error) {
+        logger.error('generateTsQueue killCurrentProcess',error)
+        
+    }
+
+}
+function generateTsQueue(videoInfo,commandTemplate) {
+    try {
+          FFmpegProcess = {}
     let lastWriteId = -1
+    let videoIndex = videoInfo.videoIndex
     for (const segment in videoIndex) {
-        let { inputParams, outputParams } = generateFfmpegCommand(videoInfo, subtitleList, segment)
-        let params = [
-            ...inputParams,
-            `-i "${filePath}"`,
-            ...outputParams,
-            path.resolve(settings.tempPath, 'output', 'tempList', `${segment}.m3u8`)
-        ]
-        // if (segment == 'index0') {
-        // }
+        let params = commandTemplate(videoIndex[segment].start, segment)
         let process = async () => {
             await killCurrentProcess(segment)
+            currentProcess = this
+            event.emit('setCurrentProcess',currentProcess)
             transState = 'doing'
             if ((Number(segment.replace('index', '')) == Object.keys(videoIndex).length - 1) && FFmpegProcess[segment].state == 'done') {
                 return
@@ -32,32 +85,6 @@ function generateTsQueue(videoInfo, subtitleList) {
             ffmpeg.id = Number(segment.replace('index', ''))
             logger.debug('debug', 'start------------------------' + segment);
             logger.debug('debug', [params.join(' ')]);
-            // function checkSegment(segment) {
-            //     let checkTimes = 0
-            //     function check(segment) {
-            //         return new Promise((r, j) => {
-            //             stat(path.resolve(settings.tempPath, 'output', `${segment}.ts`)).then((result) => {
-            //                 FFmpegProcess[segment].state = 'done'
-            //                 ffmpeg.queue.push(segment)
-            //                 logger.debug('debug',segment, 'done');
-            //                 checkTimes = 0
-            //                 r(true)
-            //             }).catch((err) => {
-            //                 if (checkTimes < 10) {
-            //                     setTimeout(() => {
-            //                         logger.debug('debug','cccccccccccccckkkkkkkkk');
-            //                         checkTimes++
-            //                         check(segment)
-            //                     }, 500)
-            //                 } else {
-            //                     j(false)
-            //                 }
-            //             })
-
-            //         }).catch(err=>logger.debug('debug',err))
-            //     }
-            //     return check()
-            // }
             ffmpeg.stderr.on('data', async function (stderrLine) {
                 currentProcess = ffmpeg
                 stderrLine = stderrLine.toString()
@@ -128,7 +155,11 @@ function generateTsQueue(videoInfo, subtitleList) {
         }
         // logger.debug('debug','generate'+process);
     }
-    return FFmpegProcess
+    return FFmpegProcess  
+    } catch (error) {
+        logger.error('generateTsQueue',error)
+    }
+
 }
 
-module.exports = generateTsQueue
+module.exports = {generateTsQueue,killCurrentProcess}

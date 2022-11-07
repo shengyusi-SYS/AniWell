@@ -1,13 +1,9 @@
 const { log4js, logger } = require('./utils/logger');
 const fs = require('fs');
 const path = require('path');
-const {
-    settings,
-    Ffmpeg,
-    proxySettings,
-    libraryIndex,
-    osPlatform
-} = require('./utils/init');
+
+const {settings,proxySettings,libraryIndex,osPlatform} = require('./utils/init');
+const { readdir, rmdir, mkdir, stat, readFile, writeFile } = require('./utils');
 
 var got = () => Promise.reject()
 import('got').then((result) => {
@@ -15,14 +11,15 @@ import('got').then((result) => {
 })
 const cookieParser = require('cookie-parser');
 const express = require('express');
-const proxyMw = require('http-proxy-middleware');
+module.exports.express = express
 const https = require('https');
-
 const CookieJar = require('tough-cookie').CookieJar;
 const cookieJar = new CookieJar()
-// const xml2js = require('xml2js');
-// const xmlParser = new xml2js.Parser();
 const history = require('connect-history-api-fallback');
+const proxyMw = require('http-proxy-middleware');
+const proxy = proxyMw.createProxyMiddleware;
+const app = express();
+module.exports.app=app
 
 
 const merger = require('./utils/merger');
@@ -31,21 +28,13 @@ const trimPath = require('./utils/trimPath');
 
 
 
-const { readdir, rmdir, mkdir, stat, readFile, writeFile } = require('./utils');
-const proxy = proxyMw.createProxyMiddleware;
-const app = express();
+
+const handleVideoRequest = require('./components/handleVideoRequest');
 
 
-
-
-
-
-// const fileCookie = {}
-// let qbCookie = { SID: undefined }
 var SID
 var cookieTimer
 var checkCookie = true
-var currentProcess = null
 var maindataCache = {}
 
 
@@ -112,14 +101,14 @@ function initMaindata(params) {
             for (const hash in newData.torrents) {
                 if (libraryIndex.allSeason[newData.torrents[hash].content_path]) {
                     newData.torrents[hash].mediaInfo = JSON.parse(JSON.stringify(libraryIndex.allSeason[newData.torrents[hash].content_path]))
-                    newData.torrents[hash].mediaInfo.poster = `/api/localFile/img.jpg?type=picture&path=${encodeURIComponent(libraryIndex.allSeason[newData.torrents[hash].content_path].poster)}`
+                    newData.torrents[hash].mediaInfo.poster = `/api/localFile/getFile/img.jpg?type=picture&path=${encodeURIComponent(libraryIndex.allSeason[newData.torrents[hash].content_path].poster)}`
                 } else if (newData.torrents[hash].content_path == newData.torrents[hash].save_path) {
                     if (!libraryIndex.collections[hash]) {
                         libraryIndex.collections[hash] = { rootPath: path.resolve(newData.torrents[hash].save_path) }
                         update = true
                     } else if (libraryIndex.collections[hash].title) {
                         newData.torrents[hash].mediaInfo = JSON.parse(JSON.stringify(libraryIndex.collections[hash]))
-                        newData.torrents[hash].mediaInfo.poster = `/api/localFile/img.jpg?type=picture&path=${encodeURIComponent(newData.torrents[hash].mediaInfo.poster)}`
+                        newData.torrents[hash].mediaInfo.poster = `/api/localFile/getFile/img.jpg?type=picture&path=${encodeURIComponent(newData.torrents[hash].mediaInfo.poster)}`
                     }
                 }
             }
@@ -136,11 +125,11 @@ function initMaindata(params) {
 }
 
 function generatePictureUrl(path) {
-    return `/api/localFile/img.jpg?type=picture&path=${encodeURIComponent(path)}`
+    return `/api/localFile/getFile/img.jpg?type=picture&path=${encodeURIComponent(path)}`
 }
 
 process.on('uncaughtException', function (err) {
-    console.log('Caught exception: ' + err);
+    logger.error('Caught exception ', err);
 });
 app.use(log4js.connectLogger(log4js.getLogger("http"), { level: 'trace' }));
 app.use(express.json())
@@ -209,8 +198,8 @@ app.use('/api/localFile', (req, res, next) => {
                 throw new Error('无权限，请重新登录')
             }
         }).catch((err) => {
-            // logger.debug('debug',err);
-            res.status(403).send(err.message)
+            logger.error('/api/localFile',err);
+            res.status(403).send(err)
             return
         });
     } else {
@@ -249,17 +238,7 @@ app.use('/api/localFile/updateLibrary', (req, res) => {
 //更新配置项
 app.use('/api/localFile/changeFileServerSettings', async (req, res) => {
     let data = req.body
-    let clean = ['customInputCommand',
-        'customOutputCommand',
-        'encode', 'platform', 'bitrate', 'autoBitrate']
-    data.forEach(val => {
-        if (settings[val.name] != val.value) {
-            settings[val.name] = val.value
-            if (clean.includes(val.name) && currentProcess) {
-                hlsTemp = null
-            }
-        }
-    })
+    hlsTemp = null
     killCurrentProcess()
     writeFile('./settings.json', JSON.stringify(settings, '', '\t')).then((result) => {
         logger.debug('debug', '已更新配置');
@@ -299,7 +278,7 @@ app.use("/api/localFile/library", (req, res, next) => {
 })
 
 //文件请求处理
-app.use('/api/localFile', async (req, res, next) => {
+app.use('/api/localFile/getFile', async (req, res, next) => {
     let filePath
     let formatList = {
         text: ['txt'],
@@ -320,7 +299,7 @@ app.use('/api/localFile', async (req, res, next) => {
     }
     if (req.query.path) {
         fileType = req.query.type
-        filePath = req.query.path
+        filePath = path.resolve(req.query.path)
     }
     // logger.debug('debug',req.query);
     try {
@@ -329,7 +308,9 @@ app.use('/api/localFile', async (req, res, next) => {
                 res.send(result)
             })
         } else if (fileType == 'video') {
-            handleVideoRequest(req, res, filePath, suffix)
+            let handler =  await handleVideoRequest({filePath, suffix,SID})
+            handler(app)
+            res.send('Ok.')
         } else if (fileType == 'picture') {
             res.sendFile(path.resolve(filePath))
         } else if (fileType == 'audio') {
@@ -369,14 +350,14 @@ app.use("/api/v2/sync/maindata", async (req, res, next) => {
                 for (const hash in newData.torrents) {
                     if (libraryIndex.allSeason[newData.torrents[hash].content_path]) {
                         newData.torrents[hash].mediaInfo = JSON.parse(JSON.stringify(libraryIndex.allSeason[newData.torrents[hash].content_path]))
-                        newData.torrents[hash].mediaInfo.poster = `/api/localFile/img.jpg?type=picture&path=${encodeURIComponent(libraryIndex.allSeason[newData.torrents[hash].content_path].poster)}`
+                        newData.torrents[hash].mediaInfo.poster = `/api/localFile/getFile/img.jpg?type=picture&path=${encodeURIComponent(libraryIndex.allSeason[newData.torrents[hash].content_path].poster)}`
                     } else if (newData.torrents[hash].content_path == newData.torrents[hash].save_path) {
                         if (!libraryIndex.collections[hash]) {
                             libraryIndex.collections[hash] = { rootPath: path.resolve(newData.torrents[hash].save_path) }
                             update = true
                         } else if (libraryIndex.collections[hash].title) {
                             newData.torrents[hash].mediaInfo = JSON.parse(JSON.stringify(libraryIndex.collections[hash]))
-                            newData.torrents[hash].mediaInfo.poster = `/api/localFile/img.jpg?type=picture&path=${encodeURIComponent(newData.torrents[hash].mediaInfo.poster)}`
+                            newData.torrents[hash].mediaInfo.poster = `/api/localFile/getFile/img.jpg?type=picture&path=${encodeURIComponent(newData.torrents[hash].mediaInfo.poster)}`
                         }
                     }
                 }
@@ -456,7 +437,10 @@ try {
 }
 logger.debug('debug', 'dir', __dirname, 'resolve', path.resolve(''));
 
-
+app.use((req,res,next)=>{
+    logger.debug('all',req.path)
+    next()
+})
 
 if (!(proxySettings.ssl.cert && proxySettings.ssl.key)) {
     app.listen(settings.serverPort);
@@ -485,9 +469,8 @@ if (!(proxySettings.ssl.cert && proxySettings.ssl.key)) {
 // });
 // export default app
 
-module.exports = {
-    app,
-    express,
-    SID
-}
-require('./components/handleVideoRequest/old.js')
+// module.exports = {
+//     app,
+//     express,
+//     SID
+// }
