@@ -20,6 +20,7 @@ module.exports = {
     stat: promisify(fs.stat),
     readFile: promisify(fs.readFile),
     writeFile: promisify(fs.writeFile),
+    access:promisify(fs.access),
     rimraf,
     event,
     cleanNull

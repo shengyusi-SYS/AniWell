@@ -4,6 +4,8 @@ const handleSubtitles = require('./handleSubtitles');
 const selectMethod = require('./selectMethod');
 const handleHlsRequest = require('./handleHlsRequest');
 const handleTranscode = require('./handleTranscode');
+
+var lastHlsProcessController
 //处理视频请求，返回一个接收app的handler
 async function handleVideoRequest(params) {
     try {
@@ -21,10 +23,15 @@ async function handleVideoRequest(params) {
             if (videoInfo.exist) {
             } else {
                 logger.info('handleVideoRequest','start transcode')
-                let FFmpegProcess = await handleTranscode(videoInfo, subtitleList)
-                FFmpegProcess.index0.process()
-                logger.debug('handleVideoRequest handleTranscode',FFmpegProcess['index0'])
-                handler = handleHlsRequest().setFFmpegProcess(FFmpegProcess).setVideoIndex(videoInfo.videoIndex).handler
+                let HlsProcessController = await handleTranscode(videoInfo, subtitleList)
+                if (lastHlsProcessController) {
+                    await lastHlsProcessController.killCurrentProcess()
+                }
+                lastHlsProcessController = HlsProcessController
+                await HlsProcessController.generateHlsProcess('index0')
+                logger.debug('handleVideoRequest handleTranscode')
+                let HandleHlsRequest = new handleHlsRequest(videoInfo.videoIndex,HlsProcessController)
+                handler = HandleHlsRequest.handler
                 logger.info('handleVideoRequest','end transcode',handler)
                 return handler
             }

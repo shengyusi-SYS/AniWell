@@ -471,7 +471,7 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
     ])
 
     let commandTemplate = (start, segment) => [...inputParams(start), ...outputParams(start, segment)]
-    logger.debug('generateFfmpegCommand', 'end', commandTemplate(0, 'index1'))
+    // logger.debug('generateFfmpegCommand', 'end', commandTemplate(0, 'index1'))
     return commandTemplate
     } catch (error) {
         logger.error('generateFfmpegCommand',error)

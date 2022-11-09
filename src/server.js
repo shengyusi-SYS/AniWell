@@ -238,8 +238,11 @@ app.use('/api/localFile/updateLibrary', (req, res) => {
 //更新配置项
 app.use('/api/localFile/changeFileServerSettings', async (req, res) => {
     let data = req.body
-    hlsTemp = null
-    killCurrentProcess()
+    data.forEach(val => {
+        if (settings[val.name] != val.value) {
+            settings[val.name] = val.value
+        }
+    })
     writeFile('./settings.json', JSON.stringify(settings, '', '\t')).then((result) => {
         logger.debug('debug', '已更新配置');
         logger.debug('debug', settings);
@@ -437,10 +440,10 @@ try {
 }
 logger.debug('debug', 'dir', __dirname, 'resolve', path.resolve(''));
 
-app.use((req,res,next)=>{
-    logger.debug('all',req.path)
-    next()
-})
+// app.use((req,res,next)=>{
+//     logger.debug('all',req.path)
+//     next()
+// })
 
 if (!(proxySettings.ssl.cert && proxySettings.ssl.key)) {
     app.listen(settings.serverPort);

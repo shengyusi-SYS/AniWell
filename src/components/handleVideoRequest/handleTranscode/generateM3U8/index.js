@@ -31,7 +31,7 @@ function generateM3U8(videoInfo) {
                 M3U8 += `#EXTINF:${lastSegmentDuration}\nindex${i}.ts?cookie=SID=${encodeURIComponent(SID)}\n#EXT-X-ENDLIST`
                 endLoop = true
             }
-            videoIndex[`index${i}`] = { start_pts, duration_ts, start, end, segmentDuration, id: i }
+            videoIndex[`index${i}`] = { start_pts, duration_ts, start, end, segmentDuration, id: i ,state:"init"}
         }
         return new Promise((r, j) => {
             rimraf(path.resolve(settings.tempPath, 'output'), (err) => {
