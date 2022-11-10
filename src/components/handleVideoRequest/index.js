@@ -1,28 +1,36 @@
-const {logger} = require('../../utils/logger');
+const { logger } = require('../../utils/logger');
+const { mediaContentType } = require('../../utils');
+const path = require('path');
 const getVideoInfo = require('./getVideoInfo');
 const handleSubtitles = require('./handleSubtitles');
 const selectMethod = require('./selectMethod');
-const handleHlsRequest = require('./handleHlsRequest');
+const hlsRequestHandler = require('./hlsRequestHandler');
 const handleTranscode = require('./handleTranscode');
-
+const directPlayHandler = require('./directPlayHandler');
 var lastHlsProcessController
+var lastHandler
 //处理视频请求，返回一个接收app的handler
 async function handleVideoRequest(params) {
     try {
-        logger.debug('handleVideoRequest params',params)
-        let { filePath, bitrate, autoBitrate, resolution,SID } = params
+        logger.debug('handleVideoRequest params', params)
+        let { filePath, bitrate, autoBitrate, resolution, SID } = params
         let videoInfo = await getVideoInfo(filePath)
-        logger.debug('handleVideoRequest videoInfo',videoInfo)
-        let subtitleList = await handleSubtitles(filePath,videoInfo)
-        logger.debug('handleVideoRequest handleSubtitles',subtitleList)
-        videoInfo = selectMethod(videoInfo, subtitleList,params)
+        logger.debug('handleVideoRequest videoInfo', videoInfo)
+        let subtitleList = await handleSubtitles(filePath, videoInfo)
+        logger.debug('handleVideoRequest handleSubtitles', subtitleList)
+        videoInfo = selectMethod(videoInfo, subtitleList, params)
         logger.debug('handleVideoRequest selectMethod')
         let handler
         if (videoInfo.method == 'direct') {
+            logger.info('handleVideoRequest', 'start direct')
+            let DirectPlayHandler = new directPlayHandler(videoInfo)
+            handler = DirectPlayHandler.handler
+            handler.contentType = mediaContentType(videoInfo.filePath)
         } else if (videoInfo.method == 'transcode') {
             if (videoInfo.exist) {
+                handler = lastHandler
             } else {
-                logger.info('handleVideoRequest','start transcode')
+                logger.info('handleVideoRequest', 'start transcode')
                 let HlsProcessController = await handleTranscode(videoInfo, subtitleList)
                 if (lastHlsProcessController) {
                     await lastHlsProcessController.killCurrentProcess()
@@ -30,14 +38,19 @@ async function handleVideoRequest(params) {
                 lastHlsProcessController = HlsProcessController
                 await HlsProcessController.generateHlsProcess('index0')
                 logger.debug('handleVideoRequest handleTranscode')
-                let HandleHlsRequest = new handleHlsRequest(videoInfo.videoIndex,HlsProcessController)
-                handler = HandleHlsRequest.handler
-                logger.info('handleVideoRequest','end transcode',handler)
-                return handler
+                let HlsRequestHandler = new hlsRequestHandler(videoInfo.videoIndex, HlsProcessController)
+                handler = HlsRequestHandler.handler
+                lastHandler = handler
+                logger.info('handleVideoRequest', 'end transcode')
             }
-        } 
+            handler.contentType = 'application/x-mpegURL'
+        }
+        handler.method = videoInfo.method
+        handler.id = path.basename(videoInfo.filePath)
+        logger.info('handleVideoRequest', 'end')
+        return handler
     } catch (error) {
-        logger.error('handleVideoRequest',error)
+        logger.error('handleVideoRequest', error)
     }
 
 }

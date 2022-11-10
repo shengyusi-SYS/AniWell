@@ -4,6 +4,7 @@ const path = require('path');
 const { settings, ffmpegSuffix } = require('../../../../utils/init');
 const kill = require('tree-kill');
 const { spawn } = require('child_process');
+const {debounce} = require('lodash');
 var _this
 class hlsProcessController {
     constructor(videoInfo = {}, commandTemplate = {}) {
@@ -31,6 +32,8 @@ class hlsProcessController {
 
             logger.debug('hlsProcessController-generateHlsProcess 2', 'ffmpegPath', path.resolve(settings.ffmpegPath, `ffmpeg${ffmpegSuffix}`));
             let ffmpeg = spawn(settings.ffmpegPath ? `"${path.resolve(settings.ffmpegPath, `ffmpeg${ffmpegSuffix}`)}"` : 'ffmpeg', params, { shell: true });
+            ffmpeg.id = initSegmentId
+            console.log('++++++++++++++++++++++++++++++++++++++++',ffmpeg.id);
             this.currentProcess = ffmpeg;
             this.processList.push(ffmpeg);
             ffmpeg.queue = [];
@@ -42,7 +45,7 @@ class hlsProcessController {
                 // logger.debug('debug',`${stderrLine} ${Boolean(stderrLine.match(/Opening.*for writing/))} ${stderrLine.search(/m3u8/) == -1}`);
                 if (/Opening.*for writing/.test(stderrLine) && !/m3u8/i.test(stderrLine)) {
                     let writingSegment = path.parse(path.parse(/'.*'/.exec(stderrLine)[0]).name).name;
-                    if (videoIndex[writingSegment].state=='init') {
+                    if (videoIndex[writingSegment].state == 'init') {
                         videoIndex[writingSegment].state = 'writing'
                     }
                     let writingSegmentId = Number(writingSegment.replace('index', ''));
@@ -70,7 +73,7 @@ class hlsProcessController {
                         return;
                     }
 
-                    if (videoIndex[writingSegment].state == 'done') {
+                    if (videoIndex[writingSegment].state == 'done'&&this.transState != 'changing') {
                         await _this.killCurrentProcess()
                         logger.info('hlsProcessController-generateHlsProcess 6', 'break------------------------', writingSegment);
                         let nextProcessId = writingSegmentId + 1;
@@ -83,7 +86,7 @@ class hlsProcessController {
                             }
                             logger.info('hlsProcessController-generateHlsProcess 7', 'continue-------------------', `index${nextProcessId}`);
                             this.transState = 'changing';
-                            return _this.generateHlsProcess(`index${nextProcessId}`)
+                            await _this.generateHlsProcess(`index${nextProcessId}`)
                         } else {
                             logger.info('hlsProcessController-generateHlsProcess 7', 'end-------------------', nextProcessId);
                         }
@@ -98,19 +101,16 @@ class hlsProcessController {
     async killCurrentProcess() {
         try {
             logger.info('hlsProcessController-killCurrentProcess', 'start');
-            if (this.currentProcess && this.currentProcess.exitCode != 0) {
+            if (!this.currentProcess || this.currentProcess.exitCode == 0||this.currentProcess.exitCode == 1||this.transState == 'changing') {
+                return this
+            } else {
                 this.transState = 'changing'
-                // if (lastProcessList) {
-                //     lastProcessList.forEach(v => {
-                //         kill(v.pid, 'SIGKILL')
-                //     })
-                // }
                 await new Promise((r, j) => {
                     let tempProcessList = JSON.parse(JSON.stringify(this.processList))
                     if (this.currentProcess) {
-                        this.currentProcess.on('close', () => {
-                            logger.info('hlsProcessController-killCurrentProcess', 'close');
-                            this.currentProcess = null
+                        this.currentProcess.on('close', (code) => {
+                            logger.info('hlsProcessController-killCurrentProcess', 'close',code);
+                            // this.currentProcess = null
                             return r()
                         })
                         // this.currentProcess.on('exit', () => {
@@ -119,12 +119,13 @@ class hlsProcessController {
                         // })
                         this.currentProcess.on('error', (err) => {
                             logger.error('hlsProcessController-killCurrentProcess', 'error', err);
-                            this.currentProcess = null
+
+                            // this.currentProcess = null
                             return r(err)
                         })
                         kill(this.currentProcess.pid, 'SIGKILL')
                     } else {
-                        this.currentProcess = null
+                        // this.currentProcess = null
                         return r()
                     }
                     // killTimeout = setTimeout(() => {
@@ -135,16 +136,10 @@ class hlsProcessController {
                     //     return r()
                     // }, 3000);
                 })
-                // .then((result) => {
-                //     clearTimeout(killTimeout)
-                //     transState = 'stop'
-                //     return result
-                // }).catch((err) => {
-                //     clearTimeout(killTimeout)
-                //     logger.error('error', err);
-                //     return
-                // })
+                this.transState = 'stopped'
             }
+
+
             logger.info('hlsProcessController-killCurrentProcess', 'end');
             return this
         } catch (error) {
