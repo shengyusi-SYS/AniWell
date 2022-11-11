@@ -43,29 +43,26 @@ class hlsProcessController {
             ffmpeg.stderr.on('data', async function (stderrLine) {
                 stderrLine = stderrLine.toString();
                 transcodeLogger.info('transcode', `~${stderrLine}`);
-                // logger.debug('debug',`${stderrLine} ${Boolean(stderrLine.match(/Opening.*for writing/))} ${stderrLine.search(/m3u8/) == -1}`);
-                if (/Opening.*for writing/.test(stderrLine) && !/m3u8/i.test(stderrLine)) {
-                    let writingSegment = path.parse(path.parse(/'.*'/.exec(stderrLine)[0]).name).name;
+                let writing = stderrLine.match(/Opening.*index\d+\.ts\.tmp.*?for writing/)
+                if (writing) {
+                    let writingSegment = path.parse(path.parse(writing[0]).name).name;
                     if (videoIndex[writingSegment].state == 'init') {
                         videoIndex[writingSegment].state = 'writing'
                     }
                     let writingSegmentId = Number(writingSegment.replace('index', ''));
-                    if (writingSegmentId > 0) {
-                        lastWriteId = writingSegmentId - 1
-                        for (let start = lastWriteId; start < writingSegmentId; start++) {
-                            let lastWriteSegment = `index${start}`;
-                            try {
-                                await access(path.resolve(settings.tempPath, 'output', `${lastWriteSegment}.ts`))
-                                videoIndex[lastWriteSegment].state = 'done'
-                                ffmpeg.queue.push(lastWriteSegment);
-                                logger.info('hlsProcessController', 'generateHlsProcess 5', lastWriteSegment, 'done')
-                            } catch (error) {
-                                if (videoIndex[lastWriteSegment].state != 'init') {
-                                    videoIndex[lastWriteSegment].state = 'err'
-                                    logger.error('hlsProcessController', 'generateHlsProcess 5', 'lost', lastWriteSegment);
-                                }
+                    if (writingSegmentId>0) {
+                        let lastWriteSegment = `index${writingSegmentId-1}`;
+                        try {
+                            await access(path.resolve(settings.tempPath, 'output', `${lastWriteSegment}.ts`))
+                            videoIndex[lastWriteSegment].state = 'done'
+                            ffmpeg.queue.push(lastWriteSegment);
+                            logger.info('hlsProcessController', 'generateHlsProcess 5', lastWriteSegment, 'done')
+                        } catch (error) {
+                            if (videoIndex[lastWriteSegment].state != 'init') {
+                                videoIndex[lastWriteSegment].state = 'err'
+                                logger.error('hlsProcessController', 'generateHlsProcess 5', 'lost', lastWriteSegment);
                             }
-                        }
+                        }                       
                     }
 
                     if (writingSegmentId == Object.keys(videoIndex).length - 1) {
