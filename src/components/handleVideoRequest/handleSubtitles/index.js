@@ -4,33 +4,33 @@ const fs = require('fs');
 const {readdir} = require('../../../utils');
 function handleSubtitles(filePath, videoInfo) {
     try {
-        logger.debug('handleSubtitles start',filePath, videoInfo)
+        logger.debug('handleSubtitles start')
         let videoSub = ['pgs']
         let textSub = ['ass', 'ssa', 'srt', 'vtt', 'mks', 'sub', 'sup', 'subrip']
-        let specialCharacter = [':', `'`, '"', '`', '.', '?', '(', ')', '*', '^', '{', '$', '|']
+        let specialCharacter = [':', `'`, '"', '`', '?', '(', ')', '*', '^', '{', '$', '|']
         let videoName = path.parse(filePath).name
         subtitleList = []
         fileRootPath = path.dirname(filePath)
         return readdir(fileRootPath).catch((err) => {
             logger.error('handleSubtitles', err)
         }).then((dir) => {
-            dir.forEach(v => {
-                let suffix = path.extname(v).replace('.', '')
-                if ((v.includes(videoName) || videoName.includes(path.parse(v).name)) && [...videoSub, ...textSub].includes(suffix)) {
-                    let sub = { path: path.join(fileRootPath, v), source: 'out', codec: suffix }
+            dir.forEach((value,index) => {
+                let suffix = path.extname(value).replace('.', '')
+                if ((value.includes(videoName) || videoName.includes(path.parse(value).name)) && [...videoSub, ...textSub].includes(suffix)) {
+                    let sub = { path: path.join(fileRootPath, value), source: 'out', codec: suffix }
                     if (textSub.includes(suffix)) {
                         sub.type = 'text'
                     } else sub.type = 'video'
                     try {
                         // let tempSubPath = path.resolve(settings.tempPath,'output',`in.${suffix}`)
-                        let tempSubPath = path.resolve('temp', `in.${suffix}`)
+                        let tempSubPath = path.resolve('temp', `in${index}.${suffix}`)
                         let end = false
-                        specialCharacter.forEach(v => {
+                        specialCharacter.forEach(val => {
                             if (end) {
                                 return
                             }
-                            logger.debug('handleSubtitles', '~~~~~~~~~~~~~~~~~~~~~~', v);
-                            if (sub.path.includes(v)) {
+                            logger.debug('handleSubtitles', '~~~~~~~~~~~~~~~~~~~~~~', val);
+                            if (sub.path.includes(val)) {
                                 logger.debug('handleSubtitles', 'copy', sub.path);
                                 fs.copyFileSync(sub.path, tempSubPath)
                                 sub.path = tempSubPath
@@ -53,7 +53,7 @@ function handleSubtitles(filePath, videoInfo) {
                     subtitleList.push(sub)
                 })
             }
-            logger.info('handleSubtitles end', subtitleList[0]);
+            logger.debug('handleSubtitles end');
             return subtitleList
         })
     } catch (error) {

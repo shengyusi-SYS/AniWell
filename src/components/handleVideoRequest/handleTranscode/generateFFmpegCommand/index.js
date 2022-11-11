@@ -134,6 +134,8 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
     let map = [
         '-map v:0',
         '-map a:0',
+        '-map_metadata -1',
+        '-map_chapters -1',
         // '-map s:0'
     ]
 
@@ -378,24 +380,53 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
         `-g ${videoInfo.frame_rate * 3}`,
         `-keyint_min ${videoInfo.frame_rate * 3}`,
         '-bf 1',
+        '-start_at_zero',
     ]
+
+    let inTest = [
+        '-analyzeduration 200M',
+        // '-extra_hw_frames 64',
+        // '-autorotate 0',
+    ]
+
+    let quality = [
+        '-rc cbr',
+    ]
+
+    let outTest = [
+
+        // '-vsync -1',
+        // '-max_muxing_queue_size 2048',
+        // '-sc_threshold 0',
+        // '-b_strategy 0'
+        // '-profile:v:0 high',
+        // '-flags +cgop',
+        // `-segment_time_delta ${1 / (2 * videoInfo.frame_rate)}`,
+        '-quality speed',
+        // '-force_key_frames expr:gte(t,n_forced*3)',
+        // '-force_key_frames expr:if(isnan(prev_forced_n),eq(n,prev_forced_n+71))'
+    ]
+
+    // if (copyVideo) {
+    //     filter = []
+    //     decoder = []
+    //     hwaccel = []
+    //     bitrate = []
+    // }
+
     let customInputCommand = []
     let customOutputCommand = []
     customInputCommand = settings.customInputCommand.split('\n')
     customOutputCommand = settings.customOutputCommand.split('\n')
 
     if (customInputCommand[0].length > 0) {
-        decoder = ''
-        hwaccel = []
-        logger.debug('debug', '~~~~~~~~' + customInputCommand);
+        inTest = []
+        logger.debug('generateFfmpegCommand customInputCommand', '~~~~~~~~' + customInputCommand);
     }
     if (customOutputCommand[0].length > 0) {
-        encoder = ''
-        pix_fmt = ''
-        bitrate = []
-        audio = []
-        sub = []
-        logger.debug('debug', '~~~~~~~~' + customOutputCommand);
+        outTest = []
+        quality = []
+        logger.debug('generateFfmpegCommand customOutputCommand', '~~~~~~~~' + customOutputCommand);
     }
 
     let hlsParams = segment => [
@@ -410,36 +441,7 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
         , '-hls_list_size 0'
     ]
 
-    let inTest = [
-        '-analyzeduration 200M',
-        // '-extra_hw_frames 64',
-        // '-autorotate 0',
-    ]
 
-    let outTest = [
-        '-map_metadata -1',
-        '-map_chapters -1',
-        // '-threads 0',
-        '-start_at_zero',
-        // '-vsync -1',
-        // '-max_muxing_queue_size 2048',
-        // '-sc_threshold 0',
-        // '-b_strategy 0'
-        // '-profile:v:0 high',
-        // '-flags +cgop',
-        // `-segment_time_delta ${1 / (2 * videoInfo.frame_rate)}`,
-        // '-quality speed',
-        '-rc cbr',
-        // '-force_key_frames expr:gte(t,n_forced*3)',
-        // '-force_key_frames expr:if(isnan(prev_forced_n),eq(n,prev_forced_n+71))'
-    ]
-
-    // if (copyVideo) {
-    //     filter = []
-    //     decoder = []
-    //     hwaccel = []
-    //     bitrate = []
-    // }
 
 
     inputParams = start => cleanNull([
@@ -463,6 +465,7 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
         copyts,
         ...segmentParams,
         ...bitrate,
+        ...quality,
         ...customOutputCommand,
         ...hlsParams(segment),
         '-hide_banner',

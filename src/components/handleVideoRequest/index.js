@@ -15,7 +15,7 @@ async function handleVideoRequest(params) {
         logger.debug('handleVideoRequest params', params)
         let { filePath, bitrate, autoBitrate, resolution, SID } = params
         let videoInfo = await getVideoInfo(filePath)
-        logger.debug('handleVideoRequest videoInfo', videoInfo)
+        logger.debug('handleVideoRequest videoInfo')
         let subtitleList = await handleSubtitles(filePath, videoInfo)
         logger.debug('handleVideoRequest handleSubtitles', subtitleList)
         videoInfo = selectMethod(videoInfo, subtitleList, params)
@@ -31,10 +31,10 @@ async function handleVideoRequest(params) {
                 handler = lastHandler
             } else {
                 logger.info('handleVideoRequest', 'start transcode')
-                let HlsProcessController = await handleTranscode(videoInfo, subtitleList)
                 if (lastHlsProcessController) {
                     await lastHlsProcessController.killCurrentProcess()
                 }
+                let HlsProcessController = await handleTranscode(videoInfo, subtitleList)
                 lastHlsProcessController = HlsProcessController
                 await HlsProcessController.generateHlsProcess('index0')
                 logger.debug('handleVideoRequest handleTranscode')

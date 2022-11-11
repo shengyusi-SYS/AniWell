@@ -2,7 +2,7 @@ const { logger } = require('../../../utils/logger');
 const { settings } = require('../../../utils/init');
 const { readdir, rmdir, mkdir, stat, readFile, writeFile, rimraf, event } = require('../../../utils');
 const path = require('path');
-const {debounce} = require('lodash');
+const { debounce } = require('lodash');
 var _this
 //hls请求处理
 class hlsRequestHandler {
@@ -59,7 +59,7 @@ class hlsRequestHandler {
                                     logger.debug('hlsRequestHandler /api/localFile/output', 'read', targetSegment, _this.videoIndex[targetSegment].state);
                                     return read();
                                 }, 300);
-    
+
                             });
                         }
                     }
@@ -93,7 +93,7 @@ class hlsRequestHandler {
                                     while (_this.videoIndex[`index${nextProcessId}`].state == 'done') {
                                         if (nextProcessId < endId) {
                                             nextProcessId++;
-    
+
                                         } else { break; }
                                         // logger.debug('hlsRequestHandler handler 3', 'nextProcessId',nextProcessId);
                                     }
@@ -138,9 +138,9 @@ class hlsRequestHandler {
                         _this.lastTargetId = targetSegmentId;
                         read();
                     }
-    
-    
-                },500,{leading:true}));
+
+
+                }, 500, { leading: true }));
             }
             // app._router.stack.splice(used - 1, used >= 0 ? 1 : 0)
 
@@ -150,17 +150,16 @@ class hlsRequestHandler {
             if (used < 0) {
                 app.use('/api/localFile/clearVideoTemp', async (req, res, next) => {
                     try {
-                        logger.debug('hlsRequestHandler /api/localFile/clearVideoTemp', 'start~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~', _this.id);
+                        logger.debug('hlsRequestHandler /api/localFile/clearVideoTemp', 'start');
                         await _this.HlsProcessController.killCurrentProcess()
-                        rimraf(path.resolve(settings.tempPath, 'output'), (err) => {
-                            logger.debug('hlsRequestHandler /api/localFile/clearVideoTemp', err);
-                            mkdir(path.resolve(settings.tempPath, 'output')).then((result) => {
-                                logger.info('hlsRequestHandler /api/localFile/clearVideoTemp', 'clear');
-                                res.send('Ok.');
-                            }).catch((err) => {
-                                logger.error('hlsRequestHandler /api/localFile/clearVideoTemp', err);
+                        await new Promise((resolve, reject) => {
+                            rimraf(path.resolve(settings.tempPath, 'output'), async (err) => {
+                                if (err) { reject() } else resolve()
                             });
-                        });
+                        })
+                        await mkdir(path.resolve(settings.tempPath, 'output'))
+                        logger.info('hlsRequestHandler /api/localFile/clearVideoTemp', 'clear');
+                        res.send('Ok.');
                     } catch (error) {
                         logger.error('hlsRequestHandler /api/localFile/clearVideoTemp', error);
                     }
@@ -168,7 +167,12 @@ class hlsRequestHandler {
             }
             // app._router.stack.splice(used - 1, used >= 0 ? 1 : 0)
 
-
+            used = app._router.stack.findIndex(v => v.regexp.toString().includes('stopTranscode'))
+            if (used<0) {
+                app.use('/api/localFile/stopTranscode', async (req, res, next) => {
+                    res.send('Ok.');
+                })
+            }
 
             logger.debug('hlsRequestHandler handler', 'end', app._router.stack.length);
         } catch (error) {

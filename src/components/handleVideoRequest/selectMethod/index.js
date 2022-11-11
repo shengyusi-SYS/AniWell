@@ -2,7 +2,7 @@
 const {logger} = require('../../../utils/logger');
 var tempInfo
 function selectMethod(videoInfo, subtitleList,params) {
-    logger.debug('selectMethod','start',videoInfo,params)
+    logger.debug('selectMethod','start')
     let { filePath, bitrate, autoBitrate, resolution,SID,method } = params
     videoInfo.filePath = filePath
     if (videoInfo.bitrate<=bitrate*1000000&&method=='direct') {
@@ -23,13 +23,21 @@ function selectMethod(videoInfo, subtitleList,params) {
         videoInfo.method = 'transcode'
         videoInfo.SID = SID
     }
-    if (JSON.stringify(videoInfo)==JSON.stringify(tempInfo)) {
-        videoInfo.exist = true
+    logger.debug('selectMethod','~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',JSON.stringify(videoInfo),JSON.stringify(tempInfo))
+    if (!videoInfo.cleared&&tempInfo) {
+        delete videoInfo.cleared
+        delete tempInfo.cleared
+        if (JSON.stringify(videoInfo)==JSON.stringify(tempInfo)) {
+            videoInfo.exist = true
+        }else{
+            tempInfo = JSON.parse(JSON.stringify(videoInfo))
+            videoInfo.exist = false
+        }
     }else {
         tempInfo = JSON.parse(JSON.stringify(videoInfo))
         videoInfo.exist = false
     }
-    logger.debug('selectMethod','end+++++++++++++++++++++++++++++++++++++++++',videoInfo.method,videoInfo.exist)
+    logger.debug('selectMethod','end+++++++++++++++++++++++++++++++++++++++++',videoInfo)
     return videoInfo
 }
 module.exports = selectMethod

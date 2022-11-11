@@ -12,12 +12,12 @@ class directPlayHandler {
   }
   handler = (app) => {
     try {
-      logger.info('directPlayHandler-handler', 'init',_this.filePath)
+      logger.info('directPlayHandler handler', 'init',_this.filePath)
       let used = app._router.stack.findIndex(v => v.regexp.toString().includes('directPlay'))
       if (used < 0) {
         app.use('/api/localFile/directPlay', async (req, res) => {
           try {
-            logger.info('directPlayHandler-handler /api/localFile/directPlay', 'start')
+            logger.info('directPlayHandler handler /api/localFile/directPlay', 'start')
             const filePath = _this.filePath
             console.log(filePath);
             const fileState = await stat(filePath)
@@ -57,15 +57,15 @@ class directPlayHandler {
               fs.createReadStream(filePath).pipe(res)
             }
     
-            logger.info('directPlayHandler-handler /api/localFile/directPlay', 'end',range)
+            logger.info('directPlayHandler handler /api/localFile/directPlay', 'end',range)
           } catch (error) {
-            logger.error('directPlayHandler-handler /api/localFile/directPlay', error)
+            logger.error('directPlayHandler handler /api/localFile/directPlay', error)
             
           }
         })
       }
     } catch (error) {
-      logger.error('directPlayHandler-handler', error)
+      logger.error('directPlayHandler handler', error)
     }
 
   }

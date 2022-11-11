@@ -2,12 +2,12 @@ const { logger } = require('../../../../utils/logger');
 const { rimraf, readdir, rmdir, mkdir, stat, readFile, writeFile } = require('../../../../utils');
 const { settings } = require('../../../../utils/init');
 const path = require('path');
-function generateM3U8(videoInfo) {
+async function generateM3U8(videoInfo) {
     try {
-        logger.debug('generateM3U8','start', videoInfo);
+        logger.debug('generateM3U8', 'start');
         let videoIndex = videoInfo.videoIndex = {}
         let SID = videoInfo.SID
-        logger.debug('generateM3U8','SID', SID);
+        logger.debug('generateM3U8', 'SID', SID);
         let { duration } = videoInfo
         let segmentLength = 3
         let segmentDuration = Number((segmentLength * 1001 / 1000).toFixed(3))
@@ -19,7 +19,7 @@ function generateM3U8(videoInfo) {
         // let segmentDuration = Number(timeList[0])
         // let base_pts = ts0.start_pts
         // let segmentDuration = Number((duration_ts/90000).toFixed(6))
-    
+
         for (let i = 0, base_pts = 1, start, start_pts, end, endLoop = false; !endLoop; i++) {
             start_pts = base_pts + (duration_ts + 1) * i
             start = Number(((start_pts - base_pts) / 90000).toFixed(6))
@@ -31,23 +31,21 @@ function generateM3U8(videoInfo) {
                 M3U8 += `#EXTINF:${lastSegmentDuration}\nindex${i}.ts?cookie=SID=${encodeURIComponent(SID)}\n#EXT-X-ENDLIST`
                 endLoop = true
             }
-            videoIndex[`index${i}`] = { start_pts, duration_ts, start, end, segmentDuration, id: i ,state:"init"}
+            videoIndex[`index${i}`] = { start_pts, duration_ts, start, end, segmentDuration, id: i, state: "init" }
         }
-        return new Promise((r, j) => {
+        await new Promise((r, j) => {
             rimraf(path.resolve(settings.tempPath, 'output'), (err) => {
-                logger.error('error', err);
+                if (err) {
+                    logger.error('error rimraf', err);
+                }
                 r()
             })
-        }).then((result) => {
-            return mkdir(path.resolve(settings.tempPath, 'output'))
-        }).then((result) => {
-            logger.debug('debug', 'clear');
-            return writeFile(path.resolve(settings.tempPath, 'output', 'index.m3u8'), M3U8).catch(err => { logger.debug('debug', err); })
-        }).catch((err) => {
-            logger.error('error', err);
         })
+        await mkdir(path.resolve(settings.tempPath, 'output'))
+        logger.info('debug', 'clear');
+        await writeFile(path.resolve(settings.tempPath, 'output', 'index.m3u8'), M3U8)
     } catch (error) {
-        logger.error('generateM3U8',error)
+        logger.error('generateM3U8', error)
     }
 
 }

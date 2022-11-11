@@ -1,8 +1,11 @@
 const logger = require('../../../utils/logger').logger;
 const {Ffmpeg} = require('../../../utils/init');
+const {access} = require('../../../utils');
+const {settings} = require('../../../utils/init');
+const path = require('path');
 function getVideoInfo(filePath) {
     return new Promise((r, j) => {
-        Ffmpeg.ffprobe(filePath, function (err, metadata) {
+        Ffmpeg.ffprobe(filePath, async (err, metadata)=>{
             // logger.debug('getVideoInfo metadata',metadata);
             if (err) {
                 return j(err)
@@ -33,6 +36,14 @@ function getVideoInfo(filePath) {
                 color_space,
                 index
             } = { ...vidoeStream }
+            let cleared 
+            try {
+                await access(path.resolve(settings.tempPath, 'output','index.m3u8'))
+                cleared = false
+            } catch (error) {
+                cleared = true
+                logger.info('getVideoInfo','~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~cleared',error);
+            }
             let videoInfo = {
                 index,
                 codec: codec_name,
@@ -44,9 +55,12 @@ function getVideoInfo(filePath) {
                 frame_rate: r_frame_rate.split('/')[0] / 1000,
                 pix_fmt,
                 colorSpace: color_space,
-                subtitleStream
+                subtitleStream,
+                cleared,
+                platform:settings.platform,
+                encode:settings.encode
             }
-            logger.info('getVideoInfo videoInfo',videoInfo);
+            logger.debug('getVideoInfo','end');
             return r(videoInfo)
         })
     }).catch(e => logger.error('getVideoInfo', e))

@@ -2,8 +2,8 @@ const { log4js, logger } = require('./utils/logger');
 const fs = require('fs');
 const path = require('path');
 
-const {settings,proxySettings,libraryIndex,osPlatform} = require('./utils/init');
-const { readdir, rmdir, mkdir, stat, readFile, writeFile,generatePictureUrl } = require('./utils');
+const { settings, settingsList, proxySettings, libraryIndex, osPlatform,mergeSettings } = require('./utils/init');
+const { readdir, rmdir, mkdir, stat, readFile, writeFile, generatePictureUrl } = require('./utils');
 
 var got = () => Promise.reject()
 import('got').then((result) => {
@@ -19,7 +19,7 @@ const history = require('connect-history-api-fallback');
 const proxyMw = require('http-proxy-middleware');
 const proxy = proxyMw.createProxyMiddleware;
 const app = express();
-const {debounce} = require('lodash');
+const { debounce } = require('lodash');
 
 const merger = require('./utils/merger');
 const dd2nfo = require('./utils/dd2nfo');
@@ -31,6 +31,7 @@ var cookieTimer
 var checkCookie = true
 var maindataCache = {}
 var videoHandler
+var bannedSIDs = []
 
 process.on('uncaughtException', function (err) {
     logger.error('Caught exception ', err);
@@ -148,65 +149,79 @@ app.use(cookieParser())
 
 
 app.use('/api', (req, res, next) => {
-    // logger.debug('debug',req.headers.cookie,req.cookies);
-    if (req.cookies) {
-        // logger.debug('debug',SID,req.cookies.SID);
-        debounce(async()=>{
-            if (SID != req.cookies.SID) {
-                checkCookie = true
+    // logger.debug('/api',req.path);
+    try {
+        if (req.path == '/v2/auth/login') {
+            // logger.debug('/v2/auth/login', req.headers)
+            next()
+        } else if (!req.cookies && !req.query.cookie) {
+            throw new Error('Fails.')
+        } else {
+            let newSID
+            if (req.cookies && req.cookies.SID) {
+                newSID = req.cookies.SID
+            } else if (req.query && req.query.cookie) {
+                newSID = req.query.cookie.replace('SID=', '')
+            } else {
+                throw new Error('Fails.')
             }
-        },300)
-        SID = req.cookies.SID
-        // logger.debug('debug',SID);
-        cookieJar.setCookieSync(`SID=${req.cookies.SID}`, settings.qbHost)
+
+            if (bannedSIDs.includes(newSID)) {
+                throw new Error('Fails.')
+            } else if (SID != newSID) {
+                checkCookie = true
+                SID = newSID
+                cookieJar.setCookieSync(`SID=${newSID}`, settings.qbHost)
+            }
+
+            next()
+        }
+    } catch (error) {
+        logger.error('/v2/auth/login', error)
+        res.status(403).send(error)
     }
-    next()
+
 })
 
 //权限验证
-app.use('/api/localFile',async (req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    if (checkCookie) {
-        if (settings.share && req.path.includes('/output/')) {
-            // logger.debug('debug','goooooo');
+app.use('/api/localFile', async (req, res, next) => {
+    try {
+        res.header("Access-Control-Allow-Origin", "*");
+        if (settings.share && /^\/localFile\/output\//i.test(req.path)) {
             next()
             return
         }
-        if (req.query.cookie) {
-            let coo = req.query.cookie.replace("SID=", '')
-            // logger.debug('debug',coo,'----------ccccccccc');
-            cookieJar.setCookieSync(`SID=${coo}`, settings.qbHost)
+        if (checkCookie) {
+            logger.info('/api/localFile', 'check');
+            let result = await got({
+                url: `${settings.qbHost}/api/v2/auth/login`,
+                method: 'POST',
+                cookieJar
+            })
+            result = result.body
+            if (result == 'Ok.') {
+                checkCookie = false
+                clearTimeout(cookieTimer)
+                cookieTimer = setTimeout(() => { checkCookie = true }, 30 * 60 * 1000)
+                next()
+            } else {
+                logger.info('/api/localFile', 'banned', SID);
+                bannedSIDs.push(SID)
+                throw new Error('Fails.')
+            }
+        } else {
+            next()
         }
-        logger.debug('debug', 'check');
-        try {
-
-                let result = await got({
-                    url: `${settings.qbHost}/api/v2/auth/login`,
-                    method: 'POST',
-                    cookieJar
-                })
-                result = result.body
-                if (result == 'Ok.') {
-                    checkCookie = false
-                    clearTimeout(cookieTimer)
-                    cookieTimer = setTimeout(() => { checkCookie = true }, 30 * 60 * 1000)
-                    next()
-                } else {
-                    throw new Error('无权限，请重新登录')
-                }
-        } catch (error) {
-            logger.error('/api/localFile',error);
-            res.status(403).send(error)
-            return
-        }
-    } else {
-        next()
+    } catch (error) {
+        logger.error('/api/localFile', error);
+        res.status(403).send(error)
     }
+
 })
 
 //连接状态测试
 app.use('/api/localFile/checkFileServer', (req, res) => {
-    res.send(settings)
+    res.send(settingsList)
 })
 
 app.use('/api/localFile/updateLibrary', (req, res) => {
@@ -235,11 +250,7 @@ app.use('/api/localFile/updateLibrary', (req, res) => {
 //更新配置项
 app.use('/api/localFile/changeFileServerSettings', async (req, res) => {
     let data = req.body
-    data.forEach(val => {
-        if (settings[val.name] != val.value) {
-            settings[val.name] = val.value
-        }
-    })
+    mergeSettings(settingsList,settings,data)
     writeFile('./settings.json', JSON.stringify(settings, '', '\t')).then((result) => {
         logger.debug('debug', '已更新配置');
         logger.debug('debug', settings);
@@ -266,13 +277,13 @@ app.use('/api/localFile/videoSrc', (req, res, next) => {
     const path = req.headers.referer.split(':')
     if (videoHandler.method == 'direct') {
         res.send({
-            src:`/api/localFile/directPlay/${videoHandler.id}?cookie=SID=${encodeURIComponent(SID)}`,
-            type:videoHandler.contentType
+            src: `/api/localFile/directPlay/${videoHandler.id}?cookie=SID=${encodeURIComponent(SID)}`,
+            type: videoHandler.contentType
         })
-    }else if (videoHandler.method == 'transcode') {
-        
+    } else if (videoHandler.method == 'transcode') {
+
         res.send({
-            src:`/api/localFile/output/index.m3u8?cookie=SID=${encodeURIComponent(SID)}`,
+            src: `/api/localFile/output/index.m3u8?cookie=SID=${encodeURIComponent(SID)}`,
             type: videoHandler.contentType,
         })
     }
@@ -319,8 +330,8 @@ app.use('/api/localFile/getFile', async (req, res, next) => {
                 res.send(result)
             })
         } else if (fileType == 'video') {
-            let params = {filePath, suffix,SID, bitrate:settings.bitrate, autoBitrate:settings.autoBitrate, resolution:'1080p',method:'transcode'}
-            videoHandler =  await handleVideoRequest(params)
+            let params = { filePath, suffix, SID, bitrate: settings.bitrate, autoBitrate: settings.autoBitrate, resolution: '1080p', method: 'transcode' }
+            videoHandler = await handleVideoRequest(params)
             videoHandler(app)
             res.send('Ok.')
         } else if (fileType == 'picture') {

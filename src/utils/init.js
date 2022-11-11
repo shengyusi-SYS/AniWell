@@ -18,44 +18,35 @@ switch (os.type()) {
         break
 }
 
-var settings = {
-    qbHost: 'http://localhost:8080',
-    serverPort: 9009,
-    tempPath: os.tmpdir(),
-    ffmpegPath: './',
-    dandanplayPath: '',
-    cert: './ssl/domain.pem',
-    key: './ssl/domain.key',
-    secure: false,
-    // burnSubtitle: true,
-    // forceTranscode: false,
-    share: false,
-    platform: 'nvidia',
-    encode: 'h264',
-    bitrate: 5,
-    autoBitrate: false,
-    advAccel: true,
-    customInputCommand: '',
-    customOutputCommand: '',
-}
 const settingsList = {
-    qbHost: { type: 'text' },
-    tempPath: { type: 'text' },
-    cert: { type: 'text' },
-    key: { type: 'text' },
-    ffmpegPath: { type: 'text' },
-    dandanplayPath: { type: 'text' },
-    secure: { type: 'switch' },
-    burnSubtitle: { type: 'switch' },
-    forceTranscode: { type: 'switch' },
-    share: { type: 'switch' },
-    autoBitrate: { type: 'switch' },
-    platform: { type: 'radio' },
-    encode: { type: 'radio' },
-    customInputCommand: { type: 'textarea' },
-    customOutputCommand: { type: 'textarea' },
-    serverPort: { type: 'number' },
-    bitrate: { type: 'number' },
+    qbHost: { type: 'text', name: 'qbHost', value: 'http://localhost:8080', placeholder: 'http://localhost:8080' },
+    serverPort: { type: 'number', name: 'serverPort', value: 9009, placeholder: '9009' },
+    tempPath: { type: 'text', name: 'tempPath', value: os.tmpdir(), placeholder: os.tmpdir() },
+    ffmpegPath: { type: 'text', name: 'ffmpegPath', value: `./src/thirdParty/${osPlatform}`, placeholder: `./src/thirdParty/${osPlatform}` },
+    dandanplayPath: { type: 'text', name: 'dandanplayPath', value: '', placeholder: '' },
+    cert: { type: 'text', name: 'cert', value: './ssl/domain.pem', placeholder: './ssl/domain.pem' },
+    key: { type: 'text', name: 'key', value: './ssl/domain.key', placeholder: './ssl/domain.key' },
+    // burnSubtitle: { type: 'switch',name:'burnSubtitle',value:'' },
+    secure: { type: 'switch', name: 'secure', value: false },
+    share: { type: 'switch', name: 'share', value: false },
+    bitrate: { type: 'number', name: 'bitrate', value: '', placeholder: '5' },
+    autoBitrate: { type: 'switch', name: 'autoBitrate', value: false },
+    advAccel: { type: 'switch', name: 'advAccel', value: true },
+    platform: { type: 'radios', name: 'platform', value: 'nvidia', placeholder: '', radios: { nvidia: { name: 'nvidia', value: 'nvidia' }, intel: { name: 'intel', value: 'intel' }, amd: { name: 'amd', value: 'amd' }, vaapi: { name: 'vaapi', value: 'vaapi' } } },
+    encode: { type: 'radios', name: 'encode', value: '', placeholder: '', radios: { h264: { name: 'h264', value: 'h264' }, h265: { name: 'h265', value: 'h265' } } },
+    customInputCommand: { type: 'textarea', name: 'customInputCommand', value: '', placeholder: '指令设定请参考readme文档，勿轻易修改' },
+    customOutputCommand: { type: 'textarea', name: 'customOutputCommand', value: '', placeholder: '指令设定请参考readme文档，勿轻易修改' },
+}
+var settings = {}
+for (const key in settingsList) {
+    settings[settingsList[key].name] = settingsList[key].value
+}
+
+function mergeSettings(settingsList=settingsList,settings=settings,newSettings) {
+    settings = Object.assign(settings, newSettings)
+    for (const key in settings) {
+        settingsList[key].value = settings[key]
+    }
 }
 
 try {
@@ -63,13 +54,13 @@ try {
     try {
         var newSettings = JSON.parse(fs.readFileSync('./settings.json'))
         if (newSettings) {
-            settings = Object.assign(settings, newSettings)
+            mergeSettings(settingsList,settings,newSettings)
             fs.writeFileSync('./settings.json', JSON.stringify(settings, '', '\t'))
             fs.writeFileSync(path.resolve(settings.tempPath, './settings_backup.json'), JSON.stringify(settings, '', '\t'))
             logger.debug('init', '已加载本地配置', settings);
         } else {
             newSettings = JSON.parse(fs.readFileSync(path.resolve(settings.tempPath, './settings_backup.json')))
-            settings = Object.assign(settings, newSettings)
+            mergeSettings(settingsList,settings,newSettings)
             logger.debug('init', '配置项错误，请检查1');
         }
         if (settings.ffmpegPath) {
@@ -157,10 +148,12 @@ try {
 
 module.exports = {
     settings,
+    settingsList,
     Ffmpeg,
     proxySettings,
     libraryIndex,
     osPlatform,
     ffmpegSuffix,
+    mergeSettings
 }
 module.exports.gpus = require('./getGPU')
