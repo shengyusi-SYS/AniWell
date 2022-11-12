@@ -21,7 +21,7 @@ async function handleVideoRequest(params) {
         logger.debug('handleVideoRequest videoInfo')
         let subtitleList = await handleSubtitles(filePath, videoInfo)
         logger.debug('handleVideoRequest handleSubtitles', subtitleList)
-        videoInfo = selectMethod(videoInfo, subtitleList, params)
+        videoInfo = selectMethod(videoInfo, params)
         logger.debug('handleVideoRequest selectMethod')
         let handler
         if (videoInfo.method == 'direct') {

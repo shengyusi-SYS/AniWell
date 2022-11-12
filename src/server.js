@@ -2,8 +2,9 @@ const { log4js, logger } = require('./utils/logger');
 const fs = require('fs');
 const path = require('path');
 
-const { settings, settingsList, proxySettings, libraryIndex, osPlatform,mergeSettings } = require('./utils/init');
-const { readdir, rmdir, mkdir, stat, readFile, writeFile, generatePictureUrl } = require('./utils');
+const { settings, settingsList, proxySettings, libraryIndex, osPlatform, mergeSettings } = require('./utils/init');
+const {  generatePictureUrl } = require('./utils');
+const { copyFile,readdir,rmdir,mkdir,stat,readFile,writeFile,access,rename } = require('fs/promises');
 
 var got = () => Promise.reject()
 import('got').then((result) => {
@@ -155,7 +156,7 @@ app.use('/api', (req, res, next) => {
             // logger.debug('/v2/auth/login', req.headers)
             next()
         } else if (!req.cookies && !req.query.cookie) {
-            throw new Error('Fails.')
+                throw new Error('Fails.')
         } else {
             let newSID
             if (req.cookies && req.cookies.SID) {
@@ -167,6 +168,7 @@ app.use('/api', (req, res, next) => {
             }
 
             if (bannedSIDs.includes(newSID)) {
+                logger.error('/api', 'bannedSIDs')
                 throw new Error('Fails.')
             } else if (SID != newSID) {
                 checkCookie = true
@@ -177,7 +179,9 @@ app.use('/api', (req, res, next) => {
             next()
         }
     } catch (error) {
-        logger.error('/v2/auth/login', error)
+        if (req.path!='/v2/sync/maindata') {
+            logger.error('/api', error)
+        }
         res.status(403).send(error)
     }
 
@@ -250,7 +254,7 @@ app.use('/api/localFile/updateLibrary', (req, res) => {
 //更新配置项
 app.use('/api/localFile/changeFileServerSettings', async (req, res) => {
     let data = req.body
-    mergeSettings(settingsList,settings,data)
+    mergeSettings(settingsList, settings, data)
     writeFile('./settings.json', JSON.stringify(settings, '', '\t')).then((result) => {
         logger.debug('debug', '已更新配置');
         logger.debug('debug', settings);
@@ -330,7 +334,7 @@ app.use('/api/localFile/getFile', async (req, res, next) => {
                 res.send(result)
             })
         } else if (fileType == 'video') {
-            let params = { filePath, suffix, SID, bitrate: settings.bitrate, autoBitrate: settings.autoBitrate, resolution: '1080p', method: 'transcode' }
+            let params = { filePath, suffix, SID, bitrate: settings.bitrate, autoBitrate: settings.autoBitrate, resolution: '1080p' }
             videoHandler = await handleVideoRequest(params)
             videoHandler(app)
             res.send('Ok.')

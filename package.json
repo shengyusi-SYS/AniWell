@@ -19,6 +19,7 @@
     "log4js": "^6.7.0",
     "node-7z": "^3.0.0",
     "node-wmi": "^0.0.5",
+    "parse-torrent": "^9.1.5",
     "rimraf": "^3.0.2",
     "socket.io": "^4.5.2",
     "tough-cookie": "^4.1.2",

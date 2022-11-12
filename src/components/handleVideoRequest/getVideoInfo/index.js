@@ -1,6 +1,6 @@
 const logger = require('../../../utils/logger').logger;
 const {Ffmpeg} = require('../../../utils/init');
-const {access} = require('../../../utils');
+const { access } = require('fs/promises');
 const {settings} = require('../../../utils/init');
 const path = require('path');
 function getVideoInfo(filePath) {

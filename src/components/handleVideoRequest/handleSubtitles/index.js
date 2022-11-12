@@ -1,7 +1,7 @@
 const logger = require('../../../utils/logger').logger;
 const path = require('path');
 const fs = require('fs');
-const {readdir} = require('../../../utils');
+const { readdir } = require('fs/promises');
 function handleSubtitles(filePath, videoInfo) {
     try {
         logger.debug('handleSubtitles start')
@@ -56,6 +56,7 @@ function handleSubtitles(filePath, videoInfo) {
                 })
             }
             logger.debug('handleSubtitles end');
+            videoInfo.subtitleList = subtitleList
             return subtitleList
         })
     } catch (error) {

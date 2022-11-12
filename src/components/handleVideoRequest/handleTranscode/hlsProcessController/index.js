@@ -1,5 +1,5 @@
 const { logger, transcodeLogger } = require('../../../../utils/logger');
-const { access } = require('../../../../utils');
+const { access } = require('fs/promises');
 const path = require('path');
 const { settings, ffmpegSuffix } = require('../../../../utils/init');
 const kill = require('tree-kill');

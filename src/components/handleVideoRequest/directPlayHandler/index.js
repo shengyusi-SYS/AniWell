@@ -1,7 +1,9 @@
 const path = require('path');
 const fs = require('fs');
-const { readdir, rmdir, mkdir, stat, readFile, writeFile, generatePictureUrl,mediaContentType } = require('../../../utils');
+const { generatePictureUrl,mediaContentType } = require('../../../utils');
+const { stat } = require('fs/promises');
 const { logger } = require('../../../utils/logger');
+
 var _this
 
 class directPlayHandler {

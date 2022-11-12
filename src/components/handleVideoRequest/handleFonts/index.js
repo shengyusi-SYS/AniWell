@@ -1,6 +1,6 @@
+const { readdir } = require('fs/promises');
 const path = require('path');
-const {extractFonts,readdir} = require('../../../utils');
-
+const {extractFonts} = require('../../../utils');
 async function handleFonts(filePath){
     let dirContent = await readdir(path.dirname(filePath))
     let fonts 

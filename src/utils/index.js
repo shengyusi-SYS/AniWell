@@ -1,7 +1,6 @@
 const { settings } = require('./init');
 const {logger} = require('./logger');
-const { promisify } = require('util');
-const fs = require('fs');
+const {createReadStream} = require('fs');
 const rimraf = require('rimraf');
 const { EventEmitter } = require('events');
 const path = require('path');
@@ -9,7 +8,9 @@ const event = new EventEmitter();
 const sevenBin = require('7zip-bin');
 const pathTo7zip = sevenBin.path7za
 const Seven = require('node-7z');
-const { copyFile,readdir,rmdir,mkdir,stat,readFile,writeFile,access,rename } = require('fs/promises');
+const { readdir,mkdir,rename } = require('fs/promises');
+var crypto = require('crypto');
+const hash = crypto.createHash('md5');
 function cleanNull(arr) {
     let temp = []
     arr.forEach(v => {
@@ -71,20 +72,27 @@ function listFonts(packPath) {
         $bin: pathTo7zip
     })
 }
+
+async function vidoeHash(filePath) {
+    return await new Promise((resolve, reject) => {
+        const stream =createReadStream(filePath,{end:1024*1024*16-1})
+        stream.on('data', chunk => {
+          hash.update(chunk, 'utf8');
+        });
+        stream.on('end', () => {
+          const md5 = hash.digest('hex');
+          resolve(md5)
+        });
+    })
+}
+
 module.exports = {
-    readdir,
-    rmdir,
-    mkdir,
-    stat,
-    readFile,
-    writeFile,
-    access,
-    copyFile,
     cleanNull,
     generatePictureUrl,
     mediaContentType,
     extractFonts,
     listFonts,
+    vidoeHash,
     Seven,
     event,
     rimraf,

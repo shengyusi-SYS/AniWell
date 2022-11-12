@@ -1,6 +1,7 @@
 const { logger } = require('../../../utils/logger');
 const { settings } = require('../../../utils/init');
-const { readdir, rmdir, mkdir, stat, readFile, writeFile, rimraf, event } = require('../../../utils');
+const { rimraf } = require('../../../utils');
+const {mkdir,stat} = require('fs/promises');
 const path = require('path');
 const { debounce } = require('lodash');
 var _this
@@ -26,7 +27,7 @@ class hlsRequestHandler {
             let used = app._router.stack.findIndex(v => v.regexp.toString().includes('output'))
             if (used < 0) {
                 app.use('/api/localFile/output', debounce(async (req, res, next) => {
-                    logger.debug('hlsRequestHandler /api/localFile/output', req.path);
+                    // logger.debug('hlsRequestHandler /api/localFile/output', req.path);
                     if (tempReqPath && (tempReqPath != req.path)) {
                         clearTimeout(readTimeout)
                     }

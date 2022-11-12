@@ -1,5 +1,7 @@
 const { logger } = require('../../../../utils/logger');
-const { rimraf, readdir, rmdir, mkdir, stat, readFile, writeFile } = require('../../../../utils');
+const { rimraf } = require('../../../../utils');
+const { mkdir,writeFile} = require('fs/promises');
+
 const { settings } = require('../../../../utils/init');
 const path = require('path');
 async function generateM3U8(videoInfo) {

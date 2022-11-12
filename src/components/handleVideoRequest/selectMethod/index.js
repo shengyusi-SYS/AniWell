@@ -1,11 +1,12 @@
 
 const {logger} = require('../../../utils/logger');
 var tempInfo
-function selectMethod(videoInfo, subtitleList,params) {
+function selectMethod(videoInfo,params) {
     logger.debug('selectMethod','start')
     let { filePath, bitrate, autoBitrate, resolution,SID,method } = params
     videoInfo.filePath = filePath
-    if (videoInfo.bitrate<=bitrate*1000000&&method=='direct') {
+    console.log(method);
+    if ((videoInfo.codec=='h264'&&videoInfo.bitrate<=bitrate*1000000&&!videoInfo.subtitleList.length>0)||method=='direct') {
         videoInfo.method = 'direct'
     } else {
         let targetBitrate = bitrate
@@ -23,7 +24,7 @@ function selectMethod(videoInfo, subtitleList,params) {
         videoInfo.method = 'transcode'
         videoInfo.SID = SID
     }
-    logger.debug('selectMethod','~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',JSON.stringify(videoInfo),JSON.stringify(tempInfo))
+    // logger.debug('selectMethod','~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',JSON.stringify(videoInfo),JSON.stringify(tempInfo))
     if (!videoInfo.cleared&&tempInfo) {
         delete videoInfo.cleared
         delete tempInfo.cleared
