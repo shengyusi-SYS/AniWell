@@ -14,7 +14,8 @@ function handleSubtitles(filePath, videoInfo) {
         return readdir(fileRootPath).catch((err) => {
             logger.error('handleSubtitles', err)
         }).then((dir) => {
-            dir.forEach((value,index) => {
+            let index = 0
+            dir.forEach((value) => {
                 let suffix = path.extname(value).replace('.', '')
                 if ((value.includes(videoName) || videoName.includes(path.parse(value).name)) && [...videoSub, ...textSub].includes(suffix)) {
                     let sub = { path: path.join(fileRootPath, value), source: 'out', codec: suffix }
@@ -24,6 +25,7 @@ function handleSubtitles(filePath, videoInfo) {
                     try {
                         // let tempSubPath = path.resolve(settings.tempPath,'output',`in.${suffix}`)
                         let tempSubPath = path.resolve('temp', `in${index}.${suffix}`)
+                        index++
                         let end = false
                         specialCharacter.forEach(val => {
                             if (end) {

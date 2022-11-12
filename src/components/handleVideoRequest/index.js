@@ -7,6 +7,7 @@ const selectMethod = require('./selectMethod');
 const hlsRequestHandler = require('./hlsRequestHandler');
 const handleTranscode = require('./handleTranscode');
 const directPlayHandler = require('./directPlayHandler');
+const handleFonts = require('./handleFonts');
 var lastHlsProcessController
 var lastHandler
 //处理视频请求，返回一个接收app的handler
@@ -14,6 +15,8 @@ async function handleVideoRequest(params) {
     try {
         logger.debug('handleVideoRequest params', params)
         let { filePath, bitrate, autoBitrate, resolution, SID } = params
+        let fonts = handleFonts(filePath)
+        logger.debug('handleVideoRequest handleFonts')
         let videoInfo = await getVideoInfo(filePath)
         logger.debug('handleVideoRequest videoInfo')
         let subtitleList = await handleSubtitles(filePath, videoInfo)
@@ -35,6 +38,7 @@ async function handleVideoRequest(params) {
                     await lastHlsProcessController.killCurrentProcess()
                 }
                 let HlsProcessController = await handleTranscode(videoInfo, subtitleList)
+                await fonts
                 lastHlsProcessController = HlsProcessController
                 await HlsProcessController.generateHlsProcess('index0')
                 logger.debug('handleVideoRequest handleTranscode')

@@ -1,12 +1,13 @@
 {
   "name": "FileServer-for-qBittorrent",
-  "version": "1.0.0",
+  "version": "0.4.0",
   "main": "./src/main.js",
   "bin": "./middle/middle.js",
   "repository": "https://github.com/blytzxdl/File-server-for-qBittorrent.git",
   "author": "生于斯 <shengyss@163.com>",
   "license": "GPL-3.0-or-later",
   "dependencies": {
+    "7zip-bin": "^5.2.0",
     "body-parser": "^1.20.1",
     "connect-history-api-fallback": "^2.0.0",
     "cookie-parser": "^1.4.6",
@@ -16,6 +17,7 @@
     "http-proxy-middleware": "^2.0.6",
     "lodash": "^4.17.21",
     "log4js": "^6.7.0",
+    "node-7z": "^3.0.0",
     "node-wmi": "^0.0.5",
     "rimraf": "^3.0.2",
     "socket.io": "^4.5.2",
