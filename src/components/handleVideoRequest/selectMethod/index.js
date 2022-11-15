@@ -22,7 +22,6 @@ function selectMethod(videoInfo,params) {
         videoInfo.targetBitrate = targetBitrate
         videoInfo.targetResolution = '1080p'
         videoInfo.method = 'transcode'
-        videoInfo.SID = SID
     }
     // logger.debug('selectMethod','~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',JSON.stringify(videoInfo),JSON.stringify(tempInfo))
     if (!videoInfo.cleared&&tempInfo) {
@@ -38,6 +37,7 @@ function selectMethod(videoInfo,params) {
         tempInfo = JSON.parse(JSON.stringify(videoInfo))
         videoInfo.exist = false
     }
+    videoInfo.SID = SID
     logger.debug('selectMethod','end+++++++++++++++++++++++++++++++++++++++++',videoInfo)
     return videoInfo
 }

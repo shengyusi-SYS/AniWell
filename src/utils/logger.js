@@ -64,7 +64,22 @@ let config = {
             "type": "logLevelFilter",
             "appender": "allTranscode",
             "level": "debug"
-        }
+        },
+        "allScrape": {
+            "type": "dateFile",
+            "filename": "log/scrape.log",
+            "pattern": ".yyyy-MM-dd",
+            "layout": {
+                "type": "pattern",
+                "pattern": "[%d{ISO8601}][%5p %z %c] %m"
+            },
+            "compress": true
+        },
+        "scrape": {
+            "type": "logLevelFilter",
+            "appender": "allScrape",
+            "level": "debug"
+        },
     },
     "categories": {
         "default": {
@@ -86,6 +101,12 @@ let config = {
                 "transcode"
             ],
             "level": "all"
+        },
+        scrape:{
+            appenders:[
+                'scrape'
+            ],
+            level:'all'
         }
     }
 }
@@ -93,8 +114,10 @@ const log4js = require('log4js');
 log4js.configure(config);
 const logger = log4js.getLogger('maxInfo')
 const transcodeLogger = log4js.getLogger('transcode')
+const scrapeLogger = log4js.getLogger('scrape')
 module.exports = {
     log4js,
     logger,
-    transcodeLogger
+    transcodeLogger,
+    scrapeLogger
 }

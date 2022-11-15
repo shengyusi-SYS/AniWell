@@ -118,3 +118,4 @@ libraryIndex.json
 sync.ffs*
 .vscode
 settings_backup.json
+/log
