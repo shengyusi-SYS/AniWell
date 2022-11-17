@@ -113,7 +113,7 @@ async function readDirTree(dirPath, dirTree = {}) {
                     newDir = false
                 }
                 if (newDir) {
-                    res.children = newDir
+                    res = newDir
                 }
                 dirTree.children.push(res)
                 resolve()
@@ -138,7 +138,7 @@ function readDirTreeSync(dirPath, dirTree = {}) {
             let newTree = {}
             let newDir = readDirTreeSync(newPath, newTree)
             if (newDir) {
-                res.children = newDir
+                res = newDir
             }
             dirTree.children.push(res)
         })
@@ -194,7 +194,7 @@ async function appedDirTree(dirPath = '', dirTree = {}, appendFileInfo = async (
                     }
                     if (newDir) {
                         // await appendDirInfo(newDir)
-                        res.children = newDir
+                        res = newDir
                     }
                     dirTree.children.push(res)
                 }
