@@ -1,4 +1,4 @@
-const treeMerger = (addA, toB) => {
+const treeMerger = (toB,addA) => {
     addA.forEach(addVal => {
         if (!addVal.children) {
             let exist = toB.find(val => val.label == addVal.label)

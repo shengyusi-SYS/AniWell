@@ -1,102 +1,85 @@
 const path = require('path');
-const { readdir, writeFile } = require('fs/promises');
+const { readdir, writeFile, readFile } = require('fs/promises');
 const { scrapeLogger, logger } = require('../../../utils/logger');
 const dandanplayMatch = require('./dandanplayMatch');
+const computeCollection = require('./computeCollection');
 const fs = require('fs');
-const { appedDirTree,getFileType } = require('../../../utils');
-const {diffWords} = require('diff');
+const { appedDirTree, getFileType, Concurrently,deepMerge } = require('../../../utils');
+// const { Worker, isMainThread, parentPort, workerData } = require('worker_threads')
 
-async function dandanplayScraper(dirPath) {
+
+// parentPort.on('message',async libraryRootPath=>{
+//     let res = await dandanplayScraper(libraryRootPath)
+//     parentPort.postMessage(res)
+//   })
+
+
+var taskQueue = new Concurrently(3)
+
+async function dandanplayScraper(libraryRootPath) {
     try {
-        let dirTree = await appedDirTree(dirPath,{},dandanplayMatch,computeCollection,async(filePath)=>await getFileType(filePath) == 'video')
-        // console.log(dirTree);
-        await writeFile('./test.json',JSON.stringify(dirTree,'','\t'))
-        // scrapeLogger.debug('dandanplayScraper', dirTree);
-        return dirTree
+        let existTree = { label: path.basename(libraryRootPath), path: libraryRootPath, children: [] }
+        let fileFilter = async (filePath) => await getFileType(filePath) == 'video'
+        try {
+            existTree = JSON.parse(await readFile('./test.json'))
+            if (existTree.children) {
+                fileFilter = async (filePath) => {
+                    let branch = filePath.replace(path.dirname(existTree.path) + '\\', '').split(path.sep)
+                    let leaf = existTree
+                    for (let index = 1; index < branch.length; index++) {
+                        const label = branch[index];
+                        leaf = leaf.children.find(v => v.label == label)
+                        if (!leaf) {
+                            return true
+                        }
+                    }
+                    if (leaf.title) {
+                        console.log('exist');
+                        return false
+                    }
+                    return await getFileType(filePath) == 'video'
+                }
+            } else {
+                existTree = { label: path.basename(libraryRootPath), path: libraryRootPath, children: [] }
+            }
+        } catch (error) { }
+        let dirTree = {
+            label: path.basename(libraryRootPath),
+            path: libraryRootPath,
+            children: []
+        }
+        let queue = []
+        let curList = await readdir(libraryRootPath)
+        curList.forEach(v => {
+            queue.push(new Promise(async (resolve, reject) => {
+                let dirTask = async () => {
+                    return await appedDirTree(path.join(libraryRootPath, v), {}, {
+                        appendFileInfo: dandanplayMatch,
+                        appendDirInfo: computeCollection,
+                        fileFilter,
+                        callback: async () => {
+                            deepMerge(existTree, dirTree,true)
+                            await writeFile('./test.json', JSON.stringify(existTree, '', '\t'))
+                        }
+                    })
+                }
+                let res = await taskQueue.task(dirTask)
+                //    console.log('res-----------------',res);
+                if (res.type != 'file') {
+                    dirTree.children.push(res)
+                }
+                resolve()
+            }))
+        })
+        await Promise.all(queue)
+        deepMerge(existTree, dirTree,true)
+        await writeFile('./test.json', JSON.stringify(existTree, '', '\t'))
     } catch (error) {
-        scrapeLogger.error('dandanplayScraper',error);
+
     }
 }
 
 
-async function computeCollection(dirTree){
-    let countSeason = {}
-    let tempSeasonTitle
-    let tempCollectionTitle
-    let countCollection={}
-    let number = dirTree.children.length
-    dirTree.children.forEach(v=>{
-        if (v.fileInfo) {
-            let info = v.fileInfo
-            let seasonTitle = info.animeTitle
-            if (!tempSeasonTitle&&number>1) {
-                tempSeasonTitle = seasonTitle
-            }else if (tempSeasonTitle) {
-                seasonTitle = diffWords(tempSeasonTitle,seasonTitle)[0].value
-                if (!countSeason[seasonTitle]) {
-                    countSeason[seasonTitle]={id:info.animeId,num:1}
-                }else countSeason[seasonTitle].num++
-                tempSeasonTitle = seasonTitle
-            } else {
-                countSeason[seasonTitle]={id:info.animeId,num:1}
-            }
-            delete info.animeTitle
-            delete info.animeId
-            delete v.fileInfo
-            Object.assign(v,info)
-        }
-        if (v.ddId) {
-            let collectionTitle = v.title
-            if (!tempCollectionTitle&&number>1) {
-                tempCollectionTitle = collectionTitle
-            }else if (tempCollectionTitle) {
-                collectionTitle = diffWords(tempCollectionTitle,collectionTitle)[0].value
-                if (!countCollection[collectionTitle]) {
-                    countCollection[collectionTitle]={id:v.ddId,num:1}
-                }else countCollection[collectionTitle].num++
-                tempCollectionTitle = collectionTitle
-            } else {
-                countCollection[collectionTitle]={id:v.ddId,num:1}
-            }
-        }
-    })
-    let season = Object.entries(countSeason)
-    if (season.length>0) {
-        season = season.sort((a,b)=>b[1].num-a[1].num)[0]
-        dirTree.title = season[0]
-        dirTree.ddId = season[1].id
-        let seasonInfo =  await searchSeason(dirTree.title,dirTree.ddId)
-        delete seasonInfo.animeId
-        delete seasonInfo.animeTitle
-        delete seasonInfo.typeDescription
-        delete seasonInfo.animeId
-        delete seasonInfo.animeId
-        Object.assign(dirTree,seasonInfo)
-    }
-    let collection = Object.entries(countCollection)
-    if (collection.length>0) {
-        collection = collection.sort((a,b)=>b[1].num-a[1].num)
-        dirTree.title = collection[0][0]
-        dirTree.seasons=countCollection
-    }
-    dirTree.children.sort((a,b)=>{
-        if (a.episode&&b.episode) {
-            return a.episode-b.episode
-        }else if (a.startDate&&b.startDate) {
-            return a.startDate-b.startDate
-        }else return 0
-    })
-    // console.log(dirTree);
-}
 
-async function searchSeason(title,id) {
-    let res  = await fetch(`https://api.dandanplay.net/api/v2/search/anime?keyword=${encodeURI(title)}`)
-    res = await res.json()
-    if (res.animes) {
-        if (id) {
-            return res.animes.find(v=>v.animeId==id)
-        }else return res.animes[0]
-    }else return false
-  }
 
 module.exports = dandanplayScraper

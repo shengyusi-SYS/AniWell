@@ -21,6 +21,7 @@
     "log4js": "^6.7.0",
     "node-7z": "^3.0.0",
     "node-wmi": "^0.0.5",
+    "node-worker-threads-pool": "^1.5.1",
     "parse-torrent": "^9.1.5",
     "rimraf": "^3.0.2",
     "socket.io": "^4.5.2",

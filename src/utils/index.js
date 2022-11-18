@@ -76,7 +76,7 @@ function listFonts(packPath) {
     })
 }
 //计算视频hash，弹弹play模式
-async function vidoeHash(filePath) {
+async function vidoeHashS(filePath) {
     const hash = crypto.createHash('md5')
     return await new Promise((resolve, reject) => {
         const stream = fs.createReadStream(filePath, { end: 1024 * 1024 * 16 - 1 })
@@ -89,29 +89,104 @@ async function vidoeHash(filePath) {
         });
     })
 }
+
+
+function readChunkSync(filePath, { length, startPosition }) {
+    let buffer = Buffer.alloc(length);
+    const fileDescriptor = fs.openSync(filePath, 'r');
+
+    try {
+        const bytesRead = fs.readSync(fileDescriptor, buffer, {
+            length,
+            position: startPosition,
+        });
+
+        if (bytesRead < length) {
+            buffer = buffer.subarray(0, bytesRead);
+        }
+
+        return buffer;
+    } finally {
+        fs.closeSync(fileDescriptor);
+    }
+}
+
+async function vidoeHash(filePath) {
+    try {
+        const hash = crypto.createHash('md5')
+        // console.log('start', filePath);
+        const chunk = readChunkSync(filePath, { length: 1024 * 1024 * 16 })
+        const md5 = hash.update(chunk, 'utf8').digest('hex')
+        console.log('end', filePath);
+        return Promise.resolve(md5)
+    } catch (error) {
+        return Promise.reject
+    }
+
+}
+
+class Concurrently {
+    constructor(tasksLimit) {
+        if (tasksLimit < 0) {
+            throw new Error('Limit cant be lower than 0.');
+        }
+        this.tasksQueue = [];
+        this.tasksActiveCount = 0;
+        this.tasksLimit = tasksLimit;
+    }
+
+    registerTask(handler) {
+        this.tasksQueue = [...this.tasksQueue, handler];
+        this.executeTasks();
+    }
+
+    executeTasks() {
+        while (this.tasksQueue.length && this.tasksActiveCount < this.tasksLimit) {
+            const task = this.tasksQueue[0];
+            this.tasksQueue = this.tasksQueue.slice(1);
+            this.tasksActiveCount += 1;
+
+            task()
+                .then((result) => {
+                    this.tasksActiveCount -= 1;
+                    this.executeTasks();
+                    return result;
+                })
+                .catch((err) => {
+                    this.tasksActiveCount -= 1;
+                    this.executeTasks();
+                    throw err
+                });
+        }
+    }
+
+    task(handler) {
+        return new Promise((resolve, reject) =>
+            this.registerTask(() =>
+                handler()
+                    .then(resolve)
+                    .catch(reject),
+            ),
+        );
+    }
+}
+
+
 //获取树形文件夹内容，异步
-async function readDirTree(dirPath, dirTree = {}) {
+async function readDirTree(dirPath, dirTree = {}, id = 0) {
     let queue = []
     dirTree.label = path.basename(dirPath)
-    dirTree.children = []
     let curList = []
     try {
         curList = await readdir(dirPath)
-    } catch (error) {
-        return Promise.reject()
-    }
-    try {
+        dirTree.children = []
         curList.forEach(v => {
             queue.push(new Promise(async (resolve, reject) => {
                 let res = { label: v }
                 let newPath = path.join(dirPath, v)
                 let newTree = {}
                 let newDir = []
-                try {
-                    newDir = await readDirTree(newPath, newTree)
-                } catch (error) {
-                    newDir = false
-                }
+                newDir = await readDirTree(newPath, newTree)
                 if (newDir) {
                     res = newDir
                 }
@@ -120,9 +195,15 @@ async function readDirTree(dirPath, dirTree = {}) {
             }))
         })
     } catch (error) {
+        // console.log(id,dirTree.label);
         return false
     }
-    await Promise.all(queue)
+    try {
+
+        await Promise.all(queue)
+    } catch (error) {
+    }
+    console.log(id, dirTree);
     return dirTree
 }
 
@@ -152,18 +233,29 @@ function readDirTreeSync(dirPath, dirTree = {}) {
 // 在遇到文件时执行fileFilter和appendFileInfo函数,
 // fileFilter需要返回Boolen，为false时在树中忽略此文件，appendFileInfo将返回值设为文件的fileInfo;
 // 遇到目录时执行appendDirInfo函数，可以获取到文件的fileInfo,
-async function appedDirTree(dirPath = '', dirTree = {}, appendFileInfo = async (filePath) => { }, appendDirInfo = async (dirTree) => { }, fileFilter = async (filePath) => true) {
-    let queue = []
+async function appedDirTree(dirPath = '', dirTree = {}, append = {}) {
+    let { appendFileInfo, appendDirInfo, fileFilter, id, queue, callback } = append
+    !appendFileInfo ? appendFileInfo = async (filePath) => { } : '';
+    !appendDirInfo ? appendDirInfo = async (dirTree) => { } : '';
+    !fileFilter ? fileFilter = async (filePath) => true : '';
+    !callback ? callback = async (dirTree) => { } : ''
+    !id ? id = 0 : '';
+    !queue ? queue = [] : ''
     let curList = []
     dirTree.label = path.basename(dirPath)
     dirTree.children = []
     try {
         curList = await readdir(dirPath)
     } catch (error) {
+        // console.log('readdir error~~~~~~~~~~~~~~~~~~~~~~~',dirPath,error);
         let filePath = dirPath
         try {
-            let fileInfo = await appendFileInfo(filePath)
-            return Promise.reject(fileInfo)
+            let task = new Promise(async (resolve, reject) => {
+                resolve(await appendFileInfo(filePath))
+            })
+            queue.push(task)
+            let fileInfo = await task
+            return { type: 'file', fileInfo }
         } catch (error) {
             console.log('fileInfo', error);
         }
@@ -184,17 +276,11 @@ async function appedDirTree(dirPath = '', dirTree = {}, appendFileInfo = async (
                     let newPath = path.join(dirPath, v)
                     let newTree = {}
                     let newDir = []
-                    try {
-                        newDir = await appedDirTree(newPath, newTree, appendFileInfo, appendDirInfo, fileFilter)
-                    } catch (error) {
-                        if (typeof error == 'object') {
-                            res.fileInfo = error
-                        }
-                        newDir = false
-                    }
-                    if (newDir) {
-                        // await appendDirInfo(newDir)
+                    newDir = await appedDirTree(newPath, newTree, { appendFileInfo, appendDirInfo, fileFilter, id: id++ })
+                    if (newDir && newDir.children) {
                         res = newDir
+                    } else if (newDir.type == 'file' && newDir.fileInfo) {
+                        res.fileInfo = newDir.fileInfo
                     }
                     dirTree.children.push(res)
                 }
@@ -206,12 +292,13 @@ async function appedDirTree(dirPath = '', dirTree = {}, appendFileInfo = async (
         return false
     }
     try {
-
         await Promise.all(queue)
     } catch (error) {
         console.log('Promise.all', error);
     }
     await appendDirInfo(dirTree)
+    await callback(dirTree)
+    // console.log('-----------------------',dirTree);
     return dirTree
 }
 
@@ -220,12 +307,50 @@ async function getFileType(filePath) {
     const { fileTypeFromFile } = await import('file-type')
     try {
         let res = await fileTypeFromFile(filePath)
-        res = res.mime.split('/')[0]
+        if (res) {
+            res = res.mime.split('/')[0]
+        }
         return res
     } catch (error) {
         return false
     }
 }
+
+const deepMerge = (toB, addA,isTree) => {
+    if (toB instanceof Object&&addA instanceof Object) {
+      if (toB instanceof Array&&addA instanceof Array) {
+        addA.forEach(v=>{
+            let addVal = v
+            let exist
+            if (isTree) {
+                exist = toB.find(val=>val.label===v.label)
+            }else exist = toB.find(val=>val===v)
+            if (!exist) {
+                toB.push(addVal)
+            }else{
+                if (typeof exist=='object' &&typeof addVal=='object'){
+                  deepMerge(exist, addVal,isTree)
+                }
+            }
+        })
+    } else{
+      for (const key in addA) {
+          let exist = toB[key]
+          let addVal = addA[key]
+          if (!exist) {
+              toB[key] = addVal
+          } else {
+              if (typeof exist=='object' &&typeof addVal=='object') {
+                deepMerge(exist, addVal,isTree)    
+              } else if (exist!==addVal) {
+                  toB[key] = addVal
+              }
+          }
+        }
+    }
+  }
+    return toB
+  }
 
 module.exports = {
     cleanNull,
@@ -238,7 +363,9 @@ module.exports = {
     readDirTreeSync,
     appedDirTree,
     getFileType,
+    deepMerge,
     Seven,
     event,
     rimraf,
+    Concurrently
 }

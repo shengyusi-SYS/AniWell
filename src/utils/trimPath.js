@@ -24,7 +24,7 @@ const trimPath = (list) => {
         })
         branches.push(leaves[0])
     });
-    treeMerger(branches, res)
+    treeMerger(res,branches )
     return res
 }
 module.exports = trimPath
