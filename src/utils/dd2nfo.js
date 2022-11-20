@@ -9,7 +9,7 @@ import('got').then((result) => {
 })
 var noticed = false
 function dd2nfo(dandanplayPath, fullUpdate = false, overwrite = false) {
-    console.log('开始转化媒体库',dandanplayPath,fullUpdate,overwrite);
+    console.log('开始转化媒体库', dandanplayPath, fullUpdate, overwrite);
     if (!dandanplayPath) {
         return Promise.reject('未检测到弹弹Play')
     }
@@ -51,7 +51,7 @@ function dd2nfo(dandanplayPath, fullUpdate = false, overwrite = false) {
     if (!fullUpdate) {
         console.log('增量更新');
         for (const ap in library) {
-            if (!backup[ap]||(backup[ap].EpisodeId!=library[ap].EpisodeId)) {
+            if (!backup[ap] || (backup[ap].EpisodeId != library[ap].EpisodeId)) {
                 update[ap] = library[ap]
             }
         }
@@ -99,13 +99,13 @@ function dd2nfo(dandanplayPath, fullUpdate = false, overwrite = false) {
             try {
                 oldNfo = fs.readFileSync(path.resolve(path.dirname(anime.Path), `${path.parse(anime.Name).name}.nfo`))
                 delete obj.episodedetails.uniqueid
-                if (oldNfo.episodedetails&&oldNfo.episodedetails.art) {
+                if (oldNfo.episodedetails && oldNfo.episodedetails.art) {
                     delete obj.episodedetails.art
                 }
                 parser.parseString(oldNfo, (err, res) => {
-                   Object.assign(res.episodedetails, obj.episodedetails)
-                //    delete res.title
-                   newNfo = res
+                    Object.assign(res.episodedetails, obj.episodedetails)
+                    //    delete res.title
+                    newNfo = res
                 })
                 let xml = builder.buildObject(newNfo);
                 fs.writeFileSync(path.resolve(path.dirname(anime.Path), `${path.parse(anime.Name).name}.nfo`), xml)
@@ -141,9 +141,9 @@ function dd2nfo(dandanplayPath, fullUpdate = false, overwrite = false) {
             } catch (error) {
                 try {
                     fs.statSync(path.resolve(path.dirname(anime.Path), 'poster.jpg'))
-                    objs.tvshow.art=[{poster:path.resolve(path.dirname(anime.Path), 'poster.jpg')}]
+                    objs.tvshow.art = [{ poster: path.resolve(path.dirname(anime.Path), 'poster.jpg') }]
                 } catch (error) {
-                    
+
                 }
             }
             season[path.dirname(anime.Path)] = objs
@@ -174,28 +174,28 @@ function dd2nfo(dandanplayPath, fullUpdate = false, overwrite = false) {
                     fs.statSync(path.resolve(path.dirname(anime.Path), 'poster.jpg'))
                     poster = path.resolve(path.dirname(anime.Path), 'poster.jpg')
                 } catch (error) {
-                    
+
                 }
             }
             allSeason[path.dirname(anime.Path)] = {
                 title: anime.AnimeTitle,
                 poster,
-                id:anime.AnimeId,
-                name:path.dirname(anime.Path)
+                id: anime.AnimeId,
+                name: path.dirname(anime.Path)
             }
         }
-        libraryIndex.episodes[ap]={
-            poster:path.resolve(path.parse(ap).dir,'metadata', `${path.parse(ap).name}.jpg`),
-            title:anime.EpisodeTitle,
-            episode:anime.EpisodeId - anime.AnimeId * 10000,
-            seasonTitle:anime.AnimeTitle,
-            seasonPoster:poster,
-            hash:anime.Hash
+        libraryIndex.episodes[ap] = {
+            poster: path.resolve(path.parse(ap).dir, 'metadata', `${path.parse(ap).name}.jpg`),
+            title: anime.EpisodeTitle,
+            episode: anime.EpisodeId - anime.AnimeId * 10000,
+            seasonTitle: anime.AnimeTitle,
+            seasonPoster: poster,
+            hash: anime.Hash
         }
         try {
             libraryIndex.episodes[ap].seasonPoster = allSeason[path.dirname(anime.Path)].poster
         } catch (error) {
-            console.log(error,ap);
+            console.log(error, ap);
         }
         for (const ap in dropped) {
             delete libraryIndex.episodes[ap]
@@ -208,13 +208,13 @@ function dd2nfo(dandanplayPath, fullUpdate = false, overwrite = false) {
         episode.poster = path.resolve(dandanplayPath, 'Cache', 'LibraryImage', `${episode.hash}.jpg`)
         delete episode.seasonTitle
         delete episode.seasonPoster
-      }
-    libraryIndex.libraryTree = trimPath([...Object.values(episodes),...Object.values(allSeason)])
+    }
+    libraryIndex.libraryTree = trimPath([...Object.values(episodes), ...Object.values(allSeason)])
     try {
         fs.writeFileSync('./libraryIndex.json', JSON.stringify(libraryIndex, '', '\t'))
         console.log('已更新索引');
     } catch (error) {
-        
+
     }
 
     let searchQueue = []

@@ -6,7 +6,7 @@ function selectMethod(videoInfo,params) {
     let { filePath, bitrate, autoBitrate, resolution,SID,method } = params
     videoInfo.filePath = filePath
     console.log(method);
-    if ((videoInfo.codec=='h264'&&videoInfo.bitrate<=bitrate*1000000&&!videoInfo.subtitleList.length>0)||method=='direct') {
+    if ((videoInfo.codec=='h264'&&videoInfo.pix_fmt=='yuv420p'&&videoInfo.bitrate<=bitrate*1000000&&!videoInfo.subtitleList.length>0)||method=='direct') {
         videoInfo.method = 'direct'
     } else {
         let targetBitrate = bitrate

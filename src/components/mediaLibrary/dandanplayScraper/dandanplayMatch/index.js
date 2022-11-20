@@ -1,17 +1,18 @@
 const { vidoeHash, getFileType } = require('../../../../utils')
 const { scrapeLogger } = require('../../../../utils/logger');
-
+const mergeNfo = require('../../mergeNfo');
 const path = require('path');
-async function dandanplayMatch(filePath,params={}) {
+async function dandanplayMatch(filePath, params = {}) {
     try {
-        let {selectedName,nameFilter}=params
-        if (!filePath&&!selectedName) {
-            return false
-        }
-        !selectedName?selectedName='':''
-        !nameFilter?nameFilter=(fileName)=>{return fileName}:''
-        let fileName = selectedName||nameFilter(path.parse(filePath).name)
-        let hash=''
+        // let { selectedName, nameFilter } = params
+        // if (!filePath && !selectedName) {
+        //     return false
+        // }
+        // !selectedName ? selectedName = '' : ''
+        // !nameFilter ? nameFilter = (fileName) => { return fileName } : ''
+        // let fileName = selectedName || nameFilter(path.parse(filePath).name)
+        let fileName = path.parse(filePath).name
+        let hash = ''
         let matchMode
         if (filePath) {
             if (await getFileType(filePath) != 'video') {
@@ -19,7 +20,7 @@ async function dandanplayMatch(filePath,params={}) {
             }
             hash = await vidoeHash(filePath)
             matchMode = 'hashAndFileName'
-        }else{
+        } else {
             matchMode = 'fileNameOnly'
         }
         let form = {
@@ -48,22 +49,33 @@ async function dandanplayMatch(filePath,params={}) {
         if (res.success) {
             if (!res.isMatched) {
                 res = {
+                    source: 'dandan',
+                    result: 'episodedetails',
+                    // fileInfo:{
                     hash,
                     matches: res.matches
+                    // }
                 }
             } else {
                 let result = res.matches[0]
                 res = {
+                    source: 'dandan',
+                    result: 'episodedetails',
+                    // fileInfo:{
                     hash,
                     episode: result.episodeId - result.animeId * 10000,
                     animeTitle: result.animeTitle,
                     animeId: result.animeId,
                     title: result.episodeTitle,
-                    catagory: result.type
+                    type: result.type,
+                    season: result.episodeId - result.animeId * 10000 < 9000 ? 1 : 0
+                    // }
                 }
             }
         } else res = false
-
+        if (res) {
+            mergeNfo(filePath, res)
+        }
         scrapeLogger.debug('dandanplayMatch res', fileName, res);
         return res
     } catch (error) {

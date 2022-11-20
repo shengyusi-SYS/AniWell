@@ -125,7 +125,7 @@ async function vidoeHash(filePath) {
 
 }
 
-class Concurrently {
+class TaskPool {
     constructor(tasksLimit) {
         if (tasksLimit < 0) {
             throw new Error('Limit cant be lower than 0.');
@@ -233,29 +233,34 @@ function readDirTreeSync(dirPath, dirTree = {}) {
 // 在遇到文件时执行fileFilter和appendFileInfo函数,
 // fileFilter需要返回Boolen，为false时在树中忽略此文件，appendFileInfo将返回值设为文件的fileInfo;
 // 遇到目录时执行appendDirInfo函数，可以获取到文件的fileInfo,
-async function appedDirTree(dirPath = '', dirTree = {}, append = {}) {
-    let { appendFileInfo, appendDirInfo, fileFilter, id, queue, callback } = append
-    !appendFileInfo ? appendFileInfo = async (filePath) => { } : '';
-    !appendDirInfo ? appendDirInfo = async (dirTree) => { } : '';
-    !fileFilter ? fileFilter = async (filePath) => true : '';
-    !callback ? callback = async (dirTree) => { } : ''
-    !id ? id = 0 : '';
-    !queue ? queue = [] : ''
+const defaultAppend = {
+    fileFilter: async (filePath) => true,
+    appendFileInfo: async (filePath) => { },
+    appendDirInfo: async (dirTree, deep) => { },
+    callback: async (dirTree) => { },
+    deepLimit: 0,
+    deep: 0,
+    tag: {}
+}
+async function appedDirTree(dirPath = '', dirTree = {}, append = defaultAppend) {
+    append = { ...defaultAppend, ...append }
+    let { appendFileInfo, appendDirInfo, fileFilter, deep, callback, deepLimit, tag } = append
+    if (deepLimit !== 0 && deep == deepLimit) {
+        return false
+    }
+    let queue = []
     let curList = []
     dirTree.label = path.basename(dirPath)
     dirTree.children = []
+    dirTree.path = dirPath
     try {
         curList = await readdir(dirPath)
     } catch (error) {
         // console.log('readdir error~~~~~~~~~~~~~~~~~~~~~~~',dirPath,error);
         let filePath = dirPath
         try {
-            let task = new Promise(async (resolve, reject) => {
-                resolve(await appendFileInfo(filePath))
-            })
-            queue.push(task)
-            let fileInfo = await task
-            return { type: 'file', fileInfo }
+            let fileInfo = await appendFileInfo(filePath)
+            return { label: path.basename(filePath), ...fileInfo }
         } catch (error) {
             console.log('fileInfo', error);
         }
@@ -272,17 +277,10 @@ async function appedDirTree(dirPath = '', dirTree = {}, append = {}) {
                     }
                 }
                 if (pass) {
-                    let res = { label: v }
-                    let newPath = path.join(dirPath, v)
-                    let newTree = {}
-                    let newDir = []
-                    newDir = await appedDirTree(newPath, newTree, { appendFileInfo, appendDirInfo, fileFilter, id: id++ })
-                    if (newDir && newDir.children) {
-                        res = newDir
-                    } else if (newDir.type == 'file' && newDir.fileInfo) {
-                        res.fileInfo = newDir.fileInfo
+                    newDir = await appedDirTree(path.join(dirPath, v), {}, { appendFileInfo, appendDirInfo, fileFilter, tag, deep: deepLimit != 0 ? deep < deepLimit ? deep + 1 : deepLimit : deep + 1, deepLimit })
+                    if (newDir) {
+                        dirTree.children.push(newDir)
                     }
-                    dirTree.children.push(res)
                 }
                 resolve()
             }))
@@ -296,9 +294,9 @@ async function appedDirTree(dirPath = '', dirTree = {}, append = {}) {
     } catch (error) {
         console.log('Promise.all', error);
     }
-    await appendDirInfo(dirTree)
+    await appendDirInfo(dirTree, deep,tag)
     await callback(dirTree)
-    // console.log('-----------------------',dirTree);
+    // console.log('-----------------------', deep, dirTree);
     return dirTree
 }
 
@@ -316,41 +314,51 @@ async function getFileType(filePath) {
     }
 }
 
-const deepMerge = (toB, addA,isTree) => {
-    if (toB instanceof Object&&addA instanceof Object) {
-      if (toB instanceof Array&&addA instanceof Array) {
-        addA.forEach(v=>{
-            let addVal = v
-            let exist
-            if (isTree) {
-                exist = toB.find(val=>val.label===v.label)
-            }else exist = toB.find(val=>val===v)
-            if (!exist) {
-                toB.push(addVal)
-            }else{
-                if (typeof exist=='object' &&typeof addVal=='object'){
-                  deepMerge(exist, addVal,isTree)
+const defaultDeepMergerParams={
+    keyword:'',
+    depth:0,
+    depthLimit:0
+}
+
+const deepMerge = (toB, addA, params=defaultDeepMergerParams) => {
+    let {keyword,depth,depthLimit} = {...defaultDeepMergerParams,...params}
+    if (!depthLimit==0&&depth>=depthLimit) {
+        return toB
+    }
+    if (toB instanceof Object && addA instanceof Object) {
+        if (toB instanceof Array && addA instanceof Array) {
+            addA.forEach(v => {
+                let addVal = v
+                let exist
+                if (keyword) {
+                    exist = toB.find(val => val[keyword] === v[keyword])
+                } else exist = toB.find(val => val === v)
+                if (!exist) {
+                    toB.push(addVal)
+                } else {
+                    if (typeof exist == 'object' && typeof addVal == 'object') {
+                        deepMerge(exist, addVal, {keyword,depth:depth+1,depthLimit})
+                    }
+                }
+            })
+        } else {
+            for (const key in addA) {
+                let exist = toB[key]
+                let addVal = addA[key]
+                if (!exist) {
+                    toB[key] = addVal
+                } else {
+                    if (typeof exist == 'object' && typeof addVal == 'object') {
+                        deepMerge(exist, addVal, {keyword,depth:depth+1,depthLimit})
+                    } else if (exist !== addVal) {
+                        toB[key] = addVal
+                    }
                 }
             }
-        })
-    } else{
-      for (const key in addA) {
-          let exist = toB[key]
-          let addVal = addA[key]
-          if (!exist) {
-              toB[key] = addVal
-          } else {
-              if (typeof exist=='object' &&typeof addVal=='object') {
-                deepMerge(exist, addVal,isTree)    
-              } else if (exist!==addVal) {
-                  toB[key] = addVal
-              }
-          }
         }
     }
-  }
     return toB
-  }
+}
 
 module.exports = {
     cleanNull,
@@ -367,5 +375,5 @@ module.exports = {
     Seven,
     event,
     rimraf,
-    Concurrently
+    TaskPool
 }
