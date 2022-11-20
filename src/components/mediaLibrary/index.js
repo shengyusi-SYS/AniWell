@@ -2,47 +2,73 @@ const dandanplayScraper = require('./dandanplayScraper')
 const { readdir, access, writeFile, readFile } = require('fs/promises');
 const fs = require('fs');
 const { getFileType, TaskPool, appedDirTree } = require('../../utils');
-const { scrapeLogger } = require('../../utils/logger');
+const { scrapeLogger, logger } = require('../../utils/logger');
 const path = require('path');
 const { diffWords } = require('diff');
 const xml2js = require('xml2js');
+const { libraryIndex } = require('../../utils/init');
 
 const xmlParser = new xml2js.Parser();
 const xmlBuilder = new xml2js.Builder();
 
-async function initMediaLibrary(libraryPath = '') {
+async function initMediaLibrary(libraryPath = '', libraryName = '') {
     try {
-        // console.log('start', libraryPath);
-        // let libraryRootDir = await getLibraryRootDir(libraryPath)
-        // if (libraryRootDir == '.') {
-        //     return false
-        // }
-        let libraryRootDir =libraryPath
+        if (!libraryName) {
+            libraryName = path.basename(libraryPath)
+        }
+        let libraryRootDir = libraryPath
         console.log('libraryRootDir', libraryRootDir);
-        let dandanplayResult = await dandanplayScraper(path.resolve(libraryRootDir))
-        // console.log(dandanplayResult);
-
-        // await writeFile('./test.json', JSON.stringify(res, '', '\t'))
+        let existTree = libraryIndex.children.find(v => v.label == libraryName)
+        if (!existTree) {
+            existTree = { label: libraryName, path: libraryRootDir, children: [] }
+            libraryIndex.children.push(existTree)
+        }
+        let dandanplayResult = await dandanplayScraper(path.resolve(libraryRootDir), existTree)
+        await writeFile('./libraryIndex.json', JSON.stringify(libraryIndex, '', '\t'))
     } catch (error) {
+        logger.error('initMediaLibrary', error)
     }
 }
 
-async function readMediaLibrary(libraryPath) {
-    // let dirTree
-    // try {
-    //     dirTree = await readFile(path.resolve(libraryPath, 'dirTree.json'))
-    // } catch (error) {
+async function cleanLibrary() {
+    await writeFile('./temp/libraryIndex_backup.json',libraryIndex)
+    async function clean(dirTree){
+      let queue=[]
+          let tempChildren = []
+          dirTree.children.forEach(v => {
+            queue.push(new Promise(async(resolve, reject) => {
+              try {
+                let itemPath = path.resolve(dirTree.path, v.label)
+                await access(itemPath)
+                tempChildren.push(v)
+                await clean(v)
+            } catch (error) {}
+            resolve()
+            }))
+          })
+          dirTree.children = tempChildren
+          await Promise.all(queue)
+      }
+      let allQueue = []
+      libraryIndex.children.forEach(v=>{
+        allQueue.push(clean(v))
+      })
+    await Promise.all(allQueue)
+    await writeFile('./libraryIndex.json',JSON.stringify(libraryIndex,'','\t'))
+  }
 
-    // }
-    let curList = await readdir(libraryPath)
-    curList.forEach(async v => {
-       let contentList= await readdir(path.resolve(libraryPath,v))
-       ['tvshow.nfo','season.nfo','']
-       if (contentList.includes()) {
-        
-       }
-    })
-}
+// async function readMediaLibrary(libraryPath) {
+//     // let dirTree
+//     // try {
+//     //     dirTree = await readFile(path.resolve(libraryPath, 'dirTree.json'))
+//     // } catch (error) {
+
+//     // }
+//     let curList = await readdir(libraryPath)
+//     curList.forEach(async v => {
+//         let contentList = await readdir(path.resolve(libraryPath, v))
+//     })
+// }
 
 async function getLibraryRootDir(dirPath = '') {
     try {
@@ -89,20 +115,6 @@ async function buildEmptyNfo(filePath) {
     }
 }
 
-async function buildDirNfo(dirTree) {
-    const nfoPath = path.resolve(dirTree.path, 'tvshow.nfo')
-    try {
-        await readFile(nfoPath)
-        // console.log('has',nfoPath);
-    } catch (error) {
-        let emptyInfo = {
-            tvshow: {
-                path: path.basename(dirTree.path),
-            }
-        }
-        await writeFile(nfoPath, xmlBuilder.buildObject(emptyInfo))
-    }
-}
 
 // async function initMediaLibrary(libraryPath = '') {
 //     try {
@@ -128,86 +140,5 @@ async function buildDirNfo(dirTree) {
 // }
 
 
-// async function grabResources(dirTree, basePath, overwrite) {
-//     let { got } = await import('got')
-//     let rootPath
-//     basePath ? rootPath = basePath : rootPath = dirTree.path
-//     let queue = []
-//     dirTree.children.forEach(v => {
-//         queue.push(new Promise(async (resolve, reject) => {
-//             let dirPath = path.resolve(rootPath, v.label)
-//             let existPoster = false
-//             if (!overwrite) {
-//                 try {
-//                     await access(path.resolve(dirPath, `folder.jpg`))
-//                     v.poster = path.resolve(dirPath, `folder.jpg`)
-//                     existPoster = true
-//                 } catch (error) {
-//                     try {
-//                         await access(path.resolve(dirPath, `poster.jpg`))
-//                         v.poster = path.resolve(dirPath, `poster.jpg`)
-//                         existPoster = true
-//                     } catch (error) {
-//                     }
-//                 }
-//             }
-//             if (overwrite || !existPoster) {
-//                 try {
-//                     let url = v.imageUrl
-//                     if (url) {
-//                         let task = await got({
-//                             url,
-//                             method: 'get',
-//                             responseType: "buffer"
-//                         })
-//                         let res = task.body
-//                         await writeFile(path.resolve(dirPath, `folder.jpg`), res)
-//                         v.poster = path.resolve(dirPath, `folder.jpg`)
-//                         scrapeLogger.debug('grabResources', dirPath)
-//                     }
-//                 } catch (error) {
-//                     scrapeLogger.error('grabResources', error)
-//                 }
-//             }
-//             if (v.children) {
-//                 await grabResources(v, dirPath)
-//             }
-//             resolve()
-//         }))
-//     })
-//     await Promise.all(queue)
-//     return dirTree
-// }
 
-// const dandanList = {
-//     titleSrc: 'title',
-//     episodeSrc: 'episode',
-//     posterSrc: 'imageUrl',
-//     dateSrc: 'startDate',
-//     typeSrc: 'type',
-//     rateSrc: 'rating',
-// }
-
-// const defaultMergeParams = {
-//     dandanplayResult: {},
-//     tmdbResult: {},
-//     config: {
-//         titleSrc: 'dandan',
-//         episodeSrc: 'dandan',
-//         posterSrc: 'dandan',
-//         dateSrc: 'dandan',
-//         typeSrc: 'dandan',
-//         rateSrc: 'dandan',
-//     }
-// }
-// function mergeScrapeResult(params) {
-//     params.config = { ...defaultMergeParams.config, ...params.config }
-//     params = { ...defaultMergeParams, ...params }
-//     let { dandanplayResult, tmdbResult, config } = params
-//     return dandanplayResult
-// }
-
-// let taskQueue = new TaskPool(10)
-
-
-module.exports = initMediaLibrary
+module.exports = {initMediaLibrary,cleanLibrary}

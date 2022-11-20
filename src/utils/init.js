@@ -135,17 +135,16 @@ try {
 }
 
 
-var libraryIndex = { allSeason: {}, episodes: {}, collections: {} }
-
+var libraryIndex = {label:'libraryIndex',children:[]}
+try {
+    libraryIndex = JSON.parse(fs.readFileSync('./libraryIndex.json'))
+} catch (error) {}
+if (!libraryIndex||!libraryIndex.children||!libraryIndex.label) {
+    libraryIndex={label:'libraryIndex',children:[]}
+    logger.debug('debug', '已加载匹配数据');
+}
 
 // const specialCharacter = ['\\', '$', '(', ')', '*', '+', '.', '[', '?', '^', '{', '|']
-try {
-    fs.stat('./temp/backup.json', (err) => { })
-    libraryIndex = JSON.parse(fs.readFileSync('./libraryIndex.json'))
-    logger.debug('debug', '已加载匹配数据');
-} catch (error) {
-    // logger.debug('debug',error);
-}
 
 module.exports = {
     settings,

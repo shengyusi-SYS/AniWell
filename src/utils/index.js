@@ -294,7 +294,7 @@ async function appedDirTree(dirPath = '', dirTree = {}, append = defaultAppend) 
     } catch (error) {
         console.log('Promise.all', error);
     }
-    await appendDirInfo(dirTree, deep,tag)
+    await appendDirInfo(dirTree, deep, tag)
     await callback(dirTree)
     // console.log('-----------------------', deep, dirTree);
     return dirTree
@@ -314,15 +314,15 @@ async function getFileType(filePath) {
     }
 }
 
-const defaultDeepMergerParams={
-    keyword:'',
-    depth:0,
-    depthLimit:0
+const defaultDeepMergerParams = {
+    keyword: '',
+    depth: 0,
+    depthLimit: 0
 }
 
-const deepMerge = (toB, addA, params=defaultDeepMergerParams) => {
-    let {keyword,depth,depthLimit} = {...defaultDeepMergerParams,...params}
-    if (!depthLimit==0&&depth>=depthLimit) {
+const deepMerge = (toB, addA, params = defaultDeepMergerParams) => {
+    let { keyword, depth, depthLimit } = { ...defaultDeepMergerParams, ...params }
+    if (!depthLimit == 0 && depth >= depthLimit) {
         return toB
     }
     if (toB instanceof Object && addA instanceof Object) {
@@ -337,7 +337,7 @@ const deepMerge = (toB, addA, params=defaultDeepMergerParams) => {
                     toB.push(addVal)
                 } else {
                     if (typeof exist == 'object' && typeof addVal == 'object') {
-                        deepMerge(exist, addVal, {keyword,depth:depth+1,depthLimit})
+                        deepMerge(exist, addVal, { keyword, depth: depth + 1, depthLimit })
                     }
                 }
             })
@@ -349,7 +349,7 @@ const deepMerge = (toB, addA, params=defaultDeepMergerParams) => {
                     toB[key] = addVal
                 } else {
                     if (typeof exist == 'object' && typeof addVal == 'object') {
-                        deepMerge(exist, addVal, {keyword,depth:depth+1,depthLimit})
+                        deepMerge(exist, addVal, { keyword, depth: depth + 1, depthLimit })
                     } else if (exist !== addVal) {
                         toB[key] = addVal
                     }
@@ -358,6 +358,31 @@ const deepMerge = (toB, addA, params=defaultDeepMergerParams) => {
         }
     }
     return toB
+}
+
+function searchLeaf(dirTree, targetPath = '') {
+    try {
+        while (!dirTree.path) {
+            dirTree = dirTree.children.find(v => targetPath.includes(v.path))
+        }
+        if (!dirTree) {
+            console.log(targetPath);
+            return false
+        }
+        // console.log(dirTree);
+        let branch = targetPath.replace(path.resolve(dirTree.path) + path.sep, '').split(path.sep)
+        let leaf = dirTree
+        for (let index = 0; index < branch.length; index++) {
+            const label = branch[index];
+            leaf = leaf.children.find(v => v.label == label)
+            if (!leaf) {
+                return false
+            }
+        }
+        return leaf
+    } catch (error) {
+        console.log(error);
+    }
 }
 
 module.exports = {
@@ -372,6 +397,7 @@ module.exports = {
     appedDirTree,
     getFileType,
     deepMerge,
+    searchLeaf,
     Seven,
     event,
     rimraf,

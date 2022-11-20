@@ -2,6 +2,7 @@ const { vidoeHash, getFileType } = require('../../../../utils')
 const { scrapeLogger } = require('../../../../utils/logger');
 const mergeNfo = require('../../mergeNfo');
 const path = require('path');
+const fs = require('fs');
 async function dandanplayMatch(filePath, params = {}) {
     try {
         // let { selectedName, nameFilter } = params
@@ -72,6 +73,12 @@ async function dandanplayMatch(filePath, params = {}) {
                     // }
                 }
             }
+            // try {
+            //     let posterPath = path.resolve(path.dirname(filePath), 'metadata', `${path.parse(filePath).name}.jpg`)
+            //     fs.accessSync(posterPath)
+            //     res.poster = posterPath
+            // } catch (error) {
+            // }
         } else res = false
         if (res) {
             mergeNfo(filePath, res)

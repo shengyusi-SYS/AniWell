@@ -4,9 +4,10 @@ const path = require('path');
 const mergeNfo = require('../../mergeNfo');
 const grabResources = require('../../grabResources');
 const { scrapeLogger } = require('../../../../utils/logger');
-const { deepMerge } = require('../../../../utils');
+const { deepMerge,searchLeaf } = require('../../../../utils');
 
 async function computeCollection(dirTree = { children: [] }, deep, tag) {
+
     // console.log(dirTree);
     // let countSeason = {}
     // let tempSeasonTitle
@@ -22,6 +23,7 @@ async function computeCollection(dirTree = { children: [] }, deep, tag) {
         deepMerge(dirTree, existDirTree, { keyword: 'label', depthLimit: 2 })
         // console.log(dirTree);
     }
+
     dirTree.children.sort((a, b) => {
         if (a.episode || a.startDate || a.ddId) {
             if (b.episode || b.startDate || b.ddId) {
@@ -62,11 +64,14 @@ async function computeCollection(dirTree = { children: [] }, deep, tag) {
                 scrapeLogger.error('computeCollection seasonInfo err delete', seasonInfo, error)
             }
             Object.assign(dirTree, seasonInfo)
+        } else if (dirTree.children.find(v => v.result == 'episodedetails') && deep != 0) {
+            dirTree.result = 'tvshow'
         }
         if (dirTree.children[0].ddId && deep != 0) {
             dirTree.title = dirTree.children[0].title
             dirTree.startDate = dirTree.children[0].startDate
             dirTree.ddId = dirTree.children[0].ddId
+            dirTree.poster = dirTree.children[0].poster
             dirTree.result = 'tvshow'
             dirTree.source = 'dandan'
             collection = true
@@ -182,7 +187,9 @@ async function computeCollection(dirTree = { children: [] }, deep, tag) {
     } catch (error) {
         scrapeLogger.error('computeCollection grabResources', error)
     }
-
+    // if (!path.extname(dirTree.label)&&dirTree.label.includes('')) {
+    //     console.log('-----------',dirTree);
+    // }
     if (dirTree.result) {
         if (collection) {
             dirTree.children.forEach(v => {
@@ -204,16 +211,5 @@ async function computeCollection(dirTree = { children: [] }, deep, tag) {
     // fs.writeFileSync(path.resolve(dirTree.path,'dirTree.json'),JSON.stringify(dirTree,'','\t'))
     // console.log(dirTree);
 }
-function searchLeaf(dirTree, targetPath) {
-    let branch = targetPath.replace(path.resolve(dirTree.path) + path.sep, '').split(path.sep)
-    let leaf = dirTree
-    for (let index = 0; index < branch.length; index++) {
-        const label = branch[index];
-        leaf = leaf.children.find(v => v.label == label)
-        if (!leaf) {
-            return false
-        }
-    }
-    return leaf
-}
+
 module.exports = computeCollection

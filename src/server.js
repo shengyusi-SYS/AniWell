@@ -3,8 +3,8 @@ const fs = require('fs');
 const path = require('path');
 
 const { settings, settingsList, proxySettings, libraryIndex, osPlatform, mergeSettings } = require('./utils/init');
-const {  generatePictureUrl } = require('./utils');
-const { copyFile,readdir,rmdir,mkdir,stat,readFile,writeFile,access,rename } = require('fs/promises');
+const { generatePictureUrl, searchLeaf } = require('./utils');
+const { copyFile, readdir, rmdir, mkdir, stat, readFile, writeFile, access, rename } = require('fs/promises');
 
 var got = () => Promise.reject()
 import('got').then((result) => {
@@ -156,7 +156,7 @@ app.use('/api', (req, res, next) => {
             // logger.debug('/v2/auth/login', req.headers)
             next()
         } else if (!req.cookies && !req.query.cookie) {
-                throw new Error('Fails.')
+            throw new Error('Fails.')
         } else {
             let newSID
             if (req.cookies && req.cookies.SID) {
@@ -179,7 +179,7 @@ app.use('/api', (req, res, next) => {
             next()
         }
     } catch (error) {
-        if (req.path!='/v2/sync/maindata') {
+        if (req.path != '/v2/sync/maindata') {
             logger.error('/api', error)
         }
         res.status(403).send(error)
@@ -296,8 +296,8 @@ app.use('/api/localFile/videoSrc', (req, res, next) => {
 
 app.use("/api/localFile/library", (req, res, next) => {
     try {
-        var library = JSON.parse(fs.readFileSync(path.resolve('libraryIndex.json')))
-        res.send(library.libraryTree)
+        var library = JSON.parse(fs.readFileSync(path.resolve('./libraryIndex.json')))
+        res.send(library)
     } catch (error) {
         res.status(404).send('未建立媒体库')
     }
@@ -313,15 +313,15 @@ app.use('/api/localFile/getFile', async (req, res, next) => {
         audio: ['mp3', 'wav', 'flac']
     }
     let fileType
-    if (req.body.name) {
-        var body = req.body
-        var suffix = body.name.split('.').slice(-1)[0]
+    var body = req.body
+    if (body && body.rootPath && (body.name || body.label)) {
+        filePath = path.resolve(body.rootPath, body.name ? body.name : body.label ? body.label : '')
+        var suffix = path.extname(filePath).replace('.', '')
         for (const key in formatList) {
             if (formatList[key].includes(suffix)) {
                 fileType = key
             }
         }
-        filePath = path.resolve(body.rootPath, body.name)
     }
     if (req.query.path) {
         fileType = req.query.type
@@ -373,26 +373,42 @@ app.use("/api/v2/sync/maindata", async (req, res, next) => {
             })
         } else if (newData.full_update) {//处理完全更新
             let update = false
-            if (libraryIndex.allSeason) {
-                for (const hash in newData.torrents) {
-                    if (libraryIndex.allSeason[newData.torrents[hash].content_path]) {
-                        newData.torrents[hash].mediaInfo = JSON.parse(JSON.stringify(libraryIndex.allSeason[newData.torrents[hash].content_path]))
-                        newData.torrents[hash].mediaInfo.poster = `/api/localFile/getFile/img.jpg?type=picture&path=${encodeURIComponent(libraryIndex.allSeason[newData.torrents[hash].content_path].poster)}`
-                    } else if (newData.torrents[hash].content_path == newData.torrents[hash].save_path) {
-                        if (!libraryIndex.collections[hash]) {
-                            libraryIndex.collections[hash] = { rootPath: path.resolve(newData.torrents[hash].save_path) }
-                            update = true
-                        } else if (libraryIndex.collections[hash].title) {
-                            newData.torrents[hash].mediaInfo = JSON.parse(JSON.stringify(libraryIndex.collections[hash]))
-                            newData.torrents[hash].mediaInfo.poster = `/api/localFile/getFile/img.jpg?type=picture&path=${encodeURIComponent(newData.torrents[hash].mediaInfo.poster)}`
-                        }
+            for (const hash in newData.torrents) {
+                if (newData.torrents[hash].content_path == newData.torrents[hash].save_path) {
+                    // newData.torrents[hash].mediaInfo = JSON.parse(JSON.stringify(libraryIndex.collections[hash]))
+                    // newData.torrents[hash].mediaInfo.poster = `/api/localFile/getFile/img.jpg?type=picture&path=${encodeURIComponent(newData.torrents[hash].mediaInfo.poster)}`
+                } else {
+                    // console.log(newData.torrents[hash]);
+                    let mediaPath = newData.torrents[hash].content_path
+                    let mediaInfo = searchLeaf(libraryIndex, mediaPath)
+                    if (mediaInfo) {
+                        mediaInfo = JSON.parse(JSON.stringify(mediaInfo))
+                        delete mediaInfo.children
+                        newData.torrents[hash].mediaInfo = mediaInfo
+                        newData.torrents[hash].mediaInfo.poster = `/api/localFile/getFile/img.jpg?type=picture&path=${encodeURIComponent(mediaInfo.poster)}`
                     }
                 }
-                if (update) {
-                    updateCollections()
-                }
-                fs.writeFileSync('./libraryIndex.json', JSON.stringify(libraryIndex, '', '\t'))
             }
+            // if (libraryIndex.allSeason) {
+            //     for (const hash in newData.torrents) {
+            //         if (libraryIndex.allSeason[newData.torrents[hash].content_path]) {
+            //             newData.torrents[hash].mediaInfo = JSON.parse(JSON.stringify(libraryIndex.allSeason[newData.torrents[hash].content_path]))
+            //             newData.torrents[hash].mediaInfo.poster = `/api/localFile/getFile/img.jpg?type=picture&path=${encodeURIComponent(libraryIndex.allSeason[newData.torrents[hash].content_path].poster)}`
+            //         } else if (newData.torrents[hash].content_path == newData.torrents[hash].save_path) {
+            //             if (!libraryIndex.collections[hash]) {
+            //                 libraryIndex.collections[hash] = { rootPath: path.resolve(newData.torrents[hash].save_path) }
+            //                 update = true
+            //             } else if (libraryIndex.collections[hash].title) {
+            //                 newData.torrents[hash].mediaInfo = JSON.parse(JSON.stringify(libraryIndex.collections[hash]))
+            //                 newData.torrents[hash].mediaInfo.poster = `/api/localFile/getFile/img.jpg?type=picture&path=${encodeURIComponent(newData.torrents[hash].mediaInfo.poster)}`
+            //             }
+            //         }
+            //     }
+            //     if (update) {
+            //         updateCollections()
+            //     }
+            //     fs.writeFileSync('./libraryIndex.json', JSON.stringify(libraryIndex, '', '\t'))
+            // }
             // logger.debug('debug',newData);
             maindataCache = {}
             merger(maindataCache, newData)
@@ -401,7 +417,7 @@ app.use("/api/v2/sync/maindata", async (req, res, next) => {
         }
         res.send(newData)
     }).catch((err) => {
-        // logger.debug('debug',err);
+        logger.debug('maindata',err);
     });
 });
 
@@ -427,14 +443,16 @@ app.use("/api/v2/torrents/files", express.urlencoded({ extended: false }), (req,
         cookieJar
     }).then((result) => {
         file = JSON.parse(result.body)
-        file.forEach(v => {
-            let fullPath = path.resolve(maindataCache.torrents[hash].save_path, v.name)
-            if (libraryIndex.episodes[fullPath]) {
-                v.mediaInfo = JSON.parse(JSON.stringify(libraryIndex.episodes[fullPath]))
-                v.mediaInfo.poster = generatePictureUrl(v.mediaInfo.poster)
-                v.mediaInfo.seasonPoster = generatePictureUrl(v.mediaInfo.seasonPoster)
-            }
-        })
+        // file.forEach(v => {
+        //     let fullPath = path.resolve(maindataCache.torrents[hash].save_path, v.name)
+        //     console.log(libraryIndex.children.find(v=>fullPath.includes(v.path)),fullPath);
+        //     let info =  searchLeaf(libraryIndex.children.find(v=>fullPath.includes(v.path)),fullPath)
+        //     if (libraryIndex.episodes[fullPath]) {
+        //         v.mediaInfo = JSON.parse(JSON.stringify(info))
+        //         v.mediaInfo.poster = generatePictureUrl(v.mediaInfo.poster)
+        //         // v.mediaInfo.seasonPoster = generatePictureUrl(v.mediaInfo.seasonPoster)
+        //     }
+        // })
         res.send(file)
     }).catch(e => logger.error('error', e))
 })
