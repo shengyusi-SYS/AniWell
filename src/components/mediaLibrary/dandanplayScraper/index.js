@@ -15,7 +15,7 @@ const { appedDirTree, getFileType, TaskPool, deepMerge,searchLeaf } = require('.
 
 
 
-async function dandanplayScraper(libraryRootPath, existTree) {
+async function dandanplayScraper(libraryRootPath, existTree,full=false,depth) {
     try {
         const taskQueue = new TaskPool(3)
         // existTree = { label: path.basename(libraryRootPath), path: libraryRootPath, children: [] }
@@ -26,12 +26,13 @@ async function dandanplayScraper(libraryRootPath, existTree) {
             } else {
                 if (!existTree.children) { existTree.children = [] }
                 fileFilter = async (filePath) => {
+                        // console.log('.........................', filePath);
                     let leaf = searchLeaf(existTree, filePath)
-                    if (!leaf) {
+                    if (!leaf||full) {
                         return await getFileType(filePath) == 'video'
                     }
                     if (leaf.title) {
-                        // console.log('exist', leaf.label);
+                        console.log('exist', leaf.label);
                         return false
                     }
 
@@ -47,7 +48,7 @@ async function dandanplayScraper(libraryRootPath, existTree) {
         let curList = await readdir(libraryRootPath)
         let tempList = []
         curList.forEach(v => {
-            if (!path.extname(v)) {
+            if (path.extname(v)!='.parts') {
                 tempList.push(v)
             }
         })
@@ -63,7 +64,7 @@ async function dandanplayScraper(libraryRootPath, existTree) {
                             deepMerge(existTree, dirTree, { keyword: 'label' })
                             // await writeFile('./test.json', JSON.stringify(existTree, '', '\t'))
                         },
-                        deep: 1,
+                        deep: depth?depth:1,
                         tag: {
                             existTree
                         }
@@ -80,6 +81,7 @@ async function dandanplayScraper(libraryRootPath, existTree) {
         await Promise.all(queue)
         deepMerge(existTree, dirTree, { keyword: 'label' })
         // await writeFile('./test.json', JSON.stringify(existTree, '', '\t'))
+        // console.log('---------------------end',libraryRootPath);
         return existTree
     } catch (error) {
 

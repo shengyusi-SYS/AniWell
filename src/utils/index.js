@@ -203,7 +203,7 @@ async function readDirTree(dirPath, dirTree = {}, id = 0) {
         await Promise.all(queue)
     } catch (error) {
     }
-    console.log(id, dirTree);
+    // console.log(id, dirTree);
     return dirTree
 }
 
@@ -243,61 +243,71 @@ const defaultAppend = {
     tag: {}
 }
 async function appedDirTree(dirPath = '', dirTree = {}, append = defaultAppend) {
-    append = { ...defaultAppend, ...append }
-    let { appendFileInfo, appendDirInfo, fileFilter, deep, callback, deepLimit, tag } = append
-    if (deepLimit !== 0 && deep == deepLimit) {
-        return false
-    }
-    let queue = []
-    let curList = []
-    dirTree.label = path.basename(dirPath)
-    dirTree.children = []
-    dirTree.path = dirPath
     try {
-        curList = await readdir(dirPath)
-    } catch (error) {
-        // console.log('readdir error~~~~~~~~~~~~~~~~~~~~~~~',dirPath,error);
-        let filePath = dirPath
-        try {
-            let fileInfo = await appendFileInfo(filePath)
-            return { label: path.basename(filePath), ...fileInfo }
-        } catch (error) {
-            console.log('fileInfo', error);
+        append = { ...defaultAppend, ...append }
+        let { appendFileInfo, appendDirInfo, fileFilter, deep, callback, deepLimit, tag } = append
+        // console.log(deep,dirPath);
+        if (dirPath.includes('[VCB-Studio] YU-SIBU')) {           
+            console.log('.........................', dirPath);
         }
-    }
-    try {
-        curList.forEach(v => {
-            queue.push(new Promise(async (resolve, reject) => {
-                let pass = true
-                if (fileFilter) {
-                    try {
-                        await readdir(path.join(dirPath, v))
-                    } catch (error) {
-                        pass = await fileFilter(path.join(dirPath, v))
+        if (deepLimit !== 0 && deep == deepLimit) {
+            return false
+        }
+        let queue = []
+        let curList = []
+        dirTree.label = path.basename(dirPath)
+        dirTree.children = []
+        dirTree.path = dirPath
+        try {
+            curList = await readdir(dirPath)
+            // console.log(dirPath,curList);
+        } catch (error) {
+            // console.log('readdir error~~~~~~~~~~~~~~~~~~~~~~~',dirPath,error);
+            let filePath = dirPath
+            try {
+                let fileInfo = await appendFileInfo(filePath)
+                return { label: path.basename(filePath), ...fileInfo }
+            } catch (error) {
+                console.log('fileInfo', error);
+            }
+        }
+        try {
+            curList.forEach(v => {
+                queue.push(new Promise(async (resolve, reject) => {
+                    let pass = true
+                    if (fileFilter) {
+                        try {
+                            await readdir(path.join(dirPath, v))
+                        } catch (error) {
+                            pass = await fileFilter(path.join(dirPath, v))
+                        }
                     }
-                }
-                if (pass) {
-                    newDir = await appedDirTree(path.join(dirPath, v), {}, { appendFileInfo, appendDirInfo, fileFilter, tag, deep: deepLimit != 0 ? deep < deepLimit ? deep + 1 : deepLimit : deep + 1, deepLimit })
-                    if (newDir) {
-                        dirTree.children.push(newDir)
+                    if (pass) {
+                        newDir = await appedDirTree(path.join(dirPath, v), {}, { appendFileInfo, appendDirInfo, fileFilter, tag, deep: deepLimit != 0 ? deep < deepLimit ? deep + 1 : deepLimit : deep + 1, deepLimit })
+                        if (newDir) {
+                            dirTree.children.push(newDir)
+                        }
                     }
-                }
-                resolve()
-            }))
+                    resolve()
+                }))
 
-        })
+            })
+        } catch (error) {
+            return false
+        }
+        try {
+            await Promise.all(queue)
+        } catch (error) {
+            console.log('Promise.all', error);
+        }
+        await appendDirInfo(dirTree, deep, tag)
+        await callback(dirTree)
+        // console.log('-----------------------', deep, dirTree);
+        return dirTree
     } catch (error) {
-        return false
+        console.log(error);
     }
-    try {
-        await Promise.all(queue)
-    } catch (error) {
-        console.log('Promise.all', error);
-    }
-    await appendDirInfo(dirTree, deep, tag)
-    await callback(dirTree)
-    // console.log('-----------------------', deep, dirTree);
-    return dirTree
+
 }
 
 //获取文件类型
@@ -363,13 +373,22 @@ const deepMerge = (toB, addA, params = defaultDeepMergerParams) => {
 function searchLeaf(dirTree, targetPath = '') {
     try {
         while (!dirTree.path) {
-            dirTree = dirTree.children.find(v => targetPath.includes(v.path))
+            let rootLeaf = false
+            dirTree = dirTree.children.find(v => {
+                if (v.path == targetPath) {
+                    rootLeaf = true
+                    return true
+                } else return targetPath.includes(v.path)
+            })
+            if (rootLeaf) {
+                return dirTree
+            }
         }
         if (!dirTree) {
-            console.log(targetPath);
+            console.log('not exist', targetPath);
             return false
         }
-        // console.log(dirTree);
+
         let branch = targetPath.replace(path.resolve(dirTree.path) + path.sep, '').split(path.sep)
         let leaf = dirTree
         for (let index = 0; index < branch.length; index++) {
@@ -381,7 +400,7 @@ function searchLeaf(dirTree, targetPath = '') {
         }
         return leaf
     } catch (error) {
-        console.log(error);
+        // console.log(error);
     }
 }
 

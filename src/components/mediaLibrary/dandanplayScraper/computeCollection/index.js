@@ -4,7 +4,8 @@ const path = require('path');
 const mergeNfo = require('../../mergeNfo');
 const grabResources = require('../../grabResources');
 const { scrapeLogger } = require('../../../../utils/logger');
-const { deepMerge,searchLeaf } = require('../../../../utils');
+const { deepMerge, searchLeaf } = require('../../../../utils');
+const { copyFile, access } = require('fs/promises');
 
 async function computeCollection(dirTree = { children: [] }, deep, tag) {
 
@@ -25,6 +26,9 @@ async function computeCollection(dirTree = { children: [] }, deep, tag) {
     }
 
     dirTree.children.sort((a, b) => {
+        if (a.type != 'tvseries' && a.type != 'movie' && a.type != 'jpmovie') {
+            return 1
+        }
         if (a.episode || a.startDate || a.ddId) {
             if (b.episode || b.startDate || b.ddId) {
                 return Boolean(a.episode - b.episode) ? (a.episode - b.episode) :
@@ -38,7 +42,7 @@ async function computeCollection(dirTree = { children: [] }, deep, tag) {
 
     //判断番名、季度
     if (dirTree.children[0]) {
-        if (dirTree.children[0].animeTitle) {
+        if (dirTree.children[0].result=='episodedetails') {
             dirTree.title = dirTree.children[0].animeTitle
             dirTree.ddId = dirTree.children[0].animeId
             dirTree.type = dirTree.children[0].type
@@ -71,10 +75,18 @@ async function computeCollection(dirTree = { children: [] }, deep, tag) {
             dirTree.title = dirTree.children[0].title
             dirTree.startDate = dirTree.children[0].startDate
             dirTree.ddId = dirTree.children[0].ddId
-            dirTree.poster = dirTree.children[0].poster
+            dirTree.poster = path.resolve(dirTree.path, 'folder.jpg')
             dirTree.result = 'tvshow'
             dirTree.source = 'dandan'
             collection = true
+            try {
+                await access(dirTree.poster)
+            } catch (error) {
+                try {
+                    await copyFile(path.resolve(dirTree.children[0].path, 'folder.jpg'), path.resolve(dirTree.path, 'folder.jpg'))
+                } catch (error) {
+                }
+            }
             dirTree.children.forEach((v, i) => {
                 if (v.result == 'tvshow') {
                     v.result = 'season'
@@ -91,91 +103,6 @@ async function computeCollection(dirTree = { children: [] }, deep, tag) {
         }
     }
 
-    // dirTree.children.forEach(v => {
-    //     if (v.fileInfo && !v.fileInfo.matches) {
-    //         let info = v.fileInfo
-    //         let seasonTitle = info.animeTitle
-    //         // let episode = JSON.parse(JSON.stringify(v.fileInfo))
-    //         // episodes.push(episode)
-
-    //         if (!tempSeasonTitle && number > 1) {
-    //             tempSeasonTitle = seasonTitle
-    //         } else if (tempSeasonTitle) {
-    //             seasonTitle = diffWords(tempSeasonTitle, seasonTitle)[0].value
-    //             if (!countSeason[seasonTitle]) {
-    //                 countSeason[seasonTitle] = { id: info.animeId, num: 1 }
-    //             } else countSeason[seasonTitle].num++
-    //             tempSeasonTitle = seasonTitle
-    //         } else {
-    //             countSeason[seasonTitle] = { id: info.animeId, num: 1 }
-    //         }
-    //         delete info.animeTitle
-    //         delete info.animeId
-    //         delete v.fileInfo
-    //         Object.assign(v, info)
-    //     }
-    //     if (v.ddId && number < 10) {
-    //         let collectionTitle = v.title
-    //         let season = JSON.parse(JSON.stringify(v))
-    //         delete season.children
-    //         seasons.push(season)
-    //         if (!tempCollectionTitle && number > 1) {
-    //             tempCollectionTitle = collectionTitle
-    //         } else if (tempCollectionTitle) {
-    //             collectionTitle = diffWords(tempCollectionTitle, collectionTitle)[0].value
-    //             if (!countCollection[collectionTitle]) {
-    //                 countCollection[collectionTitle] = { id: v.ddId, num: 1 }
-    //             } else {
-    //                 if (v.ddId < countCollection[collectionTitle].id) {
-    //                     countCollection[collectionTitle].id = v.ddId
-    //                 }
-    //                 countCollection[collectionTitle].num++
-    //             }
-    //             tempCollectionTitle = collectionTitle
-    //         } else {
-    //             countCollection[collectionTitle] = { id: v.ddId, num: 1 }
-    //         }
-    //     }
-    // })
-    // let season = Object.entries(countSeason)
-    // if (season.length > 0) {
-    //     season = season.sort((a, b) => b[1].num - a[1].num)[0]
-    //     dirTree.title = season[0]
-    //     dirTree.ddId = season[1].id
-    //     dirTree.result = 'tvshow'//需修正
-    //     dirTree.source = 'dandan'
-    //     let seasonInfo = {}
-    //     try {
-    //         seasonInfo = await searchSeason(dirTree.title, dirTree.ddId)
-    //     } catch (error) {
-    //         console.log('seasonInfo err', seasonInfo, error);
-    //     }
-    //     try {
-    //         delete seasonInfo.animeId
-    //         delete seasonInfo.animeTitle
-    //         delete seasonInfo.typeDescription
-    //     } catch (error) {
-    //         console.log('seasonInfo err delete', seasonInfo);
-    //     }
-    //     Object.assign(dirTree, seasonInfo)
-    // }
-    // let collection = Object.entries(countCollection)
-    // if (collection.length > 0) {
-    //     collection = collection.sort((a, b) => b[1].num - a[1].num)
-    //     dirTree.title = collection[0][0]
-    //     dirTree.seasons = seasons
-    //     dirTree.poster = dirTree.children.find(v => v.ddId == collection[0][1].id).poster
-    //     dirTree.result = 'tvshow'
-    //     dirTree.source = 'dandan'
-    // }
-    // dirTree.children.sort((a, b) => {
-    //     if (a.episode && b.episode) {
-    //         return a.episode - b.episode
-    //     } else if (a.startDate && b.startDate) {
-    //         return a.startDate - b.startDate
-    //     } else return 0
-    // })
-    // console.log(dirTree);
     try {
         if (dirTree.imageUrl) {
             let posterPath = await grabResources(dirTree.path, dirTree.imageUrl.replace('_medium', ''))

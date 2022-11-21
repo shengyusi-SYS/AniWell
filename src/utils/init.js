@@ -34,7 +34,7 @@ const settingsList = {
     advAccel: { type: 'switch', name: 'advAccel', value: true },
     platform: { type: 'radios', name: 'platform', value: 'nvidia', placeholder: '', radios: { nvidia: { name: 'nvidia', value: 'nvidia' }, intel: { name: 'intel', value: 'intel' }, amd: { name: 'amd', value: 'amd' }, vaapi: { name: 'vaapi', value: 'vaapi' } } },
     encode: { type: 'radios', name: 'encode', value: '', placeholder: '', radios: { h264: { name: 'h264', value: 'h264' }, h265: { name: 'h265', value: 'h265' } } },
-    tmdbKey:{ type: 'text', name: 'tmdbKey', value: '', placeholder: 'TMDB API KEY' },
+    tmdbKey: { type: 'text', name: 'tmdbKey', value: '', placeholder: 'TMDB API KEY' },
     customInputCommand: { type: 'textarea', name: 'customInputCommand', value: '', placeholder: '指令设定请参考readme文档，勿轻易修改' },
     customOutputCommand: { type: 'textarea', name: 'customOutputCommand', value: '', placeholder: '指令设定请参考readme文档，勿轻易修改' },
 }
@@ -43,8 +43,11 @@ for (const key in settingsList) {
     settings[settingsList[key].name] = settingsList[key].value
 }
 
-function mergeSettings(settingsList=settingsList,settings=settings,newSettings) {
+
+
+function mergeSettings(settingsList = settingsList, settings = settings, newSettings) {
     settings = Object.assign(settings, newSettings)
+    // console.log(settings);
     for (const key in settings) {
         settingsList[key].value = settings[key]
     }
@@ -55,13 +58,13 @@ try {
     try {
         var newSettings = JSON.parse(fs.readFileSync('./settings.json'))
         if (newSettings) {
-            mergeSettings(settingsList,settings,newSettings)
+            mergeSettings(settingsList, settings, newSettings)
             fs.writeFileSync('./settings.json', JSON.stringify(settings, '', '\t'))
             fs.writeFileSync(path.resolve(settings.tempPath, './settings_backup.json'), JSON.stringify(settings, '', '\t'))
             logger.debug('init', '已加载本地配置', settings);
         } else {
             newSettings = JSON.parse(fs.readFileSync(path.resolve(settings.tempPath, './settings_backup.json')))
-            mergeSettings(settingsList,settings,newSettings)
+            mergeSettings(settingsList, settings, newSettings)
             logger.debug('init', '配置项错误，请检查1');
         }
         if (settings.ffmpegPath) {
@@ -135,13 +138,16 @@ try {
 }
 
 
-var libraryIndex = {label:'libraryIndex',children:[]}
+var libraryIndex = { label: 'libraryIndex', children: [] }
 try {
     libraryIndex = JSON.parse(fs.readFileSync('./libraryIndex.json'))
-} catch (error) {}
-if (!libraryIndex||!libraryIndex.children||!libraryIndex.label) {
-    libraryIndex={label:'libraryIndex',children:[]}
     logger.debug('debug', '已加载匹配数据');
+} catch (error) {
+    console.log(error);
+}
+if (!libraryIndex || !libraryIndex.children || !libraryIndex.label) {
+    libraryIndex = { label: 'libraryIndex', children: [] }
+    // console.log('init');
 }
 
 // const specialCharacter = ['\\', '$', '(', ')', '*', '+', '.', '[', '?', '^', '{', '|']
@@ -157,3 +163,4 @@ module.exports = {
     mergeSettings
 }
 module.exports.gpus = require('./getGPU')
+

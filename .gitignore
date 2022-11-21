@@ -115,6 +115,7 @@ test.*
 /out
 /FileServer-for-qBittorrent-win32-x64
 libraryIndex.json
+librarySettings.json
 sync.ffs*
 .vscode
 settings_backup.json

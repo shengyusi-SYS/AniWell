@@ -42,7 +42,7 @@
     "webpack-cli": "^4.10.0"
   },
   "scripts": {
-    "serve": "nodemon ./src/server.js -i settings.json -i libraryIndex.json -i ./temp",
+    "serve": "nodemon ./src/server.js -i settings.json -i libraryIndex.json -i ./temp -i librarySettings.json",
     "start": "electron ./src/main.js",
     "build": "npx electron-packager . --overwrite --out=out --icon=public/favicon.ico --ignore='^(/ssl$)' --ignore='^(/out$)' --ignore='^(/temp$)' --ignore='.gitignore' --ignore='settings.json' --ignore='jsconfig.json' --ignore='^(test).js' --ignore='libraryIndex.json' --ignore='sync.ffs_db' --ignore='^(/.vscode$)' --ignore='settings_backup.json' --ignore='webpack.config.js' --ignore='^(/log$)' --ignore='.log$'",
     "test": "node ./src/test.js",
