@@ -25,7 +25,7 @@ function cleanNull(arr) {
 function generatePictureUrl(path) {
     return `/api/localFile/getFile/img.jpg?type=picture&path=${encodeURIComponent(path)}`
 }
-//MIME type
+//MIME type，videojs播放mkv时也要设为'video/mp4'，待研究
 function mediaContentType(name) {
     const type = {
         '.mp4': 'video/mp4',
@@ -39,15 +39,14 @@ function mediaContentType(name) {
 async function extractFonts(packPath, fontsDir) {
     if (!fontsDir) {
         fontsDir = path.resolve(settings.tempPath, 'fonts')
-        logger.debug('utils extractFonts', fontsDir)
     }
+    logger.debug('utils extractFonts start', fontsDir)
     try {
         await new Promise((resolve, reject) => {
             rimraf(fontsDir, err => resolve())
         })
         await mkdir(fontsDir)
-    } catch (error) {
-    }
+    } catch (error) {}
     await new Promise((resolve, reject) => {
         let stream = Seven.extractFull(packPath, fontsDir, {
             recursive: true,
@@ -58,6 +57,7 @@ async function extractFonts(packPath, fontsDir) {
         })
         stream.on('error', (err) => resolve(err))
     })
+    //检查是否有子文件夹嵌套，只检查一层，多了不干
     let dirContent = await readdir(fontsDir)
     if (dirContent.length == 1) {
         let fontsList = []
@@ -69,13 +69,16 @@ async function extractFonts(packPath, fontsDir) {
         await Promise.all(fontsList)
     }
 }
-//列出fonts压缩包内容
-function listFonts(packPath) {
+
+//列出压缩包内容
+function listPack(packPath) {
     return Seven.list(packPath, {
         $bin: pathTo7zip
     })
 }
-//计算视频hash，弹弹play模式
+
+
+//计算视频hash，弹弹play模式，废弃，异步模式会导致读取变成小文件随机读取，效率极低
 async function vidoeHashS(filePath) {
     const hash = crypto.createHash('md5')
     return await new Promise((resolve, reject) => {
@@ -111,6 +114,7 @@ function readChunkSync(filePath, { length, startPosition }) {
     }
 }
 
+//异步函数，但是同步化的读取hash
 async function vidoeHash(filePath) {
     try {
         const hash = crypto.createHash('md5')
@@ -125,6 +129,7 @@ async function vidoeHash(filePath) {
 
 }
 
+//异步任务池
 class TaskPool {
     constructor(tasksLimit) {
         if (tasksLimit < 0) {
@@ -229,14 +234,21 @@ function readDirTreeSync(dirPath, dirTree = {}) {
     }
 }
 
-// 获取树形文件夹内容,异步,
-// 在遇到文件时执行fileFilter和appendFileInfo函数,
-// fileFilter需要返回Boolen，为false时在树中忽略此文件，appendFileInfo将返回值设为文件的fileInfo;
-// 遇到目录时执行appendDirInfo函数，可以获取到文件的fileInfo,
+/*
+fileFilter：文件过滤器,需要返回Boolen，为false时在树中忽略此文件
+appendFileInfo：需要返回Object，结果会与当前文件信息同层合并
+appendDirInfo：可以获取到当前文件夹及其子项的信息
+callback：回调
+deepLimit：深度限制
+deep：当前深度
+tag：可以附加其它信息
+我知道单词拼写不对，还用了一些愚蠢的方法，有空再改...
+*/
+
 const defaultAppend = {
     fileFilter: async (filePath) => true,
     appendFileInfo: async (filePath) => { },
-    appendDirInfo: async (dirTree, deep) => { },
+    appendDirInfo: async (dirTree, deep,tag) => { },
     callback: async (dirTree) => { },
     deepLimit: 0,
     deep: 0,
@@ -247,9 +259,7 @@ async function appedDirTree(dirPath = '', dirTree = {}, append = defaultAppend) 
         append = { ...defaultAppend, ...append }
         let { appendFileInfo, appendDirInfo, fileFilter, deep, callback, deepLimit, tag } = append
         // console.log(deep,dirPath);
-        if (dirPath.includes('[VCB-Studio] YU-SIBU')) {           
-            console.log('.........................', dirPath);
-        }
+        //深度限制，貌似效率有限
         if (deepLimit !== 0 && deep == deepLimit) {
             return false
         }
@@ -290,7 +300,6 @@ async function appedDirTree(dirPath = '', dirTree = {}, append = defaultAppend) 
                     }
                     resolve()
                 }))
-
             })
         } catch (error) {
             return false
@@ -324,12 +333,12 @@ async function getFileType(filePath) {
     }
 }
 
+//深合并
 const defaultDeepMergerParams = {
-    keyword: '',
+    keyword: '',//处理数组合并时使用，根据每个元素中的关键词属性对应的值判断是否存在
     depth: 0,
     depthLimit: 0
 }
-
 const deepMerge = (toB, addA, params = defaultDeepMergerParams) => {
     let { keyword, depth, depthLimit } = { ...defaultDeepMergerParams, ...params }
     if (!depthLimit == 0 && depth >= depthLimit) {
@@ -370,6 +379,7 @@ const deepMerge = (toB, addA, params = defaultDeepMergerParams) => {
     return toB
 }
 
+//根据给定路径搜索dirTree中的信息
 function searchLeaf(dirTree, targetPath = '') {
     try {
         while (!dirTree.path) {
@@ -409,7 +419,7 @@ module.exports = {
     generatePictureUrl,
     mediaContentType,
     extractFonts,
-    listFonts,
+    listPack,
     vidoeHash,
     readDirTree,
     readDirTreeSync,

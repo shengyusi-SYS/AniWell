@@ -141,9 +141,9 @@ try {
 var libraryIndex = { label: 'libraryIndex', children: [] }
 try {
     libraryIndex = JSON.parse(fs.readFileSync('./libraryIndex.json'))
-    logger.debug('debug', '已加载匹配数据');
+    logger.info('debug', '已加载媒体库');
 } catch (error) {
-    console.log(error);
+    logger.info('debug', '媒体库不存在');
 }
 if (!libraryIndex || !libraryIndex.children || !libraryIndex.label) {
     libraryIndex = { label: 'libraryIndex', children: [] }

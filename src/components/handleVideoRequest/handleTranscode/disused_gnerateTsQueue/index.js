@@ -5,6 +5,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 const kill = require('tree-kill');
 
+//旧版ffmpeg进程系统，已废弃
 var FFmpegProcess = {}
 var lastProcessList = []
 var killTimeout = {}
@@ -92,7 +93,7 @@ function generateTsQueue(videoInfo,commandTemplate) {
                 // logger.debug('debug',`${stderrLine} ${Boolean(stderrLine.match(/Opening.*for writing/))} ${stderrLine.search(/m3u8/) == -1}`);
                 if (/Opening.*for writing/.test(stderrLine) && !/m3u8/i.test(stderrLine)) {
                     let writingSegment = path.parse(path.parse(/'.*'/.exec(stderrLine)[0]).name).name
-                    writingSegmentId = Number(writingSegment.replace('index', ''))
+                    let writingSegmentId = Number(writingSegment.replace('index', ''))
                     let nextSegment = `index${writingSegmentId + 1}`
 
                     // logger.debug('debug',`${stderrLine}`);

@@ -5,7 +5,7 @@ const { stat } = require('fs/promises');
 const { logger } = require('../../../utils/logger');
 
 var _this
-
+//处理直接播放
 class directPlayHandler {
   constructor(videoInfo) {
     _this = this

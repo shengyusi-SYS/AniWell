@@ -1,17 +1,10 @@
 const { vidoeHash, getFileType } = require('../../../../utils')
 const { scrapeLogger } = require('../../../../utils/logger');
-const mergeNfo = require('../../mergeNfo');
 const path = require('path');
 const fs = require('fs');
-async function dandanplayMatch(filePath, params = {}) {
+const mergeNfo = require('../../mergeNfo');
+async function dandanplayMatch(filePath) {
     try {
-        // let { selectedName, nameFilter } = params
-        // if (!filePath && !selectedName) {
-        //     return false
-        // }
-        // !selectedName ? selectedName = '' : ''
-        // !nameFilter ? nameFilter = (fileName) => { return fileName } : ''
-        // let fileName = selectedName || nameFilter(path.parse(filePath).name)
         let fileName = path.parse(filePath).name
         let hash = ''
         let matchMode
@@ -48,21 +41,19 @@ async function dandanplayMatch(filePath, params = {}) {
             scrapeLogger.error('dandanplayMatch res err', res.errorMessage)
         }
         if (res.success) {
+            //完全匹配的信息才会参与后续合集的识别，不完全匹配的留在matchs内，以后加入手动识别
             if (!res.isMatched) {
                 res = {
                     source: 'dandan',
                     result: 'episodedetails',
-                    // fileInfo:{
                     hash,
                     matches: res.matches
-                    // }
                 }
             } else {
                 let result = res.matches[0]
                 res = {
                     source: 'dandan',
                     result: 'episodedetails',
-                    // fileInfo:{
                     hash,
                     episode: result.episodeId - result.animeId * 10000,
                     animeTitle: result.animeTitle,
@@ -70,15 +61,8 @@ async function dandanplayMatch(filePath, params = {}) {
                     title: result.episodeTitle,
                     type: result.type,
                     season: result.episodeId - result.animeId * 10000 < 9000 ? 1 : 0
-                    // }
                 }
             }
-            // try {
-            //     let posterPath = path.resolve(path.dirname(filePath), 'metadata', `${path.parse(filePath).name}.jpg`)
-            //     fs.accessSync(posterPath)
-            //     res.poster = posterPath
-            // } catch (error) {
-            // }
         } else res = false
         if (res) {
             mergeNfo(filePath, res)

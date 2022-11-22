@@ -5,6 +5,8 @@ const { settings, ffmpegSuffix } = require('../../../../utils/init');
 const kill = require('tree-kill');
 const { spawn } = require('child_process');
 const { debounce } = require('lodash');
+
+//转码串流的核心，进程控制系统，测试感觉挺完善了
 var _this
 class hlsProcessController {
     constructor(videoInfo = {}, commandTemplate = {}) {
@@ -39,7 +41,7 @@ class hlsProcessController {
             logger.info('hlsProcessController', 'generateHlsProcess 3', 'start------------------------' + segment);
             logger.info('hlsProcessController', 'generateHlsProcess 4', [params.join(' ')]);
             transcodeLogger.info('transcode', [params.join(' ')]);
-            let lastWriteId
+            // let lastWriteId
             ffmpeg.stderr.on('data', async function (stderrLine) {
                 stderrLine = stderrLine.toString();
                 transcodeLogger.info('transcode', `~${stderrLine}`);
@@ -50,8 +52,8 @@ class hlsProcessController {
                         videoIndex[writingSegment].state = 'writing'
                     }
                     let writingSegmentId = Number(writingSegment.replace('index', ''));
-                    if (writingSegmentId>0) {
-                        let lastWriteSegment = `index${writingSegmentId-1}`;
+                    if (writingSegmentId > 0) {
+                        let lastWriteSegment = `index${writingSegmentId - 1}`;
                         try {
                             await access(path.resolve(settings.tempPath, 'output', `${lastWriteSegment}.ts`))
                             videoIndex[lastWriteSegment].state = 'done'
@@ -62,7 +64,7 @@ class hlsProcessController {
                                 videoIndex[lastWriteSegment].state = 'err'
                                 logger.error('hlsProcessController', 'generateHlsProcess 5', 'lost', lastWriteSegment);
                             }
-                        }                       
+                        }
                     }
 
                     if (writingSegmentId == Object.keys(videoIndex).length - 1) {
@@ -107,11 +109,10 @@ class hlsProcessController {
                 this.transState = 'changing'
                 await new Promise((r, j) => {
                     logger.info('hlsProcessController', 'kill', 'start');
-                    let tempProcessList = JSON.parse(JSON.stringify(this.processList))
+                    // let tempProcessList = JSON.parse(JSON.stringify(this.processList))
                     if (this.currentProcess) {
                         this.currentProcess.on('close', (code) => {
                             logger.info('hlsProcessController', 'killCurrentProcess', 'close', code);
-                            // this.currentProcess = null
                             return r()
                         })
                         // this.currentProcess.on('exit', () => {
@@ -120,22 +121,12 @@ class hlsProcessController {
                         // })
                         this.currentProcess.on('error', (err) => {
                             logger.error('hlsProcessController', 'killCurrentProcess', 'error', err);
-
-                            // this.currentProcess = null
                             return r(err)
                         })
                         kill(this.currentProcess.pid, 'SIGKILL')
                     } else {
-                        // this.currentProcess = null
                         return r()
                     }
-                    // killTimeout = setTimeout(() => {
-                    //     tempProcessList.forEach(v => {
-                    //         kill(v.pid, 'SIGKILL')
-                    //     })
-                    //     logger.debug('debug', 'kkkkkkk~~~~~~~~~', currentProcess.id);
-                    //     return r()
-                    // }, 3000);
                 })
                 this.transState = 'stopped'
             }
@@ -144,7 +135,7 @@ class hlsProcessController {
             logger.info('hlsProcessController', 'killCurrentProcess', 'end');
             return this
         } catch (error) {
-            logger.error('generateTsQueue', ' killCurrentProcess', error)
+            logger.error('hlsProcessController', ' killCurrentProcess', error)
         }
     }
 }

@@ -5,6 +5,9 @@ const xmlBuilder = new xml2js.Builder();
 const fs = require('fs');
 const { deepMerge } = require('../../../utils');
 const path = require('path');
+const {librarySettings} = require('../../mediaLibrary/librarySettings');
+
+
 const dandanList = {
     'title': 'title',
     'episode': 'episode',
@@ -19,17 +22,7 @@ const dandanList = {
     ddId: 'dandanplayId'
 }
 
-const config = {
-    title: 'dandan',
-    episode: 'dandan',
-    poster: 'dandan',
-    date: 'dandan',
-    type: 'dandan',
-    rating: 'dandan',
-    hash: 'dandan',
-    season: 'dandan',
-    dandanplayId: 'dandanplayId',
-}
+const config = librarySettings.source
 
 function mergeNfo(filePath = '', res = {}) {
     if (!filePath || filePath == '.') {
@@ -114,6 +107,8 @@ function mergeNfo(filePath = '', res = {}) {
 
     // console.log(exist);
 
+
+    //根据结果信息源选择对应信息映射列表
     let srcList
     switch (res.source) {
         case 'dandan':

@@ -1,10 +1,10 @@
 const { log4js, logger } = require('./utils/logger');
 const fs = require('fs');
 const path = require('path');
+const { readFile, writeFile } = require('fs/promises');
 
-const { settings, settingsList, proxySettings, libraryIndex, osPlatform, mergeSettings } = require('./utils/init');
+const { settings, settingsList, proxySettings, libraryIndex, mergeSettings } = require('./utils/init');
 const { generatePictureUrl, searchLeaf } = require('./utils');
-const { copyFile, readdir, rmdir, mkdir, stat, readFile, writeFile, access, rename } = require('fs/promises');
 
 var got = () => Promise.reject()
 import('got').then((result) => {
@@ -23,10 +23,10 @@ const app = express();
 const { debounce } = require('lodash');
 
 const merger = require('./utils/merger');
-const dd2nfo = require('./utils/dd2nfo');
 const trimPath = require('./utils/trimPath');
 const handleVideoRequest = require('./components/handleVideoRequest');
-const { initMediaLibrary, cleanLibrary, librarySettings, librarySettingsList, updateLibrarySettings } = require('./components/mediaLibrary');
+const { librarySettingsList, updateLibrarySettings} = require('./components/mediaLibrary/librarySettings');
+const { initMediaLibrary, cleanLibrary} = require('./components/mediaLibrary');
 const dandanplayScraper = require('./components/mediaLibrary/dandanplayScraper');
 
 var SID
@@ -40,55 +40,6 @@ process.on('uncaughtException', function (err) {
     logger.error('Caught exception ', err);
 });
 // const specialCharacter = ['\\', '$', '(', ')', '*', '+', '.', '[', '?', '^', '{', '|']
-
-
-
-function updateCollections(params) {
-    let fileQueue = []
-    for (const hash in libraryIndex.collections) {
-        // let form = new FormData()
-        // form.append('hash', hash)
-        let task = got({
-            url: `${settings.qbHost}/api/v2/torrents/files`,
-            method: 'post',
-            // body: form,
-            form: { 'hash': hash },
-            cookieJar
-        }).then((result) => {
-            let fileTree = trimPath(JSON.parse(result.body))
-            let seasonList = Object.keys(libraryIndex.allSeason)
-            fileTree.sort((a, b) => {
-                try {
-                    var aPath = seasonList.find(v => a.label == path.parse(v).name)
-                    var aId = libraryIndex.allSeason[aPath].id
-                    var bPath = seasonList.find(v => b.label == path.parse(v).name)
-                    var bId = libraryIndex.allSeason[bPath].id
-                } catch (error) {
-                    // logger.debug('debug',error);
-                    return a.label.length - b.label.length
-                }
-                return aId - bId
-            })
-            let collectionTitle = fileTree[0].label
-            let collectionPath = path.resolve(libraryIndex.collections[hash].rootPath, collectionTitle)
-            collectionTitle = libraryIndex.allSeason[collectionPath].title
-            // logger.debug('debug',collectionTitle);
-            let collectionPoster = libraryIndex.allSeason[collectionPath].poster
-            libraryIndex.collections[hash].title = collectionTitle
-            libraryIndex.collections[hash].poster = collectionPoster
-            return true
-        }).catch((err) => {
-            return false
-        });
-        fileQueue.push(task)
-    }
-    fs.writeFileSync('./libraryIndex.json', JSON.stringify(libraryIndex, '', '\t'))
-    return Promise.all(fileQueue).then((fileQueue) => {
-        initMaindata()
-        logger.debug('debug', '合集匹配完成');
-    }).catch((err) => {
-    })
-}
 
 function initMaindata(params) {
     got({
@@ -150,7 +101,7 @@ app.use(cookieParser())
 // })
 
 
-
+//权限验证预处理
 app.use('/api', (req, res, next) => {
     // logger.debug('/api',req.path);
     try {
@@ -177,7 +128,6 @@ app.use('/api', (req, res, next) => {
                 SID = newSID
                 cookieJar.setCookieSync(`SID=${newSID}`, settings.qbHost)
             }
-
             next()
         }
     } catch (error) {
@@ -186,7 +136,6 @@ app.use('/api', (req, res, next) => {
         }
         res.status(403).send(error)
     }
-
 })
 
 //权限验证
@@ -222,16 +171,17 @@ app.use('/api/localFile', async (req, res, next) => {
         logger.error('/api/localFile', error);
         res.status(403).send(error)
     }
-
 })
 
-//连接状态测试
+//连接状态测试，返回服务器配置项
 app.use('/api/localFile/checkFileServer', (req, res) => {
     res.send(settingsList)
 })
+//获取媒体库配置项
 app.use('/api/localFile/librarySettings', (req, res) => {
     res.send(librarySettingsList)
 })
+//更新媒体库设定
 app.use('/api/localFile/updateLibrarySettings', (req, res) => {
     let result = updateLibrarySettings(req.body)
     if (result) {
@@ -243,6 +193,7 @@ app.use('/api/localFile/updateLibrarySettings', (req, res) => {
         })
     }
 })
+//更新指定媒体库
 app.use('/api/localFile/updateLibrary', async(req, res) => {
     let {libraryPath, libraryName} = req.body
     if (!searchLeaf(libraryIndex,libraryPath)) {
@@ -258,6 +209,7 @@ app.use('/api/localFile/updateLibrary', async(req, res) => {
    await cleanLibrary()
    logger.info('/api/localFile/updateLibrary end')
 })
+//更新指定文件夹
 app.use('/api/localFile/updateDir', async(req, res) => {
     let {dirPath} = req.body
     // if (!searchLeaf(libraryIndex,dirPath)) {
@@ -272,6 +224,8 @@ app.use('/api/localFile/updateDir', async(req, res) => {
    await dandanplayScraper(dirPath,searchLeaf(libraryIndex,dirPath),true,0)
    logger.info('/api/localFile/updateDir end')
 })
+
+
 //更新配置项
 app.use('/api/localFile/changeFileServerSettings', async (req, res) => {
     let data = req.body
@@ -394,6 +348,7 @@ app.use("/api/v2/sync/maindata", async (req, res, next) => {
             })
         } else if (newData.full_update) {//处理完全更新
             let update = false
+            //附加媒体信息，半废中
             for (const hash in newData.torrents) {
                 if (newData.torrents[hash].content_path == newData.torrents[hash].save_path) {
                     // newData.torrents[hash].mediaInfo = JSON.parse(JSON.stringify(libraryIndex.collections[hash]))

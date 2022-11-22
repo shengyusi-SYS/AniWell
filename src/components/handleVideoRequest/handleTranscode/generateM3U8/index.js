@@ -4,6 +4,8 @@ const { mkdir,writeFile} = require('fs/promises');
 
 const { settings } = require('../../../../utils/init');
 const path = require('path');
+
+//转码串流功能的次核心，预处理分段信息，同时生成m3u8清单文件
 async function generateM3U8(videoInfo) {
     try {
         logger.debug('generateM3U8', 'start');
@@ -21,7 +23,6 @@ async function generateM3U8(videoInfo) {
         // let segmentDuration = Number(timeList[0])
         // let base_pts = ts0.start_pts
         // let segmentDuration = Number((duration_ts/90000).toFixed(6))
-
         for (let i = 0, base_pts = 1, start, start_pts, end, endLoop = false; !endLoop; i++) {
             start_pts = base_pts + (duration_ts + 1) * i
             start = Number(((start_pts - base_pts) / 90000).toFixed(6))

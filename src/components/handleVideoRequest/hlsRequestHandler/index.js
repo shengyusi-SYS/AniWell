@@ -24,6 +24,8 @@ class hlsRequestHandler {
             let readTimeout
             let tempReqPath
             // logger.debug('hlsRequestHandler currentProcess',currentProcess.id,currentProcess.state)
+
+            //处理分段请求
             let used = app._router.stack.findIndex(v => v.regexp.toString().includes('output'))
             if (used < 0) {
                 app.use('/api/localFile/output', debounce(async (req, res, next) => {
@@ -74,6 +76,7 @@ class hlsRequestHandler {
                         res.sendFile(path.resolve(settings.tempPath, 'output', 'index.m3u8'));
                         return;
                     } else {
+                        //处理跳转，如果所有人都把视频从头看到尾，就没它什么事了...
                         res.header('Content-Type', 'video/m2pt');
                         logger.debug('hlsRequestHandler handler 2', targetSegment, '-------', _this.videoIndex[targetSegment].state);
                         let targetSegmentId = Number(targetSegment.replace('index', ''));

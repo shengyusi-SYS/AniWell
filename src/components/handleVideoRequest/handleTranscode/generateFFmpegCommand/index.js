@@ -2,6 +2,8 @@ const { logger } = require('../../../../utils/logger');
 const path = require('path');
 const { settings, osPlatform } = require('../../../../utils/init');
 const { cleanNull } = require('../../../../utils');
+
+//转码串流的精髓，ffmpeg指令生成系统，自己看着都头大...
 const encoders = {
     h265: {
         nvidia: 'hevc_nvenc',
@@ -19,6 +21,7 @@ const decoders = {
     nvidia: '_cuvid',
     intel: '_qsv',
 }
+//固定的硬件加速配置
 const hwaccels = {
     win: {
         nvidia: {

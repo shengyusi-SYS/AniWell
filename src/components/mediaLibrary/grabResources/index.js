@@ -32,11 +32,9 @@ async function grabResources(dirPath, imageUrl) {
             let res = task.body
             await writeFile(path.resolve(dirPath, `folder.jpg`), res)
             scrapeLogger.debug('grabResources', dirPath)
-            // console.log('grabResources', dirPath);
             return path.resolve(dirPath, `folder.jpg`)
         } catch (error) {
             scrapeLogger.error('grabResources', error)
-            // console.log('grabResources', error);
         }
     }
     return false
