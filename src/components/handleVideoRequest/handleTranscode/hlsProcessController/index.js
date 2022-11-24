@@ -6,7 +6,7 @@ const kill = require('tree-kill');
 const { spawn } = require('child_process');
 const { debounce } = require('lodash');
 
-//转码串流的核心，进程控制系统，测试感觉挺完善了
+//转码串流的核心，进程控制系统，测试感觉挺完善了（删）
 var _this
 class hlsProcessController {
     constructor(videoInfo = {}, commandTemplate = {}) {
@@ -45,24 +45,30 @@ class hlsProcessController {
             ffmpeg.stderr.on('data', async function (stderrLine) {
                 stderrLine = stderrLine.toString();
                 transcodeLogger.info('transcode', `~${stderrLine}`);
-                let writing = stderrLine.match(/Opening.*index\d+\.ts\.tmp.*?for writing/)
-                if (writing) {
-                    let writingSegment = path.parse(path.parse(writing[0]).name).name;
-                    if (videoIndex[writingSegment].state == 'init') {
-                        videoIndex[writingSegment].state = 'writing'
-                    }
-                    let writingSegmentId = Number(writingSegment.replace('index', ''));
-                    if (writingSegmentId > 0) {
-                        let lastWriteSegment = `index${writingSegmentId - 1}`;
-                        try {
-                            await access(path.resolve(settings.tempPath, 'output', `${lastWriteSegment}.ts`))
-                            videoIndex[lastWriteSegment].state = 'done'
-                            ffmpeg.queue.push(lastWriteSegment);
-                            logger.info('hlsProcessController', 'generateHlsProcess 5', lastWriteSegment, 'done')
-                        } catch (error) {
-                            if (videoIndex[lastWriteSegment].state != 'init') {
-                                videoIndex[lastWriteSegment].state = 'err'
-                                logger.error('hlsProcessController', 'generateHlsProcess 5', 'lost', lastWriteSegment);
+                let isWriting = stderrLine.match(/Opening.*index\d+\.ts\.tmp.*?for writing/)
+                if (isWriting) {
+                    //打脸来得太快了，任务密集时，信息输出会合并为一条，需要匹配全部
+                    let writings = stderrLine.matchAll(/Opening.*index\d+\.ts\.tmp.*?for writing/g)
+                    let writingSegment
+                    let writingSegmentId
+                    for (const writing of writings) {
+                        writingSegment = writing[0].match(/index\d+/)[0]
+                        if (videoIndex[writingSegment].state == 'init') {
+                            videoIndex[writingSegment].state = 'writing'
+                            writingSegmentId = Number(writingSegment.replace('index', ''));
+                            if (writingSegmentId > 0) {
+                                let lastWriteSegment = `index${writingSegmentId - 1}`;
+                                try {
+                                    await access(path.resolve(settings.tempPath, 'output', `${lastWriteSegment}.ts`))
+                                    videoIndex[lastWriteSegment].state = 'done'
+                                    ffmpeg.queue.push(lastWriteSegment);
+                                    logger.info('hlsProcessController', 'generateHlsProcess 5', lastWriteSegment, 'done')
+                                } catch (error) {
+                                    if (videoIndex[lastWriteSegment].state != 'init') {
+                                        videoIndex[lastWriteSegment].state = 'err'
+                                        logger.error('hlsProcessController', 'generateHlsProcess 5', 'lost', lastWriteSegment);
+                                    }
+                                }
                             }
                         }
                     }

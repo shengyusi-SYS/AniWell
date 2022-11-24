@@ -2,7 +2,14 @@ const fs = require('fs');
 const path = require('path');
 try { fs.accessSync(path.join('log')) }
 catch (error) { fs.mkdirSync(path.join('log')) }
-
+try {
+    var debug = JSON.parse(fs.readFileSync('./settings.json')).debug
+} catch (error) {
+    debug=true
+}
+if (debug) {
+    console.log('已开启debug模式');
+}
 let config = {
     "appenders": {
         "console": {
@@ -108,6 +115,12 @@ let config = {
             ],
             level:'all'
         }
+    }
+}
+if (debug===false) {
+    let cat = config.categories
+    for (const key in cat) {
+        cat[key].level = 'info'
     }
 }
 const log4js = require('log4js');

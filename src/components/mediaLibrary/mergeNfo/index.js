@@ -3,10 +3,11 @@ const xml2js = require('xml2js');
 const xmlParser = new xml2js.Parser({ explicitArray: false, explicitRoot: false });
 const xmlBuilder = new xml2js.Builder();
 const fs = require('fs');
-const { deepMerge } = require('../../../utils');
+const { deepMerge, event, searchLeaf } = require('../../../utils');
 const path = require('path');
-const {librarySettings} = require('../../mediaLibrary/librarySettings');
-
+const { librarySettings } = require('../../mediaLibrary/librarySettings');
+const pictureExtractor = require('../pictureExtractor');
+const {scrapeLogger} = require('../../../utils/logger');
 
 const dandanList = {
     'title': 'title',
@@ -24,19 +25,43 @@ const dandanList = {
 
 const config = librarySettings.source
 
-function mergeNfo(filePath = '', res = {}) {
+async function mergeNfo(filePath = '', res = {}, tag) {
+    scrapeLogger.info('mergeNfo start',filePath,res.result,tag.full)
     if (!filePath || filePath == '.') {
         return false
     }
+    // deepMerge(res,searchLeaf(tag.existTree,filePath))
     let nfoPath
     let posterPath
     switch (res.result) {
         case 'episodedetails':
             nfoPath = path.resolve(path.dirname(filePath), `${path.parse(filePath).name}.nfo`)
-            try {
-                fs.accessSync(path.resolve(path.dirname(filePath), 'metadata', `${path.parse(filePath).name}.jpg`))
+            if (tag.full) {
+                try { fs.mkdirSync(path.resolve(path.dirname(filePath), 'metadata')) } catch (error) { }
+                try {
+                    posterPath = path.resolve(path.dirname(filePath), 'metadata', `${path.parse(filePath).name}.jpg`)
+                    await pictureExtractor(filePath, posterPath)
+                    res.poster = posterPath
+                } catch (error) {
+                    posterPath = false
+                }
+            } else {
                 posterPath = path.resolve(path.dirname(filePath), 'metadata', `${path.parse(filePath).name}.jpg`)
-            } catch (error) { }
+                try {
+                    fs.accessSync(path.resolve(path.dirname(filePath), 'metadata', `${path.parse(filePath).name}.jpg`))
+                    res.poster = posterPath
+                } catch (error) {
+                    try {
+                        fs.mkdirSync(path.resolve(path.dirname(filePath), 'metadata'))
+                    } catch (error) { }
+                    try {
+                        await pictureExtractor(filePath, posterPath)
+                        res.poster = posterPath
+                    } catch (error) {
+                        posterPath = false
+                    }
+                }
+            }
             break;
         case 'tvshow':
             nfoPath = path.resolve(filePath, 'tvshow.nfo')

@@ -3,7 +3,7 @@ const { scrapeLogger } = require('../../../../utils/logger');
 const path = require('path');
 const fs = require('fs');
 const mergeNfo = require('../../mergeNfo');
-async function dandanplayMatch(filePath) {
+async function dandanplayMatch(filePath,tag) {
     try {
         let fileName = path.parse(filePath).name
         let hash = ''
@@ -28,7 +28,9 @@ async function dandanplayMatch(filePath) {
             method: 'POST',
             headers: {
                 'Content-Type': 'text/json',
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'Accept-Encoding':'gzip',
+                'User-Agent':`fileServer for qbittorrent 0.4`
             },
             timeout: {
                 request: 120000
@@ -37,6 +39,7 @@ async function dandanplayMatch(filePath) {
             responseType: 'json'
         })
         res = res.body
+        scrapeLogger.info('dandanplayMatch res', res)
         if (res.errorCode != 0) {
             scrapeLogger.error('dandanplayMatch res err', res.errorMessage)
         }
@@ -65,7 +68,7 @@ async function dandanplayMatch(filePath) {
             }
         } else res = false
         if (res) {
-            mergeNfo(filePath, res)
+            await  mergeNfo(filePath, res,tag)
         }
         scrapeLogger.debug('dandanplayMatch res', fileName, res);
         return res

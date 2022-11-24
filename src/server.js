@@ -25,8 +25,8 @@ const { debounce } = require('lodash');
 const merger = require('./utils/merger');
 const trimPath = require('./utils/trimPath');
 const handleVideoRequest = require('./components/handleVideoRequest');
-const { librarySettingsList, updateLibrarySettings} = require('./components/mediaLibrary/librarySettings');
-const { initMediaLibrary, cleanLibrary} = require('./components/mediaLibrary');
+const { librarySettingsList, updateLibrarySettings } = require('./components/mediaLibrary/librarySettings');
+const { initMediaLibrary, cleanLibrary } = require('./components/mediaLibrary');
 const dandanplayScraper = require('./components/mediaLibrary/dandanplayScraper');
 
 var SID
@@ -185,7 +185,7 @@ app.use('/api/localFile/librarySettings', (req, res) => {
 app.use('/api/localFile/updateLibrarySettings', (req, res) => {
     let result = updateLibrarySettings(req.body)
     if (result) {
-        res.send('Ok.')
+        res.send({ success: true })
     } else {
         res.send({
             error: true,
@@ -194,24 +194,24 @@ app.use('/api/localFile/updateLibrarySettings', (req, res) => {
     }
 })
 //更新指定媒体库
-app.use('/api/localFile/updateLibrary', async(req, res) => {
-    let {libraryPath, libraryName} = req.body
-    if (!searchLeaf(libraryIndex,libraryPath)) {
+app.use('/api/localFile/updateLibrary', async (req, res) => {
+    let { libraryPath, libraryName } = req.body
+    if (!searchLeaf(libraryIndex, libraryPath)) {
         res.send({
-            error: true,
+            success: false,
             errorMessage: '媒体库不存在'
         })
         return
-    }else{
-        res.send('Ok.')
+    } else {
+        res.send({ success: true })
     }
-   await initMediaLibrary(libraryPath, libraryName)
-   await cleanLibrary()
-   logger.info('/api/localFile/updateLibrary end')
+    await initMediaLibrary(libraryPath, libraryName, true)
+    await cleanLibrary()
+    logger.info('/api/localFile/updateLibrary end')
 })
 //更新指定文件夹
-app.use('/api/localFile/updateDir', async(req, res) => {
-    let {dirPath} = req.body
+app.use('/api/localFile/updateDir', async (req, res) => {
+    let { dirPath } = req.body
     // if (!searchLeaf(libraryIndex,dirPath)) {
     //     res.send({
     //         error: true,
@@ -219,10 +219,11 @@ app.use('/api/localFile/updateDir', async(req, res) => {
     //     })
     //     return
     // }else{
-        res.send('Ok.')
+    res.send('Ok.')
     // }
-   await dandanplayScraper(dirPath,searchLeaf(libraryIndex,dirPath),true,0)
-   logger.info('/api/localFile/updateDir end')
+    await dandanplayScraper(dirPath, searchLeaf(libraryIndex, dirPath), { full: true, depth: 0 })
+    await writeFile('./libraryIndex.json', JSON.stringify(libraryIndex, '', '\t'))
+    logger.info('/api/localFile/updateDir end')
 })
 
 
@@ -230,14 +231,14 @@ app.use('/api/localFile/updateDir', async(req, res) => {
 app.use('/api/localFile/changeFileServerSettings', async (req, res) => {
     let data = req.body
     mergeSettings(settingsList, settings, data)
-    writeFile('./settings.json', JSON.stringify(settings, '', '\t')).then((result) => {
-        logger.debug('debug', '已更新配置');
-        logger.debug('debug', settings);
+    try {
+        await writeFile('./settings.json', JSON.stringify(settings, '', '\t'))
+        logger.info('/api/localFile/changeFileServerSettings', '已更新配置', settings);
         res.send('Ok.')
-    }).catch((err) => {
-        logger.error('error', err);
+    } catch (error) {
+        logger.error('/api/localFile/changeFileServerSettings', err);
         res.send('Fails.')
-    });
+    }
 })
 
 
@@ -253,14 +254,13 @@ app.use('/api/localFile/changeFileServerSettings', async (req, res) => {
 
 //hls地址生成
 app.use('/api/localFile/videoSrc', (req, res, next) => {
-    const path = req.headers.referer.split(':')
+    // const path = req.headers.referer.split(':')
     if (videoHandler.method == 'direct') {
         res.send({
-            src: `/api/localFile/directPlay/${videoHandler.id}?cookie=SID=${encodeURIComponent(SID)}`,
+            src: `/api/localFile/directPlay/${videoHandler.id}?cookie=SID=${encodeURIComponent(SID)}`,//id只是凑格式的，目标路径在handler中
             type: videoHandler.contentType
         })
     } else if (videoHandler.method == 'transcode') {
-
         res.send({
             src: `/api/localFile/output/index.m3u8?cookie=SID=${encodeURIComponent(SID)}`,
             type: videoHandler.contentType,
@@ -302,7 +302,7 @@ app.use('/api/localFile/getFile', async (req, res, next) => {
         fileType = req.query.type
         filePath = path.resolve(req.query.path)
     }
-    // logger.debug('debug',req.query);
+    logger.debug('/api/localFile/getFile',req.query);
     try {
         if (fileType == 'text') {
             readFile(path.resolve(filePath)).then((result) => {
@@ -374,7 +374,7 @@ app.use("/api/v2/sync/maindata", async (req, res, next) => {
         }
         res.send(newData)
     }).catch((err) => {
-        logger.debug('maindata', err);
+        logger.error("/api/v2/sync/maindata", err);
     });
 });
 
@@ -444,12 +444,12 @@ try {
     app.use(express.static(wwwroot));
     app.use(history());
     app.use("/api/v2", proxy(proxySettings));
-    logger.debug('debug', '~~~本地WebUI');
+    logger.info('server start', '~~~本地WebUI');
 } catch (error) {
     app.use("/", proxy(proxySettings));
-    logger.debug('debug', '~~~qBittorrent Web UI');
+    logger.info('server start', '~~~qBittorrent Web UI');
 }
-logger.debug('debug', 'dir', __dirname, 'resolve', path.resolve(''));
+// logger.debug('debug', 'dir', __dirname, 'resolve', path.resolve(''));
 
 // app.use((req,res,next)=>{
 //     logger.debug('all',req.path)
@@ -458,12 +458,12 @@ logger.debug('debug', 'dir', __dirname, 'resolve', path.resolve(''));
 
 if (!(proxySettings.ssl.cert && proxySettings.ssl.key)) {
     app.listen(settings.serverPort);
-    logger.debug('debug', `HTTP Server is running on: http://localhost:${settings.serverPort}`);
+    logger.info('server start', `HTTP Server is running on: http://localhost:${settings.serverPort}`);
 } else {
     const httpsServer = https.createServer(proxySettings.ssl, app);
     io = require('socket.io')(httpsServer);
     httpsServer.listen(settings.serverPort, () => {
-        logger.debug('debug', `HTTPS Server is running on: https://localhost:${settings.serverPort}`);
+        logger.info('server start', `HTTPS Server is running on: https://localhost:${settings.serverPort}`);
     });
 }
 

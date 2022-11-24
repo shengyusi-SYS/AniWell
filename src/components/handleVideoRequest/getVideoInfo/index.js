@@ -63,7 +63,7 @@ function getVideoInfo(filePath) {
             logger.debug('getVideoInfo','end');
             return r(videoInfo)
         })
-    }).catch(e => logger.error('getVideoInfo', e))
+    }).catch(e => logger.error('getVideoInfo err', e))
 }
 
 module.exports = getVideoInfo

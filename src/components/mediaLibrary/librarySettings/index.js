@@ -3,33 +3,82 @@ const { libraryIndex } = require('../../../utils/init');
 const fs = require('fs');
 const path = require('path');
 const { logger } = require('../../../utils/logger');
-const {diffArrays, diffJson} = require('diff');
+const { diffArrays, diffJson } = require('diff');
 
 
 const librarySettingsList = {
     library: {
         type: 'cellGroup', name: 'library', cells: [
-            { name: '媒体库路径', value: '媒体库名' }
+            // { name: '媒体库路径', value: '媒体库名' }
         ]
     }
     , source: {
         type: 'cellGroup', name: 'source', cells: [
-            { type: 'radios', name: 'title', value: 'dandan', radios: { dandan: { name: '弹弹Play', value: 'dandan' }, tmdb: { name: "TMDB", value: 'tmdb' }, local: { name: '本地', value: 'local' } } },
-            { type: 'radios', name: 'episode', value: 'dandan', radios: { dandan: { name: '弹弹Play', value: 'dandan' }, tmdb: { name: "TMDB", value: 'tmdb' }, local: { name: '本地', value: 'local' } } },
-            { type: 'radios', name: 'poster', value: 'dandan', radios: { dandan: { name: '弹弹Play', value: 'dandan' }, tmdb: { name: "TMDB", value: 'tmdb' }, local: { name: '本地', value: 'local' } } },
-            { type: 'radios', name: 'date', value: 'dandan', radios: { dandan: { name: '弹弹Play', value: 'dandan' }, tmdb: { name: "TMDB", value: 'tmdb' }, local: { name: '本地', value: 'local' } } },
-            { type: 'radios', name: 'type', value: 'dandan', radios: { dandan: { name: '弹弹Play', value: 'dandan' }, tmdb: { name: "TMDB", value: 'tmdb' }, local: { name: '本地', value: 'local' } } },
-            { type: 'radios', name: 'rating', value: 'dandan', radios: { dandan: { name: '弹弹Play', value: 'dandan' }, tmdb: { name: "TMDB", value: 'tmdb' }, local: { name: '本地', value: 'local' } } },
-            { type: 'radios', name: 'hash', value: 'dandan', radios: { dandan: { name: '弹弹Play', value: 'dandan' }, tmdb: { name: "TMDB", value: 'tmdb' }, local: { name: '本地', value: 'local' } } },
-            { type: 'radios', name: 'season', value: 'dandan', radios: { dandan: { name: '弹弹Play', value: 'dandan' }, tmdb: { name: "TMDB", value: 'tmdb' }, local: { name: '本地', value: 'local' } } },
+            {
+                type: 'radios', name: 'title', value: 'dandan', radios: {
+                    dandan: { name: '弹弹Play', value: 'dandan' },
+                    tmdb: { name: "TMDB", value: 'tmdb' },
+                    local: { name: '本地', value: 'local' }
+                }
+            },
+            {
+                type: 'radios', name: 'episode', value: 'dandan', radios: {
+                    dandan: { name: '弹弹Play', value: 'dandan' },
+                    tmdb: { name: "TMDB", value: 'tmdb' },
+                    local: { name: '本地', value: 'local' }
+                }
+            },
+            {
+                type: 'radios', name: 'poster', value: 'dandan', radios: {
+                    dandan: { name: '弹弹Play', value: 'dandan' },
+                    tmdb: { name: "TMDB", value: 'tmdb' },
+                    local: { name: '本地', value: 'local' }
+                }
+            },
+            {
+                type: 'radios', name: 'date', value: 'dandan', radios: {
+                    dandan: { name: '弹弹Play', value: 'dandan' },
+                    tmdb: { name: "TMDB", value: 'tmdb' },
+                    local: { name: '本地', value: 'local' }
+                }
+            },
+            {
+                type: 'radios', name: 'type', value: 'dandan', radios: {
+                    dandan: { name: '弹弹Play', value: 'dandan' },
+                    tmdb: { name: "TMDB", value: 'tmdb' },
+                    local: { name: '本地', value: 'local' }
+                }
+            },
+            {
+                type: 'radios', name: 'rating', value: 'dandan', radios: {
+                    dandan: { name: '弹弹Play', value: 'dandan' },
+                    tmdb: { name: "TMDB", value: 'tmdb' },
+                    local: { name: '本地', value: 'local' }
+                }
+            },
+            {
+                type: 'radios', name: 'hash', value: 'dandan', radios: {
+                    dandan: { name: '弹弹Play', value: 'dandan' },
+                    // tmdb: { name: "TMDB", value: 'tmdb' },
+                    local: { name: '本地', value: 'local' }
+                }
+            },
+            {
+                type: 'radios', name: 'season', value: 'dandan', radios: {
+                    dandan: { name: '弹弹Play', value: 'dandan' },
+                    tmdb: { name: "TMDB", value: 'tmdb' },
+                    local: { name: '本地', value: 'local' }
+                }
+            },
             { name: 'dandanplayId', value: 'dandanplayId' }
         ]
     }
 }
-
+var init = true
 var librarySettings = {}
 try {
     librarySettings = JSON.parse(fs.readFileSync('./librarySettings.json'))
+    updateLibrarySettings(librarySettings)
 } catch (error) {
     for (const key in librarySettingsList) {
         if (librarySettingsList[key].type == 'cellGroup') {
@@ -44,18 +93,26 @@ try {
         }
     }
 }
-logger.info('librarySettings init', librarySettings)
+if (init) {
+    logger.info('librarySettings init', librarySettings)
+    init = false
+}
 
 //更新媒体库设置
 function updateLibrarySettings(newSettings = librarySettings) {
-    logger.info('updateLibrarySettings start', newSettings)
+    logger.debug('updateLibrarySettings start', newSettings)
     for (const key in newSettings.library) {
+        if (key === '') {
+            delete newSettings.library[key]
+            break
+        }
         //检查媒体库路径
         try {
+            console.log(path.resolve(key));
             fs.accessSync(path.resolve(key))
         } catch (error) { return false }
         //处理留空命名
-        if (newSettings.library[key]=="") {
+        if (newSettings.library[key] == "") {
             newSettings.library[key] = path.basename(key)
         }
         //通过path统一路径名
@@ -101,14 +158,20 @@ function updateLibrarySettings(newSettings = librarySettings) {
     for (const key in librarySettings) {
         newList[key] = { cells: [] }
         for (const k in librarySettings[key]) {
-            newList[key].cells.push({ name: k, value: librarySettings[key][k] })
+            if (key == 'library') {
+                newList[key].cells.push({ name: librarySettings[key][k], value: k })
+
+            } else if (key == 'source') {
+                newList[key].cells.push({ name: k, value: librarySettings[key][k] })
+            }
         }
     }
+    delete librarySettingsList.library.cells
     deepMerge(librarySettingsList, newList, { keyword: 'name' })
 
     try { fs.writeFileSync('./librarySettings.json', JSON.stringify(librarySettings, '', '\t')) } catch (error) { }
     try { fs.writeFileSync('./libraryIndex.json', JSON.stringify(libraryIndex, '', '\t')) } catch (error) { }
-    logger.info('updateLibrarySettings end', newSettings)
+    logger.debug('updateLibrarySettings end', newSettings)
     return librarySettingsList
 }
 

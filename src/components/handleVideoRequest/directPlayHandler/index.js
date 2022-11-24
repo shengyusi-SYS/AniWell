@@ -19,13 +19,12 @@ class directPlayHandler {
       if (used < 0) {
         app.use('/api/localFile/directPlay', async (req, res) => {
           try {
-            logger.info('directPlayHandler handler /api/localFile/directPlay', 'start')
+            logger.debug('directPlayHandler handler /api/localFile/directPlay', 'start')
             const filePath = _this.filePath
-            console.log(filePath);
+            logger.info('directPlayHandler handler /api/localFile/directPlay',filePath,range);
             const fileState = await stat(filePath)
             const fileSize = fileState.size
             const range = req.headers.range
-            console.log(range);
             
             if (range) {
               const parts = range.replace(/bytes=/, "").split("-")

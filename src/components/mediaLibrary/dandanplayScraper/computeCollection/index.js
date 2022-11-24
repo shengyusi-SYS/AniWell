@@ -7,11 +7,9 @@ const { deepMerge, searchLeaf } = require('../../../../utils');
 const { copyFile, access } = require('fs/promises');
 const mergeNfo = require('../../mergeNfo');
 
-console.log('computeCollection');
 
 async function computeCollection(dirTree = { children: [] }, deep, tag) {
     let collection = false
-
     //将已有信息合并，避免增量更新时，因过滤器导致相关信息缺失
     if (tag.existTree.children.length > 0) {
         let existDirTree = searchLeaf(tag.existTree, path.resolve(dirTree.path))
@@ -20,7 +18,7 @@ async function computeCollection(dirTree = { children: [] }, deep, tag) {
 
     //对单集信息进行排序，将正片内容提前，以排序后的文件夹中第一个正片为准，设置当前文件夹的季度/番名/合集信息
     dirTree.children.sort((a, b) => {
-        if (a.type != 'tvseries' && a.type != 'movie' && a.type != 'jpmovie') {
+        if (a.result != 'episodedetails' && a.type != 'tvseries' && a.type != 'movie' && a.type != 'jpmovie') {
             return 1
         }
         if (a.episode || a.startDate || a.ddId) {
@@ -37,15 +35,17 @@ async function computeCollection(dirTree = { children: [] }, deep, tag) {
     //根据排序后的children判断番名、季度
     if (dirTree.children[0]) {
         //由单集信息episodedetails判断季度/番名
-        if (dirTree.children[0].result=='episodedetails') {
+        if (dirTree.children[0].result == 'episodedetails') {
             dirTree.title = dirTree.children[0].animeTitle
             dirTree.ddId = dirTree.children[0].animeId
             dirTree.type = dirTree.children[0].type
             dirTree.result = 'tvshow'
             dirTree.source = 'dandan'
             dirTree.children.forEach(v => {
-                delete v.animeTitle
-                delete v.animeId
+                // if (deep!=0) {
+                //     delete v.animeTitle
+                //     delete v.animeId
+                // }
                 delete v.type
             })
             let seasonInfo = {}
@@ -119,20 +119,23 @@ async function computeCollection(dirTree = { children: [] }, deep, tag) {
 
     //根据识别结果合并nfo文件
     if (dirTree.result) {
-        if (collection) {
-            dirTree.children.forEach(v => {
+        if (collection || tag.update) {
+            for (let index = 0; index < dirTree.children.length; index++) {
+                const v = dirTree.children[index];
                 if (v.children) {
-                    v.children.forEach(val => {
+                    for (let index = 0; index < v.children.length; index++) {
+                        const val = v.children[index];
                         if (!val.children) {
-                            mergeNfo(path.resolve(v.path, val.label), val)
+                            await mergeNfo(path.resolve(v.path, val.label), val, tag)
                         }
-                    })
+                    }
                 }
-                mergeNfo(v.path, v)
-            })
+                await mergeNfo(path.resolve(dirTree.path, v.label), v, tag)
+            }
         }
-        mergeNfo(dirTree.path, dirTree)
+        await mergeNfo(dirTree.path, dirTree, tag)
     }
+    // console.log('computeCollection',tag.update,dirTree);
 }
 
 module.exports = computeCollection

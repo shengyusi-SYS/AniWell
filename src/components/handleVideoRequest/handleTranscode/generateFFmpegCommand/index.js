@@ -471,7 +471,7 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
         ...quality,
         ...customOutputCommand,
         ...hlsParams(segment),
-        '-hide_banner',
+        // '-hide_banner',
         '-y',
         path.resolve(settings.tempPath, 'output', 'tempList', `${segment}.m3u8`)
     ])

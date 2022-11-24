@@ -7,7 +7,6 @@ const { diffWords } = require('diff');
 const xml2js = require('xml2js');
 const { libraryIndex } = require('../../utils/init');
 
-
 const xmlBuilder = new xml2js.Builder();
 const taskQueue = new TaskPool(1)
 
@@ -16,7 +15,7 @@ event.on('addLibrary', (libraryPath, libraryName) => {
 })
 
 //新建和更新媒体库，初次为全量更新，默认为增量更新（由existTree判断）
-async function initMediaLibrary(libraryPath = '', libraryName = '') {
+async function initMediaLibrary(libraryPath = '', libraryName = '',update=false) {
     try {
         logger.info('initMediaLibrary start', libraryPath, libraryName)
         //默认命名
@@ -34,7 +33,7 @@ async function initMediaLibrary(libraryPath = '', libraryName = '') {
         }
 
         //弹弹play进行第一遍刮削
-        await dandanplayScraper(path.resolve(libraryRootDir), existTree)
+        await dandanplayScraper(path.resolve(libraryRootDir), existTree,{update})
 
         //dandanplayScraper是对existTree进行修改，而existTree已存入libraryIndex
         await writeFile('./libraryIndex.json', JSON.stringify(libraryIndex, '', '\t'))

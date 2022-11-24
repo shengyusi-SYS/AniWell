@@ -1,5 +1,5 @@
 const { settings } = require('./init');
-const { logger } = require('./logger');
+const { logger,scrapeLogger } = require('./logger');
 const rimraf = require('rimraf');
 const { EventEmitter } = require('events');
 const path = require('path');
@@ -121,7 +121,8 @@ async function vidoeHash(filePath) {
         // console.log('start', filePath);
         const chunk = readChunkSync(filePath, { length: 1024 * 1024 * 16 })
         const md5 = hash.update(chunk, 'utf8').digest('hex')
-        console.log('end', filePath);
+        // console.log('vidoeHash', filePath);
+        scrapeLogger.debug('vidoeHash', filePath);
         return Promise.resolve(md5)
     } catch (error) {
         return Promise.reject
@@ -247,7 +248,7 @@ tag：可以附加其它信息
 
 const defaultAppend = {
     fileFilter: async (filePath) => true,
-    appendFileInfo: async (filePath) => { },
+    appendFileInfo: async (filePath,tag) => { },
     appendDirInfo: async (dirTree, deep,tag) => { },
     callback: async (dirTree) => { },
     deepLimit: 0,
@@ -258,7 +259,6 @@ async function appedDirTree(dirPath = '', dirTree = {}, append = defaultAppend) 
     try {
         append = { ...defaultAppend, ...append }
         let { appendFileInfo, appendDirInfo, fileFilter, deep, callback, deepLimit, tag } = append
-        // console.log(deep,dirPath);
         //深度限制，貌似效率有限
         if (deepLimit !== 0 && deep == deepLimit) {
             return false
@@ -275,10 +275,10 @@ async function appedDirTree(dirPath = '', dirTree = {}, append = defaultAppend) 
             // console.log('readdir error~~~~~~~~~~~~~~~~~~~~~~~',dirPath,error);
             let filePath = dirPath
             try {
-                let fileInfo = await appendFileInfo(filePath)
+                let fileInfo = await appendFileInfo(filePath,tag)
                 return { label: path.basename(filePath), ...fileInfo }
             } catch (error) {
-                console.log('fileInfo', error);
+                logger.error('fileInfo', error);
             }
         }
         try {
@@ -307,14 +307,14 @@ async function appedDirTree(dirPath = '', dirTree = {}, append = defaultAppend) 
         try {
             await Promise.all(queue)
         } catch (error) {
-            console.log('Promise.all', error);
+            logger.error('Promise.all', error);
         }
         await appendDirInfo(dirTree, deep, tag)
         await callback(dirTree)
         // console.log('-----------------------', deep, dirTree);
         return dirTree
     } catch (error) {
-        console.log(error);
+        logger.error(error);
     }
 
 }
@@ -382,6 +382,9 @@ const deepMerge = (toB, addA, params = defaultDeepMergerParams) => {
 //根据给定路径搜索dirTree中的信息
 function searchLeaf(dirTree, targetPath = '') {
     try {
+        if (dirTree.path==targetPath) {
+            return dirTree
+        }
         while (!dirTree.path) {
             let rootLeaf = false
             dirTree = dirTree.children.find(v => {
@@ -395,7 +398,7 @@ function searchLeaf(dirTree, targetPath = '') {
             }
         }
         if (!dirTree) {
-            console.log('not exist', targetPath);
+            logger.debug('not exist', targetPath);
             return false
         }
 

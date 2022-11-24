@@ -45,7 +45,7 @@ async function handleVideoRequest(params) {
                 let HlsRequestHandler = new hlsRequestHandler(videoInfo.videoIndex, HlsProcessController)
                 handler = HlsRequestHandler.handler
                 lastHandler = handler
-                logger.info('handleVideoRequest', 'end transcode')
+                logger.debug('handleVideoRequest', 'end transcode',videoInfo)
             }
             handler.contentType = 'application/x-mpegURL'
         }
@@ -56,7 +56,6 @@ async function handleVideoRequest(params) {
     } catch (error) {
         logger.error('handleVideoRequest', error)
     }
-
 }
 
 module.exports = handleVideoRequest

@@ -37,6 +37,7 @@ const settingsList = {
     tmdbKey: { type: 'text', name: 'tmdbKey', value: '', placeholder: 'TMDB API KEY' },
     customInputCommand: { type: 'textarea', name: 'customInputCommand', value: '', placeholder: '指令设定请参考readme文档，勿轻易修改' },
     customOutputCommand: { type: 'textarea', name: 'customOutputCommand', value: '', placeholder: '指令设定请参考readme文档，勿轻易修改' },
+    debug:{ type: 'switch', name: 'debug', value: false },
 }
 var settings = {}
 for (const key in settingsList) {
