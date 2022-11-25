@@ -12,7 +12,7 @@ const { scrapeLogger } = require('../../../utils/logger');
 async function pictureExtractor(inputPath = '', outputPath = '') {
   try {
     var duration = await new Promise((resolve, reject) => {
-      Ffmpeg.ffprobe(filePath, async (err, metadata) => {
+      Ffmpeg.ffprobe(inputPath, async (err, metadata) => {
         let { duration } = metadata.format
         resolve(duration)
       })
@@ -21,9 +21,9 @@ async function pictureExtractor(inputPath = '', outputPath = '') {
     duration = 180
   }
   await new Promise((resolve, reject) => {
-    scrapeLogger.info('pictureExtractor start', inputPath)
+    scrapeLogger.info('pictureExtractor start', inputPath,duration)
     Ffmpeg(path.resolve(inputPath))
-      .inputOptions([`-ss ${duration / 2}`])
+      .inputOptions([`-ss ${duration / 8}`])
       .outputOptions([
         '-frames:v 1',
         '-q:v 1',

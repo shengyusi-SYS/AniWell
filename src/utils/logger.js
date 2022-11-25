@@ -4,11 +4,12 @@ try { fs.accessSync(path.join('log')) }
 catch (error) { fs.mkdirSync(path.join('log')) }
 try {
     var debug = JSON.parse(fs.readFileSync('./settings.json')).debug
+    if (debug) {
+        console.log('已开启debug模式');
+    }
 } catch (error) {
     debug=true
-}
-if (debug) {
-    console.log('已开启debug模式');
+    console.log('初次使用默认开启debug');
 }
 let config = {
     "appenders": {

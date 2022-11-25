@@ -19,6 +19,7 @@ const librarySettingsList = {
                     dandan: { name: '弹弹Play', value: 'dandan' },
                     tmdb: { name: "TMDB", value: 'tmdb' },
                     local: { name: '本地', value: 'local' }
+                    ,ignore:{name:'忽略',value:''}
                 }
             },
             {
@@ -26,6 +27,7 @@ const librarySettingsList = {
                     dandan: { name: '弹弹Play', value: 'dandan' },
                     tmdb: { name: "TMDB", value: 'tmdb' },
                     local: { name: '本地', value: 'local' }
+                    ,ignore:{name:'忽略',value:''}
                 }
             },
             {
@@ -33,6 +35,7 @@ const librarySettingsList = {
                     dandan: { name: '弹弹Play', value: 'dandan' },
                     tmdb: { name: "TMDB", value: 'tmdb' },
                     local: { name: '本地', value: 'local' }
+                    ,ignore:{name:'忽略',value:''}
                 }
             },
             {
@@ -40,6 +43,7 @@ const librarySettingsList = {
                     dandan: { name: '弹弹Play', value: 'dandan' },
                     tmdb: { name: "TMDB", value: 'tmdb' },
                     local: { name: '本地', value: 'local' }
+                    ,ignore:{name:'忽略',value:''}
                 }
             },
             {
@@ -47,6 +51,7 @@ const librarySettingsList = {
                     dandan: { name: '弹弹Play', value: 'dandan' },
                     tmdb: { name: "TMDB", value: 'tmdb' },
                     local: { name: '本地', value: 'local' }
+                    ,ignore:{name:'忽略',value:''}
                 }
             },
             {
@@ -54,6 +59,7 @@ const librarySettingsList = {
                     dandan: { name: '弹弹Play', value: 'dandan' },
                     tmdb: { name: "TMDB", value: 'tmdb' },
                     local: { name: '本地', value: 'local' }
+                    ,ignore:{name:'忽略',value:''}
                 }
             },
             {
@@ -61,6 +67,7 @@ const librarySettingsList = {
                     dandan: { name: '弹弹Play', value: 'dandan' },
                     // tmdb: { name: "TMDB", value: 'tmdb' },
                     local: { name: '本地', value: 'local' }
+                    ,ignore:{name:'忽略',value:''}
                 }
             },
             {
@@ -68,8 +75,17 @@ const librarySettingsList = {
                     dandan: { name: '弹弹Play', value: 'dandan' },
                     tmdb: { name: "TMDB", value: 'tmdb' },
                     local: { name: '本地', value: 'local' }
+                    ,ignore:{name:'忽略',value:''}
                 }
             },
+            // {
+            //     type: 'radios', name: 'art', value: 'dandan', radios: {
+            //         dandan: { name: '弹弹Play', value: 'dandan' },
+            //         tmdb: { name: "TMDB", value: 'tmdb' },
+            //         local: { name: '本地', value: 'local' }
+            //         ,ignore:{name:'忽略',value:''}
+            //     }
+            // },
             { name: 'dandanplayId', value: 'dandanplayId' }
         ]
     }

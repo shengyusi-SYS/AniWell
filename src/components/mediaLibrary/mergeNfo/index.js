@@ -20,7 +20,8 @@ const dandanList = {
     hash: 'hash',
     season: 'season',
     poster: 'poster',
-    ddId: 'dandanplayId'
+    ddId: 'dandanplayId',
+    // art:'art'
 }
 
 const config = librarySettings.source
@@ -36,24 +37,19 @@ async function mergeNfo(filePath = '', res = {}, tag) {
     switch (res.result) {
         case 'episodedetails':
             nfoPath = path.resolve(path.dirname(filePath), `${path.parse(filePath).name}.nfo`)
+            posterPath = path.resolve(path.dirname(filePath), `${path.parse(filePath).name}.jpg`)
             if (tag.full) {
-                try { fs.mkdirSync(path.resolve(path.dirname(filePath), 'metadata')) } catch (error) { }
                 try {
-                    posterPath = path.resolve(path.dirname(filePath), 'metadata', `${path.parse(filePath).name}.jpg`)
                     await pictureExtractor(filePath, posterPath)
                     res.poster = posterPath
                 } catch (error) {
                     posterPath = false
                 }
             } else {
-                posterPath = path.resolve(path.dirname(filePath), 'metadata', `${path.parse(filePath).name}.jpg`)
                 try {
-                    fs.accessSync(path.resolve(path.dirname(filePath), 'metadata', `${path.parse(filePath).name}.jpg`))
+                    fs.accessSync(posterPath)
                     res.poster = posterPath
                 } catch (error) {
-                    try {
-                        fs.mkdirSync(path.resolve(path.dirname(filePath), 'metadata'))
-                    } catch (error) { }
                     try {
                         await pictureExtractor(filePath, posterPath)
                         res.poster = posterPath
@@ -115,9 +111,11 @@ async function mergeNfo(filePath = '', res = {}, tag) {
             break
     }
 
-    if (posterPath) {
-        res.poster = posterPath
-    }
+    // if (posterPath) {
+    //     if (res.result=='episodedetails') {
+    //         res.art = {poster:posterPath}
+    //     }else res.poster = posterPath
+    // }
 
     let exist
     try {
@@ -143,15 +141,16 @@ async function mergeNfo(filePath = '', res = {}, tag) {
             break
     }
     let result = {}
-    for (const key in (res.fileInfo ? res.fileInfo : res)) {
+    for (const key in res) {
         try {
             let infoName = srcList[key]
             if (config[infoName] == res.source) {
-                result[infoName] = (res.fileInfo ? res.fileInfo : res)[key]
+                result[infoName] = res[key]
             }
         } catch (error) {
         }
     }
+    // console.log(res,'------------------------',result);
     if (res.result == 'episodedetails') {
         result.original_filename = path.basename(filePath)
     }

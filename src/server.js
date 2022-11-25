@@ -105,7 +105,7 @@ app.use(cookieParser())
 app.use('/api', (req, res, next) => {
     // logger.debug('/api',req.path);
     try {
-        if (req.path == '/v2/auth/login') {
+        if (req.path == '/v2/auth/login'||/^\/localFile\/output\//i.test(req.path)) {
             // logger.debug('/v2/auth/login', req.headers)
             next()
         } else if (!req.cookies && !req.query.cookie) {
@@ -132,7 +132,7 @@ app.use('/api', (req, res, next) => {
         }
     } catch (error) {
         if (req.path != '/v2/sync/maindata') {
-            logger.error('/api', error)
+            logger.error('/api',req.path,req.headers,req.cookies, error)
         }
         res.status(403).send(error)
     }
