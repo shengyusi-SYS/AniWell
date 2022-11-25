@@ -8,6 +8,7 @@ var ffmpegSuffix
 switch (os.type()) {
     case 'Linux':
         osPlatform = 'lin'
+        ffmpegSuffix = ''
         break;
     case 'Darwin':
         osPlatform = 'mac'

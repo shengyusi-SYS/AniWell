@@ -9,15 +9,15 @@ function selectMethod(videoInfo,params) {
     videoInfo.filePath = filePath
     // console.log(method);
     //直接串流的条件比较苛刻，如果主流设备都能直接播放h265，就没我什么事了...
-    if ((videoInfo.codec=='h264'&&videoInfo.pix_fmt=='yuv420p'&&videoInfo.bitrate<=bitrate*1000000&&!videoInfo.subtitleList.length>0)||method=='direct') {
+    if ((videoInfo.codec=='h264'&&videoInfo.pix_fmt=='yuv420p'&&videoInfo.bitrate<=bitrate&&!videoInfo.subtitleList.length>0)||method=='direct') {
         videoInfo.method = 'direct'
     } else {
         let targetBitrate = bitrate
         if (autoBitrate) {
-            if (videoInfo.bitrate * 1.5 <= bitrate * 1000000) {
-                targetBitrate = bitrate * 1000000
-            } else if (videoInfo.bitrate >= bitrate * 1000000 * 1.5) {
-                targetBitrate = bitrate * 1000000 * 1.5
+            if (videoInfo.bitrate * 1.5 <= bitrate) {
+                targetBitrate = bitrate
+            } else if (videoInfo.bitrate >= bitrate * 1.5) {
+                targetBitrate = bitrate * 1.5
             } else {
                 targetBitrate = videoInfo.bitrate * 1.2
             }

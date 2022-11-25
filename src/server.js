@@ -309,7 +309,7 @@ app.use('/api/localFile/getFile', async (req, res, next) => {
                 res.send(result)
             })
         } else if (fileType == 'video') {
-            let params = { filePath, suffix, SID, bitrate: settings.bitrate, autoBitrate: settings.autoBitrate, resolution: '1080p' }
+            let params = { filePath, suffix, SID, bitrate: settings.bitrate*1000000, autoBitrate: settings.autoBitrate, resolution: '1080p' }
             videoHandler = await handleVideoRequest(params)
             videoHandler(app)
             res.send('Ok.')
