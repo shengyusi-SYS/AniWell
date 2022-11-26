@@ -13,43 +13,51 @@ async function pictureExtractor(inputPath = '', outputPath = '') {
   try {
     var duration = await new Promise((resolve, reject) => {
       Ffmpeg.ffprobe(inputPath, async (err, metadata) => {
-        let { duration } = metadata.format
-        resolve(duration)
+        if (err) {
+          reject(err)
+        }
+        if (metadata) {
+          let { duration } = metadata.format
+          resolve(duration)
+        }
       })
     })
+    if (duration) {
+      await new Promise((resolve, reject) => {
+        scrapeLogger.info('pictureExtractor start', inputPath, duration)
+        Ffmpeg(path.resolve(inputPath))
+          .inputOptions([`-ss ${duration / 8}`])
+          .outputOptions([
+            '-frames:v 1',
+            '-q:v 1',
+            '-update 1',
+            '-s 1280x720',
+            // '-f webp',
+            // '-preset drawing',
+            // '-quality 90',
+            // '-lossless 1',
+            // '-compression_level 6'
+          ])
+          .output(path.resolve(outputPath))
+          .on('end', function () {
+            scrapeLogger.debug('pictureExtractor end', inputPath)
+            resolve()
+          })
+          // .on('stderr', function (stderrLine) {
+          //   console.log('Stderr output: ' + stderrLine);
+          // })
+          .on('error', function (err) {
+            scrapeLogger.error('pictureExtractor err', inputPath, err.message)
+            reject()
+          })
+          .run()
+      })
+    }
+    return outputPath
   } catch (error) {
-    duration = 180
+    scrapeLogger.error('pictureExtractor', error)
+    return Promise.reject()
   }
-  await new Promise((resolve, reject) => {
-    scrapeLogger.info('pictureExtractor start', inputPath,duration)
-    Ffmpeg(path.resolve(inputPath))
-      .inputOptions([`-ss ${duration / 8}`])
-      .outputOptions([
-        '-frames:v 1',
-        '-q:v 1',
-        '-update 1',
-        '-s 1280x720',
-        // '-f webp',
-        // '-preset drawing',
-        // '-quality 90',
-        // '-lossless 1',
-        // '-compression_level 6'
-      ])
-      .output(path.resolve(outputPath))
-      .on('end', function () {
-        scrapeLogger.debug('pictureExtractor end', inputPath)
-        resolve()
-      })
-      // .on('stderr', function (stderrLine) {
-      //   console.log('Stderr output: ' + stderrLine);
-      // })
-      .on('error', function (err) {
-        scrapeLogger.error('pictureExtractor err', inputPath, err.message)
-        reject()
-      })
-      .run()
-  })
-  return outputPath
 }
 
 module.exports = pictureExtractor

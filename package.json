@@ -1,6 +1,6 @@
 {
   "name": "FileServer-for-qBittorrent",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "main": "./src/main.js",
   "bin": "./middle/middle.js",
   "repository": "https://github.com/blytzxdl/File-server-for-qBittorrent.git",

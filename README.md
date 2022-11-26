@@ -1,18 +1,36 @@
 # FileServer-for-qBittorrent v0.4
 
-[TOC]
+
+
+[说明](#说明)
+
+[声明](#声明)
+
+[安装方法](#安装方法)
+
+[配置项](#配置项)
+
+[媒体库功能](#媒体库功能)
+
+[转码说明](#转码说明)
+
+[已知问题](#已知问题)
+
+[常规问题解决方案](#常规问题解决方案)
+
+[使用注意及建议](#使用注意及建议)
 
 ## 说明
 
-本应用为qbittorrent的周边项目，为qbittorrent下载好的视频提供转码串流服务，可在web端直接播放（详见配置项及转码说明），实现下载播放一条龙服务，v0.4起已实现单独的媒体库功能，但登录验证依然依赖于qbittorrent。
+本应用为qbittorrent的周边项目，为qbittorrent下载好的视频提供转码串流服务，可在web端直接播放（详见配置项及转码说明），实现下载刮削播放一条龙服务，免去做种与管理之间的矛盾，v0.4起已实现单独的媒体库功能，但登录验证依然依赖于qbittorrent。
 
-已完成的配套webui：[qBittorrent Web UI](https://github.com/blytzxdl/qbwebui)（v0.3开始会在本项目的release中集成）
+已完成的配套webui：[qBittorrent Web UI](https://github.com/blytzxdl/qbwebui)（v0.3开始已集成）
 
 使用jellyfin版的ffmpeg，因其提供了将文本字幕转为图形的方法，可以充分利用显卡硬件加速，并且可以使用libfdk_aac库，提高音频转码速度（主要是自己不会C语言，尝试了三天自己编译ffmpeg仍然报错无穷尽，果断放弃，如不符合协议，烦请提醒）
 
 如有大佬愿意参与开发，那我非常欢迎！！！
 
-## 声明
+## 安装方法声明
 
 本应用当前的定位是为qbittorrent提供轻量级的转码串流服务，内置提取视频缩略图和弹弹play的刮削功能，目的是简化下载、管理和播放的流程，既不是类似Jellyfin那样的全能媒体服务器，也不是种子播放器。
 
@@ -22,11 +40,11 @@
 
 严重Bug >= 关键功能 > 符合本应用定位的功能 > 实验性功能 >= 常规Bug >= UI改进
 
-
+本应用使用GPL3协议，完全开源免费，不是通过官方渠道下载本应用而产生的问题，恕不处理
 
 ## 安装方法
 
-[Windows版](https://github.com/blytzxdl/FileServer-for-qBittorrent/tree/main/documents/Windows版安装说明.md)			[Linux版(需要图形界面)](https://github.com/blytzxdl/FileServer-for-qBittorrent/tree/main/documents/Linux版安装说明.md)			[通用CORE版(需要nodejs)](https://github.com/blytzxdl/FileServer-for-qBittorrent/tree/main/documents/通用CORE版安装说明.md)
+[Windows版](https://github.com/blytzxdl/FileServer-for-qBittorrent/tree/main/documents/Windows版安装说明.md)（配置最简单，欢迎尝鲜）			[Linux版(需要图形界面)](https://github.com/blytzxdl/FileServer-for-qBittorrent/tree/main/documents/Linux版安装说明.md)			[通用CORE版(需要nodejs)](https://github.com/blytzxdl/FileServer-for-qBittorrent/tree/main/documents/通用CORE版安装说明.md)
 
 
 
@@ -68,51 +86,40 @@
 	"autoBitrate":false					//自动码率，为true时会将bitrate设置作为参考，在原视频码率的1.5倍低于目标码率时，会使用目标码率，尽量保持原画质；在原视频码率高于目标码率的1.5倍时，会使用目标码率的1.5倍，尽量节省流量和磁盘空间；其它情况下为原视频码率的1.2倍
 	
 	"advAccel":true						//高级硬件加速，在Windows上基本没问题，Linux上的兼容性待验证；为false时只会使用基础的硬件加速，可能解决大多数兼容问题
+	
+	"tmdbKey":""						//未实装
 					
 	"customInputCommand": ""			//自定义ffmpeg输入指令，接收string类型（纯文本）,按空格分隔（详见指令说明）
 	
 	"customOutputCommand": ""			//自定义ffmpeg输出指令
 	
+	"debug":false						//debug开关，初次使用时会自动开启，重启后需手动开启
 }
 ```
 
 
 
-## 刮削功能
+## 媒体库功能
 
-刮削功能基于”弹弹play“实现，与转码播放功能不挂钩，识别准确度由弹弹play决定
+自v0.4起，已实现独立的媒体库，并内置了视频缩略图提取功能与基于弹弹play开放API的刮削，
 
-**Linux平台因路径等问题暂时无法使用，后续可能会利用弹弹play开放API独立实现**
+海报图及番剧信息由弹弹play提供，并在本地进行计算推断，缩略图提取是基于ffmpeg独立实现。
 
-弹弹play官网：[弹弹play - 全功能“本地视频+弹幕”播放器 (dandanplay.com)](https://www.dandanplay.com/)
+也就是说，对于弹弹play数据库尚未精确匹配的视频，无法获取对应的番名、季度、海报图等信息，
 
-刮削后，会在视频文件同目录生成nfo文件，可供TMM、Jellyfin等识别
+但媒体库中会包含进来并生成缩略图，可以正常播放观看，
 
-网页端刮削完成后（即出现海报图后），建议刷新一次网页，避免数据更新机制过多消耗流量
+等到弹弹play数据库更新后，可以再次更新媒体库或文件夹，获取最新匹配信息。
 
-更新模式说明（常规默认为增量合并，初次运行为全量合并）：
+并且刮削后，会在视频文件同目录生成nfo文件，可供TMM、Jellyfin等识别，
 
-- 增量与全量
-  - 增量：对自上次更新后，弹弹play数据库中出现的变动进行更新
-  - 全量：按弹弹play当前的数据库完整更新
-- 合并与覆盖
-  - 合并：按弹弹play识别结果对已有nfo文件中的剧名、单集名、顺序等TMM、Jellyfin通常识别不准确的信息进行修改，其它信息保持不变，适合已通过TMM、Jellyfin等进行刮削但对准确度不满意的情况
-  - 覆盖：**！！！谨慎使用！！！**按弹弹play识别结果为所有关联视频生成全新的nfo文件（覆盖已存在的nfo），可通过TMM、Jellyfin等进一步完善刮削信息，适合完全初次使用
-
-媒体文件解析设为”基础“即可，本人常用排除项：
-
-```
-/\WNC(OP|ED)/
-/\WSPs/
-/\WCDs/
-/\WScans/
-/\WMenus/
-/\WOAD/
-/\WOVA/
-/\WPV\d{0,2}/
-```
+已有nfo的，会按配置项中的数据源设置进行合并。
 
 
+
+刮削过程需要较多cpu、硬盘资源，消耗时间与视频数量正相关，与cpu、硬盘速度负相关
+
+感谢弹弹play开放数据库，弹弹play官网：[弹弹play - 全功能“本地视频+弹幕”播放器 (dandanplay.com)](https://www.dandanplay.com/)
 
 ## 安全性
 
@@ -132,7 +139,9 @@ qbittorrent未使用https时，本应用有无https皆可，qbittorrent开启htt
 
 - **！！！请确认已安装好正确的驱动，尤其是Linux版，详见Linux驱动安装说明**
 
-- **！！！Linux版请确认已安装好jellyfin版ffmpeg，详见Linux安装说明**
+- **！！！Linux版请确认已安装好jellyfin版ffmpeg，并分配了相关权限，详见Linux安装说明**
+
+- 一般的视频转码通常在5秒内能启动，部分视频开始转码前可能需要较长加载时间（与视频本身、硬盘速度等相关），超过10秒，如超过半分钟未弹出视频界面，且cpu、gpu、硬盘并无较高负载，可能是其它问题
 
 - 编码支持问题
 
@@ -144,7 +153,7 @@ qbittorrent未使用https时，本应用有无https皆可，qbittorrent开启htt
 
 - 转码相关问题
 
-  - ~~未开启转码的视频，仅进行切片，因此画质、体积基本等同源文件，生成速度极快，主要受源文件和缓存所在的硬盘速度限制，有内存盘的建议将缓存路径设定为内存盘，减少硬盘压力和读写量。~~	当前版本统一强制转码，之后会重新加入不转码的支持
+  - 转码判断条件：只有无字幕且码率未超限的h264 8bit（avc yuv420p）视频会跳过转码，其它视频统一进行转码
 
 
   - 转码视频
@@ -160,6 +169,8 @@ qbittorrent未使用https时，本应用有无https皆可，qbittorrent开启htt
     - 体积：主要由编码格式和码率决定，相较源视频难以比较（因素复杂）
 
       大致上相同编码格式，码率越高，体积越大；相同码率，h265视频体积小于h264视频体积
+      
+    - HDR：暂不支持色调映射，在我的测试中，nvidia显卡会自动处理色彩，amd显卡不会处理
 
   - 硬件加速（当前支持h265、h264编码的源视频。h264 10bit的视频(比如标注有Hi10p)仅支持编码加速，这是硬件限制）
 
@@ -186,7 +197,7 @@ qbittorrent未使用https时，本应用有无https皆可，qbittorrent开启htt
 
     综上，一个5M码率，24分钟的视频，流畅播放需要5M的带宽，平均625KB/s的网速，消耗的流量约为5M×60×24÷8 = 900MB
 
-  - ~~对于未转码视频，视频总体积和消耗的流量大致等于源文件体积~~
+  - 对于未转码视频，视频总体积和消耗的流量大致等于源文件体积
 
   - 对于转码的视频，可通过限制码率来控制需要的网速与消耗的流量（但过低时会严重影响画质）
 
@@ -197,7 +208,8 @@ qbittorrent未使用https时，本应用有无https皆可，qbittorrent开启htt
 - ~~amd显卡转码的视频在safari上播放时，可正常连续完整播放，但转码完成后无法跳转进度条（黑屏）（zen2APU核显与a12+ios15测试结果，其它情况自行测试，可尝试用第三方播放器软解播放）~~	启用高级硬件加速后似乎解决了
 - ~~多季合集的种子无法准确匹配番名，但其中的单集匹配无误（由弹弹play刮削结果决定）~~已大幅改进，部分细节待优化，过于特殊的情况没办法
 - mkv内封多轨非文本字幕时，~~无法直接转码，请在同目录下放入同名外挂字幕（后续可能改进）~~ 会自动使用第一条字幕轨，后续加入字幕选择
-- 过于快速地连续跳转进度条会产生多个ffmpeg进程，后续想办法改善，但可能由于编程语言限制无法彻底解决，如要连续跳转，请尽量在继续播放后再进行下次跳转
+- ~~过于快速地连续跳转进度条会产生多个ffmpeg进程，后续想办法改善，但可能由于编程语言限制无法彻底解决，如要连续跳转，请尽量在继续播放后再进行下次跳转~~ 已超大幅改进，现在基本无忧了
+- v0.4版本，由于更换了媒体库实现方式，种子管理界面中，对于未建立子文件夹的合集种子无法正常显示刮削信息，之后会修复
 
 
 
@@ -219,8 +231,10 @@ qbittorrent未使用https时，本应用有无https皆可，qbittorrent开启htt
 ## 使用注意及建议
 
 - 每次设置成功配置项后，会在应用根目录下新建settings_backup.json文件来备份，下次更新配置项出现问题时，会读取备份配置，直到正确更新配置项
-- 自0.3版本起，已集成了qBittorrent Web UI，如果本应用下的web UI文件不存在或访问qBittorrent本身的Web端口，会使用qBittorrent中设置的web UI（通常是原版的web UI）
-- 建议不要过于快速地连续跳转进度条
+- 自0.3版本起，已集成了qBittorrent Web UI，如果本应用下的web UI文件不存在或访问qBittorrent本身的Web端口，会使用qBittorrent中设置的web UI（通常是原版的web UI），
+
+  需要管理种子但本web UI中尚未提供相应功能时，可访问qBittorrent的Web端口，在其原版的web UI中控制
+- 建议不要过于快速地连续跳转进度条（虽然已经超大幅改进了，但还是这么建议）
 - 请确认你的电脑配置能满足转码需要，比如我用非虚拟机的ubuntu+i5-1135g7核显测试没问题，但pve虚拟直通的ubuntu+j3455只能播放极少数视频，其它视频可能会在转码一半后报错，或直接导致整个宿主机卡死，jellyfin也差不多（可能是我虚拟机设置问题，比如显存等，还需排查）
 
 
@@ -231,7 +245,7 @@ qbittorrent未使用https时，本应用有无https皆可，qbittorrent开启htt
 - [ ] 封装qb原api，通过websocket向web传数据
 - [x] ~~跨平台支持（linux、openwrt等）~~已部分实现
 - [ ] 字幕匹配、上传
-- [x] ~~虚拟种子（将qB中没有，但弹弹play识别了的文件模拟成种子）~~  暂时通过媒体库页面实现，后续考虑更完善的方案
+- [x] ~~虚拟种子（将qB中没有，但弹弹play识别了的文件模拟成种子）~~  ~~暂时通过媒体库页面实现，后续考虑更完善的方案~~    v0.4已实现单独的媒体库
 - [ ] 安装向导
 - [ ] 其它优化
 - [ ] 。。。
