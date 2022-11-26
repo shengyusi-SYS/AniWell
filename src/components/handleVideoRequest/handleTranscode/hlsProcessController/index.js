@@ -5,7 +5,7 @@ const { settings, ffmpegSuffix } = require('../../../../utils/init');
 const kill = require('tree-kill');
 const { spawn } = require('child_process');
 const { debounce } = require('lodash');
-
+const fs = require('fs');
 //转码串流的核心，进程控制系统，测试感觉挺完善了（删）
 var _this
 class hlsProcessController {
@@ -48,26 +48,26 @@ class hlsProcessController {
                 let isWriting = stderrLine.match(/Opening.*index\d+\.ts\.tmp.*?for writing/)
                 if (isWriting) {
                     //打脸来得太快了，任务密集时，信息输出会合并为一条，需要匹配全部
-                    let writings = stderrLine.matchAll(/Opening.*index\d+\.ts\.tmp.*?for writing/g)
+                    let writings = [...stderrLine.matchAll(/Opening.*index\d+\.ts\.tmp.*?for writing/g)]
                     let writingSegment
                     let writingSegmentId
-                    for (const writing of writings) {
-                        writingSegment = writing[0].match(/index\d+/)[0]
+                    for (let index = 0; index < writings.length; index++) {
+                        writingSegment = writings[index][0].match(/index\d+/)[0]
+                        writingSegmentId = Number(writingSegment.replace('index', ''));
                         if (videoIndex[writingSegment].state == 'init') {
                             videoIndex[writingSegment].state = 'writing'
-                            writingSegmentId = Number(writingSegment.replace('index', ''));
-                            if (writingSegmentId > 0) {
-                                let lastWriteSegment = `index${writingSegmentId - 1}`;
-                                try {
-                                    await access(path.resolve(settings.tempPath, 'output', `${lastWriteSegment}.ts`))
-                                    videoIndex[lastWriteSegment].state = 'done'
-                                    ffmpeg.queue.push(lastWriteSegment);
-                                    logger.info('hlsProcessController', 'generateHlsProcess 5', lastWriteSegment, 'done')
-                                } catch (error) {
-                                    if (videoIndex[lastWriteSegment].state != 'init') {
-                                        videoIndex[lastWriteSegment].state = 'err'
-                                        logger.error('hlsProcessController', 'generateHlsProcess 5', 'lost', lastWriteSegment);
-                                    }
+                        }
+                        if (writingSegmentId > 0) {
+                            let lastWriteSegment = `index${writingSegmentId - 1}`;
+                            try {
+                                fs.accessSync(path.resolve(settings.tempPath, 'output', `${lastWriteSegment}.ts`))
+                                videoIndex[lastWriteSegment].state = 'done'
+                                ffmpeg.queue.push(lastWriteSegment);
+                                logger.info('hlsProcessController', 'generateHlsProcess 5', lastWriteSegment, 'done')
+                            } catch (error) {
+                                if (videoIndex[lastWriteSegment].state != 'init') {
+                                    videoIndex[lastWriteSegment].state = 'err'
+                                    logger.error('hlsProcessController', 'generateHlsProcess 5', 'lost', lastWriteSegment);
                                 }
                             }
                         }
@@ -81,8 +81,8 @@ class hlsProcessController {
                     }
 
                     if (videoIndex[writingSegment].state == 'done' && this.transState != 'changing') {
+                        logger.info('hlsProcessController', 'generateHlsProcess 6', 'break------------------------', writingSegment, writingSegmentId);
                         await _this.killCurrentProcess()
-                        logger.info('hlsProcessController', 'generateHlsProcess 6', 'break------------------------', writingSegment);
                         let nextProcessId = writingSegmentId + 1;
                         if (videoIndex[`index${nextProcessId}`]) {
                             while (videoIndex[`index${nextProcessId}`].state == 'done') {

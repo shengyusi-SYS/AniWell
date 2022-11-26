@@ -1,10 +1,10 @@
-# FileServer-for-qBittorrent v0.3
+# FileServer-for-qBittorrent v0.4
 
 [TOC]
 
 ## 说明
 
-本应用为qbittorrent的周边项目，为qbittorrent下载好的视频提供转码串流服务，可在web端直接播放（详见配置项及转码说明），实现下载播放一条龙服务
+本应用为qbittorrent的周边项目，为qbittorrent下载好的视频提供转码串流服务，可在web端直接播放（详见配置项及转码说明），实现下载播放一条龙服务，v0.4起已实现单独的媒体库功能，但登录验证依然依赖于qbittorrent。
 
 已完成的配套webui：[qBittorrent Web UI](https://github.com/blytzxdl/qbwebui)（v0.3开始会在本项目的release中集成）
 
@@ -14,7 +14,7 @@
 
 ## 声明
 
-本应用当前的定位是为qbittorrent提供轻量级的转码串流服务，目的是简化下载、管理和播放的流程，既不是类似Jellyfin那样的全能媒体服务器，也不是种子播放器。
+本应用当前的定位是为qbittorrent提供轻量级的转码串流服务，内置提取视频缩略图和弹弹play的刮削功能，目的是简化下载、管理和播放的流程，既不是类似Jellyfin那样的全能媒体服务器，也不是种子播放器。
 
 由于是新人独立开发，能力精力有限，因此，过分的要求不会受理，出现下文未列出且解决方案无效的未知Bug请积极反馈，项目层面的问题烦请大佬提醒。
 
@@ -48,8 +48,6 @@
 	"serverPort": 9009,             	//必填，本应用端口
     
 	"tempPath": "./",					//必填，视频缓存路径，默认为系统临时文件目录，可另外指定，指定路径末尾要带/号，会在指定路径生成output文件夹
-
-	"dandanplayPath":""					//弹弹play路径，会尝试在默认安装路径搜索，可关联刮削结果，包括番名、片名及海报图、缩略图
 
 	"ffmpegPath":""						//必填，ffmpeg路径，win下默认为集成的ffmpeg路径，linux下会在jellyfin-ffmpeg默认安装位置下搜索，不建议手动指定为其它版本的ffmpeg
 
