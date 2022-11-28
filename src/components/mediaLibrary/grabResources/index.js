@@ -27,7 +27,10 @@ async function grabResources(dirPath, imageUrl) {
             let task = await got({
                 url: imageUrl,
                 method: 'get',
-                responseType: "buffer"
+                responseType: "buffer",
+                headers: {
+                    'User-Agent': `fileServer for qbittorrent 0.4`
+                }
             })
             let res = task.body
             await writeFile(path.resolve(dirPath, `folder.jpg`), res)
