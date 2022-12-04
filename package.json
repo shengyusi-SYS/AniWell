@@ -1,58 +1,65 @@
 {
   "name": "FileServer-for-qBittorrent",
-  "version": "0.4.1",
-  "main": "./src/main.js",
-  "bin": "./middle/middle.js",
-  "repository": "https://github.com/blytzxdl/File-server-for-qBittorrent.git",
+  "version": "0.5",
+  "main": "dist-electron/main/index.js",
+  "description": "a nodejs transcode server",
   "author": "生于斯 <shengyss@163.com>",
   "license": "GPL-3.0-or-later",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build && electron-builder",
+    "test": "node ./test.js"
+  },
+  "engines": {
+    "node": "^14.18.0 || >=16.0.0"
+  },
   "dependencies": {
     "7zip-bin": "^5.2.0",
+    "@typescript-eslint/parser": "^5.45.0",
     "body-parser": "^1.20.1",
     "connect-history-api-fallback": "^2.0.0",
     "cookie-parser": "^1.4.6",
     "diff": "^5.1.0",
+    "eslint": "^8.29.0",
     "express": "^4.18.2",
     "file-type": "^18.0.0",
     "fluent-ffmpeg": "^2.1.2",
-    "got": "^12.3.1",
+    "got": "^11",
     "http-proxy-middleware": "^2.0.6",
     "lodash": "^4.17.21",
-    "log4js": "^6.7.0",
+    "log4js": "^6.7.1",
     "node-7z": "^3.0.0",
     "node-wmi": "^0.0.5",
-    "node-worker-threads-pool": "^1.5.1",
-    "parse-torrent": "^9.1.5",
+    "parse-torrent": "^10.0.1",
+    "prettier": "^2.8.0",
     "rimraf": "^3.0.2",
-    "socket.io": "^4.5.2",
+    "socket.io": "^4.5.4",
     "tough-cookie": "^4.1.2",
     "tree-kill": "^1.2.2",
+    "vue-eslint-parser": "^9.1.0",
     "xml2js": "^0.4.23"
   },
   "devDependencies": {
-    "@babel/core": "^7.19.6",
-    "@babel/preset-env": "^7.19.4",
-    "@babel/runtime": "^7.20.1",
-    "babel-loader": "^9.0.1",
-    "electron": "21.0.1",
-    "electron-packager": "^16.0.0",
-    "electron-squirrel-startup": "^1.0.0",
-    "pkg": "^5.8.0",
-    "webpack": "^5.74.0",
-    "webpack-cli": "^4.10.0"
+    "@vitejs/plugin-vue": "^3.1.2",
+    "electron": "^22.0.0",
+    "electron-builder": "^23.3.3",
+    "typescript": "^4.8.4",
+    "vite": "^3.2.2",
+    "vite-plugin-electron": "^0.10.4",
+    "vite-plugin-electron-renderer": "^0.11.3",
+    "vue": "^3.2.40",
+    "vue-tsc": "^1.0.9"
   },
-  "scripts": {
-    "serve": "nodemon ./src/server.js -i settings.json -i libraryIndex.json -i ./temp -i librarySettings.json",
-    "start": "electron ./src/main.js",
-    "build": "npx electron-packager . --overwrite --out=out --icon=public/favicon.ico --ignore='^(/ssl$)' --ignore='^(/out$)' --ignore='^(/temp$)' --ignore='.gitignore' --ignore='settings.json' --ignore='jsconfig.json' --ignore='^(test).js' --ignore='libraryIndex.json' --ignore='sync.ffs_db' --ignore='^(/.vscode$)' --ignore='settings_backup.json' --ignore='webpack.config.js' --ignore='^(/log$)' --ignore='.log$' --ignore='librarySettings.json'",
-    "test": "node ./src/test.js",
-    "pkg:lin": "pkg . -t linux-x64 --out-path out/ --debug",
-    "middle": "webpack --config webpack.config.js"
+  "debug": {
+    "env": {
+      "VITE_DEV_SERVER_URL": "http://127.0.0.1:3344"
+    }
   },
-  "pkg": {
-    "assets": [],
-    "options": [
-      "experimental-modules"
-    ]
-  }
+  "keywords": [
+    "qbittorrent",
+    "transcode",
+    "mediaServer",
+    "anime"
+  ]
 }

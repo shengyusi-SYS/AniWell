@@ -1,0 +1,22 @@
+import { log4js, logger } from './utils/logger';
+import fs from 'fs';
+import path from 'path';
+import { readFile, writeFile } from 'fs/promises';
+import init from './utils/init';
+import { generatePictureUrl, searchLeaf, deepMerge } from './utils';
+import got from 'got';
+import cookieParser from 'cookie-parser';
+import express from 'express';
+const app = express();
+import https from 'https';
+import { CookieJar } from 'tough-cookie';
+const cookieJar = new CookieJar()
+import history from 'connect-history-api-fallback';
+import proxyMw from 'http-proxy-middleware';
+const proxy = proxyMw.createProxyMiddleware;
+import handleVideoRequest from './components/handleVideoRequest';
+import { librarySettingsList, updateLibrarySettings } from './components/mediaLibrary/librarySettings';
+import { initMediaLibrary, cleanLibrary } from './components/mediaLibrary';
+import dandanplayScraper from './components/mediaLibrary/dandanplayScraper';
+import moduleName from 'socket.io';
+console.log(init.settings);
