@@ -1,21 +1,20 @@
-
-const xml2js = require('xml2js');
-const xmlParser = new xml2js.Parser({ explicitArray: false, explicitRoot: false });
-const xmlBuilder = new xml2js.Builder();
-const fs = require('fs');
-const { deepMerge, event, searchLeaf } = require('../../../utils');
-const path = require('path');
-const { librarySettings } = require('../../mediaLibrary/librarySettings');
-const pictureExtractor = require('../pictureExtractor');
-const {scrapeLogger} = require('../../../utils/logger');
+import xml2js from 'xml2js'
+const xmlParser = new xml2js.Parser({ explicitArray: false, explicitRoot: false })
+const xmlBuilder = new xml2js.Builder()
+import fs from 'fs'
+import { deepMerge, event, searchLeaf } from '@s/utils'
+import path from 'path'
+import { librarySettings } from '../../mediaLibrary/librarySettings'
+import pictureExtractor from '../pictureExtractor'
+import { scrapeLogger } from '@s/utils/logger'
 
 const dandanList = {
-    'title': 'title',
-    'episode': 'episode',
-    'imageUrl': 'poster',
-    'startDate': 'date',
-    'type': 'type',
-    'rating': 'rating',
+    title: 'title',
+    episode: 'episode',
+    imageUrl: 'poster',
+    startDate: 'date',
+    type: 'type',
+    rating: 'rating',
     animeTitle: 'title',
     hash: 'hash',
     season: 'season',
@@ -27,7 +26,7 @@ const dandanList = {
 const config = librarySettings.source
 
 async function mergeNfo(filePath = '', res = {}, tag) {
-    scrapeLogger.info('mergeNfo start',filePath,res.result,tag.full)
+    scrapeLogger.info('mergeNfo start', filePath, res.result, tag.full)
     if (!filePath || filePath == '.') {
         return false
     }
@@ -58,7 +57,7 @@ async function mergeNfo(filePath = '', res = {}, tag) {
                     }
                 }
             }
-            break;
+            break
         case 'tvshow':
             nfoPath = path.resolve(filePath, 'tvshow.nfo')
             try {
@@ -68,15 +67,14 @@ async function mergeNfo(filePath = '', res = {}, tag) {
                 try {
                     fs.accessSync(path.resolve(filePath, `poster.jpg`))
                     posterPath = path.resolve(filePath, `poster.jpg`)
-                } catch (error) {
-                }
+                } catch (error) {}
             }
-            break;
+            break
         case 'season':
             nfoPath = path.resolve(filePath, 'season.nfo')
             try {
                 fs.renameSync(path.resolve(filePath, 'tvshow.nfo'), nfoPath)
-            } catch (error) { }
+            } catch (error) {}
             try {
                 fs.accessSync(path.resolve(filePath, `folder.jpg`))
                 posterPath = path.resolve(filePath, `folder.jpg`)
@@ -84,7 +82,7 @@ async function mergeNfo(filePath = '', res = {}, tag) {
                 try {
                     fs.accessSync(path.resolve(filePath, `poster.jpg`))
                     posterPath = path.resolve(filePath, `poster.jpg`)
-                } catch (error) { }
+                } catch (error) {}
             }
             break
         default:
@@ -121,34 +119,35 @@ async function mergeNfo(filePath = '', res = {}, tag) {
     try {
         exist = fs.readFileSync(nfoPath)
         xmlParser.parseString(exist, (err, result) => {
-            if (err) { }
+            if (err) {
+            }
             if (result) {
                 exist = result
             } else exist = {}
         })
-    } catch (error) { exist = {} }
+    } catch (error) {
+        exist = {}
+    }
 
     // console.log(exist);
-
 
     //根据结果信息源选择对应信息映射列表
     let srcList
     switch (res.source) {
         case 'dandan':
             srcList = dandanList
-            break;
+            break
         case 'tmdb':
             break
     }
     let result = {}
     for (const key in res) {
         try {
-            let infoName = srcList[key]
+            const infoName = srcList[key]
             if (config[infoName] == res.source) {
                 result[infoName] = res[key]
             }
-        } catch (error) {
-        }
+        } catch (error) {}
     }
     // console.log(res,'------------------------',result);
     if (res.result == 'episodedetails') {
@@ -157,7 +156,7 @@ async function mergeNfo(filePath = '', res = {}, tag) {
 
     deepMerge(exist, result, { keyword: 'name' })
     if (res.result) {
-        let temp = {}
+        const temp = {}
         temp[res.result] = exist
         result = temp
     }
@@ -171,4 +170,4 @@ async function mergeNfo(filePath = '', res = {}, tag) {
     return result
 }
 
-module.exports = mergeNfo
+export default mergeNfo

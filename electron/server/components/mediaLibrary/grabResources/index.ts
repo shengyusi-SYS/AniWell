@@ -1,12 +1,11 @@
-const { access, writeFile } = require('fs/promises');
-const path = require('path');
-const { scrapeLogger } = require('../../../utils/logger');
-
+import { access, writeFile } from 'fs/promises'
+import path from 'path'
+import { scrapeLogger } from '@s/utils/logger'
+import got from 'got'
 async function grabResources(dirPath, imageUrl) {
     // console.log(imageUrl);
-    const { got } = await import('got')
     let existPoster = false
-    let overwrite = false
+    const overwrite = false
     if (!overwrite) {
         try {
             await access(path.resolve(dirPath, `folder.jpg`))
@@ -18,21 +17,21 @@ async function grabResources(dirPath, imageUrl) {
                 existPoster = true
                 return path.resolve(dirPath, `poster.jpg`)
             } catch (error) {
-            scrapeLogger.error('grabResources read', error)
+                scrapeLogger.error('grabResources read', error)
             }
         }
     }
     if (overwrite || !existPoster) {
         try {
-            let task = await got({
+            const task = await got({
                 url: imageUrl,
                 method: 'get',
-                responseType: "buffer",
+                responseType: 'buffer',
                 headers: {
-                    'User-Agent': `fileServer for qbittorrent 0.4`
-                }
+                    'User-Agent': `fileServer for qbittorrent 0.4`,
+                },
             })
-            let res = task.body
+            const res = task.body
             await writeFile(path.resolve(dirPath, `folder.jpg`), res)
             scrapeLogger.debug('grabResources', dirPath)
             return path.resolve(dirPath, `folder.jpg`)
@@ -43,4 +42,4 @@ async function grabResources(dirPath, imageUrl) {
     return false
 }
 
-module.exports = grabResources
+export default grabResources

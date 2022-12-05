@@ -2,9 +2,9 @@ import { createApp } from 'vue'
 import App from './App.vue'
 
 createApp(App)
-  .mount('#app')
-  .$nextTick(() => {
-    postMessage({ payload: 'removeLoading' }, '*')
-  })
+    .mount('#app')
+    .$nextTick(() => {
+        postMessage({ payload: 'removeLoading' }, '*')
+    })
 
-let a = { dawdwa: 'dwadwa', dawf: 'fdfwes' }
+const a = { dawdwa: 'dwadwa', dawf: 'fdfwes' }

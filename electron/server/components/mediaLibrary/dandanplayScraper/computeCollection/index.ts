@@ -1,36 +1,45 @@
-const searchSeason = require('../searchSeason');
-const { diffWords } = require('diff');
-const path = require('path');
-const grabResources = require('../../grabResources');
-const { scrapeLogger } = require('../../../../utils/logger');
-const { deepMerge, searchLeaf } = require('../../../../utils');
-const { copyFile, access } = require('fs/promises');
-const mergeNfo = require('../../mergeNfo');
-
+import searchSeason from '../searchSeason'
+import { diffWords } from 'diff'
+import path from 'path'
+import grabResources from '../../grabResources'
+import { scrapeLogger } from '@s/utils/logger'
+import { deepMerge, searchLeaf } from '@s/utils'
+import { copyFile, access } from 'fs/promises'
+import mergeNfo from '../../mergeNfo'
 
 async function computeCollection(dirTree = { children: [] }, deep, tag) {
     let collection = false
     //将已有信息合并，避免增量更新时，因过滤器导致相关信息缺失
     if (tag.existTree.children.length > 0) {
-        let existDirTree = searchLeaf(tag.existTree, path.resolve(dirTree.path))
+        const existDirTree = searchLeaf(tag.existTree, path.resolve(dirTree.path))
         deepMerge(dirTree, existDirTree, { keyword: 'label', depthLimit: 2 })
     }
 
     //对单集信息进行排序，将正片内容提前，以排序后的文件夹中第一个正片为准，设置当前文件夹的季度/番名/合集信息
     dirTree.children.sort((a, b) => {
-        if (a.result != 'episodedetails' && a.type != 'tvseries' && a.type != 'movie' && a.type != 'jpmovie') {
+        if (
+            a.result != 'episodedetails' &&
+            a.type != 'tvseries' &&
+            a.type != 'movie' &&
+            a.type != 'jpmovie'
+        ) {
             return 1
         }
         if (a.episode || a.startDate || a.ddId) {
             if (b.episode || b.startDate || b.ddId) {
-                return Boolean(a.episode - b.episode) ? (a.episode - b.episode) :
-                    (a.startDate && b.startDate) ? (a.startDate < b.startDate ? -1 : 1) :
-                        Boolean(a.ddId - b.ddId) ? (a.ddId - b.ddId) : 1
+                return a.episode - b.episode
+                    ? a.episode - b.episode
+                    : a.startDate && b.startDate
+                    ? a.startDate < b.startDate
+                        ? -1
+                        : 1
+                    : a.ddId - b.ddId
+                    ? a.ddId - b.ddId
+                    : 1
             } else return -1
         } else return 1
     })
     // console.log('2222222222222222222222222',deep,dirTree.children);
-
 
     //根据排序后的children判断番名、季度
     if (dirTree.children[0]) {
@@ -41,7 +50,7 @@ async function computeCollection(dirTree = { children: [] }, deep, tag) {
             dirTree.type = dirTree.children[0].type
             dirTree.result = 'tvshow'
             dirTree.source = 'dandan'
-            dirTree.children.forEach(v => {
+            dirTree.children.forEach((v) => {
                 // if (deep!=0) {
                 //     delete v.animeTitle
                 //     delete v.animeId
@@ -62,7 +71,8 @@ async function computeCollection(dirTree = { children: [] }, deep, tag) {
                 scrapeLogger.error('computeCollection seasonInfo err delete', seasonInfo, error)
             }
             Object.assign(dirTree, seasonInfo)
-        } else if (dirTree.children.find(v => v.result == 'episodedetails') && deep != 0) {//当弹弹play无法识别当前文件夹下所有内容，且文件夹内有视频时，将当前文件夹设为tvshow，防止遗漏和错误（处理弹弹play无法识别的情况）
+        } else if (dirTree.children.find((v) => v.result == 'episodedetails') && deep != 0) {
+            //当弹弹play无法识别当前文件夹下所有内容，且文件夹内有视频时，将当前文件夹设为tvshow，防止遗漏和错误（处理弹弹play无法识别的情况）
             dirTree.result = 'tvshow'
         }
 
@@ -82,10 +92,12 @@ async function computeCollection(dirTree = { children: [] }, deep, tag) {
                 dirTree.poster = path.resolve(dirTree.path, 'folder.jpg')
             } catch (error) {
                 try {
-                    await copyFile(path.resolve(dirTree.children[0].path, 'folder.jpg'), path.resolve(dirTree.path, 'folder.jpg'))
+                    await copyFile(
+                        path.resolve(dirTree.children[0].path, 'folder.jpg'),
+                        path.resolve(dirTree.path, 'folder.jpg'),
+                    )
                     dirTree.poster = path.resolve(dirTree.path, 'folder.jpg')
-                } catch (error) {
-                }
+                } catch (error) {}
             }
             //修正当前目录下的季度信息
             dirTree.children.forEach((v, i) => {
@@ -107,7 +119,10 @@ async function computeCollection(dirTree = { children: [] }, deep, tag) {
     //根据imageUrl信息抓取海报图
     try {
         if (dirTree.imageUrl) {
-            let posterPath = await grabResources(dirTree.path, dirTree.imageUrl.replace('_medium', ''))//弹弹默认给的图片地址留了一手:-)
+            const posterPath = await grabResources(
+                dirTree.path,
+                dirTree.imageUrl.replace('_medium', ''),
+            ) //弹弹默认给的图片地址留了一手:-)
             if (posterPath) {
                 dirTree.poster = posterPath
                 delete dirTree.imageUrl
@@ -121,10 +136,10 @@ async function computeCollection(dirTree = { children: [] }, deep, tag) {
     if (dirTree.result) {
         if (collection || tag.update) {
             for (let index = 0; index < dirTree.children.length; index++) {
-                const v = dirTree.children[index];
+                const v = dirTree.children[index]
                 if (v.children) {
                     for (let index = 0; index < v.children.length; index++) {
-                        const val = v.children[index];
+                        const val = v.children[index]
                         if (!val.children) {
                             await mergeNfo(path.resolve(v.path, val.label), val, tag)
                         }
@@ -138,4 +153,4 @@ async function computeCollection(dirTree = { children: [] }, deep, tag) {
     // console.log('computeCollection',tag.update,dirTree);
 }
 
-module.exports = computeCollection
+export default computeCollection
