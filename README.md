@@ -65,9 +65,9 @@ v0.5 分支正在迁移至 vite+vue3+ts+electron
 
 	"serverPort": 9009,             	//必填，本应用端口，与其它程序的端口冲突时可能无法启动或闪退
 
-	"tempPath": "./",					//必填，视频缓存路径，默认为系统临时文件目录，可另外指定，指定路径末尾要带/号，会在指定路径生成output文件夹
+	"tempPath": "./",			//必填，视频缓存路径，默认为系统临时文件目录，可另外指定，指定路径末尾要带/号，会在指定路径生成output文件夹
 
-	"ffmpegPath":""						//必填，ffmpeg路径，win下默认为集成的ffmpeg路径，linux下会在jellyfin-ffmpeg默认安装位置下搜索，不建议手动指定为其它版本的ffmpeg
+	"ffmpegPath":""				//必填，ffmpeg路径，win下默认为集成的ffmpeg路径，linux下会在jellyfin-ffmpeg默认安装位置下搜索，不建议手动指定为其它版本的ffmpeg
 
 	"cert": "./ssl/domain.pem",     	//ssl证书路径，可手动修改
 
@@ -75,25 +75,25 @@ v0.5 分支正在迁移至 vite+vue3+ts+electron
 
 	"secure": false,                 	//ssl安全设置，ssl配置成功后会自动使用true
 
-	"share":false,						//为true时，可将生成的hls地址中"m3u8"后的文本去除，形成固定的串流地址，但这会跳过cookie校验，自己权衡开关与否
+	"share":false,				//为true时，可将生成的hls地址中"m3u8"后的文本去除，形成固定的串流地址，但这会跳过cookie校验，自己权衡开关与否
 
-	"platform": "nvidia",				//服务端显卡型号（详见转码说明）
+	"platform": "nvidia",			//服务端显卡型号（详见转码说明）
 
-	"encode": "h264",					//目标编码格式（详见转码说明）
+	"encode": "h264",			//目标编码格式（详见转码说明）
 
-	"bitrate": "5",						//目标视频码率（单位“M”，详见转码说明）
+	"bitrate": "5",				//目标视频码率（单位“M”，详见转码说明）
 
-	"autoBitrate":false					//自动码率，为true时会将bitrate设置作为参考，在原视频码率的1.5倍低于目标码率时，会使用目标码率，尽量保持原画质；在原视频码率高于目标码率的1.5倍时，会使用目标码率的1.5倍，尽量节省流量和磁盘空间；其它情况下为原视频码率的1.2倍
+	"autoBitrate":false			//自动码率，为true时会将bitrate设置作为参考，在原视频码率的1.5倍低于目标码率时，会使用目标码率，尽量保持原画质；在原视频码率高于目标码率的1.5倍时，会使用目标码率的1.5倍，尽量节省流量和磁盘空间；其它情况下为原视频码率的1.2倍
 
-	"advAccel":true						//高级硬件加速，在Windows上基本没问题，Linux上的兼容性待验证；为false时只会使用基础的硬件加速，可能解决大多数兼容问题
+	"advAccel":true				//高级硬件加速，在Windows上基本没问题，Linux上的兼容性待验证；为false时只会使用基础的硬件加速，可能解决大多数兼容问题
 
-	"tmdbKey":""						//未实装
+	"tmdbKey":""				//未实装
 
-	"customInputCommand": ""			//自定义ffmpeg输入指令，接收string类型（纯文本）,按空格分隔（详见指令说明）
+	"customInputCommand": ""		//自定义ffmpeg输入指令，接收string类型（纯文本）,按空格分隔（详见指令说明）
 
-	"customOutputCommand": ""			//自定义ffmpeg输出指令
+	"customOutputCommand": ""		//自定义ffmpeg输出指令
 
-	"debug":false						//debug开关，初次使用时会自动开启，重启后需手动开启
+	"debug":false				//debug开关，初次使用时会自动开启，重启后需手动开启
 }
 ```
 
