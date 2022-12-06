@@ -4,7 +4,8 @@ import { scrapeLogger, logger } from '@s/utils/logger'
 import dandanplayMatch from './dandanplayMatch'
 import computeCollection from './computeCollection'
 import fs from 'fs'
-import { appedDirTree, getFileType, TaskPool, deepMerge, searchLeaf } from '@s/utils'
+import { appedDirTree, getFileType, TaskPool, deepMerge, searchLeaf, Tree } from '@s/utils'
+import { MediaLeaf } from '../'
 // const { Worker, isMainThread, parentPort, workerData } = require('worker_threads')
 
 // parentPort.on('message',async libraryRootPath=>{
@@ -13,16 +14,20 @@ import { appedDirTree, getFileType, TaskPool, deepMerge, searchLeaf } from '@s/u
 //   })
 
 async function dandanplayScraper(
-    libraryRootPath,
-    existTree,
-    params = { full: false, depth: 1, update: false },
-) {
+    libraryRootPath: string,
+    existTree: Tree | false,
+    params: {
+        full?: boolean
+        depth?: number
+        update?: boolean
+    } = { full: false, depth: 1, update: false },
+): Promise<Tree | false> {
     try {
         logger.info(
             'dandanplayScraper start',
             libraryRootPath,
-            existTree.label,
-            existTree.path,
+            (existTree as Tree)?.label,
+            (existTree as Tree)?.path,
             params,
         )
         const taskQueue = new TaskPool(3)
@@ -41,7 +46,7 @@ async function dandanplayScraper(
                 }
                 fileFilter = async (filePath) => {
                     // console.log('.........................', filePath);
-                    const leaf = searchLeaf(existTree, filePath)
+                    const leaf: MediaLeaf | false = searchLeaf(existTree as Tree, filePath)
                     if (!leaf || params.full) {
                         return (await getFileType(filePath)) == 'video'
                     }
@@ -53,7 +58,7 @@ async function dandanplayScraper(
             }
         } catch (error) {}
 
-        let dirTree = {
+        let dirTree: Tree = {
             label: path.basename(libraryRootPath),
             path: libraryRootPath,
             children: [],
@@ -101,14 +106,14 @@ async function dandanplayScraper(
                         )
                     }
                     //单个文件夹的识别结果
-                    const res = await taskQueue.task(dirTask)
+                    const res: Tree = await taskQueue.task(dirTask)
                     //    console.log('res-----------------',res);
                     if (res) {
                         if (params.depth == 0) {
                             dirTree = res
                         } else dirTree.children.push(res)
                     }
-                    resolve()
+                    resolve(null)
                 }),
             )
         })

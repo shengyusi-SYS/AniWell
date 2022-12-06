@@ -11,8 +11,8 @@ async function handleSubtitles(filePath, videoInfo) {
         const textSub = ['ass', 'ssa', 'srt', 'vtt', 'mks', 'sub', 'sup', 'subrip']
         const specialCharacter = [':', `'`, '"', '`', '?', '(', ')', '*', '^', '{', '$', '|']
         const videoName = path.parse(filePath).name
-        subtitleList = []
-        fileRootPath = path.dirname(filePath)
+        const subtitleList = []
+        const fileRootPath = path.dirname(filePath)
         let dir
         try {
             dir = await readdir(fileRootPath)
@@ -61,7 +61,7 @@ async function handleSubtitles(filePath, videoInfo) {
             //处理内封字幕
             if (videoInfo.subtitleStream[0]) {
                 videoInfo.subtitleStream.forEach((v, i) => {
-                    const sub_1 = {
+                    const sub = {
                         path: filePath,
                         source: 'in',
                         codec: v.codec_name,
@@ -69,9 +69,9 @@ async function handleSubtitles(filePath, videoInfo) {
                         subStreamIndex: i,
                     }
                     if (textSub.includes(v.codec_name)) {
-                        sub_1.type = 'text'
-                    } else sub_1.type = 'video'
-                    subtitleList.push(sub_1)
+                        sub.type = 'text'
+                    } else sub.type = 'video'
+                    subtitleList.push(sub)
                 })
             }
             logger.debug('handleSubtitles end')

@@ -1,7 +1,7 @@
 import { logger } from './logger'
 import wmi from 'node-wmi'
-import init from './init'
-const { osPlatform } = init
+import os from 'os'
+const osPlatform: string = os.type() == 'Linux' ? 'lin' : os.type() == 'Windows_NT' ? 'win' : ''
 let gpus
 async function getGPU() {
     if (osPlatform == 'win') {

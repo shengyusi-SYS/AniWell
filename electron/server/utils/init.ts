@@ -3,7 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import Ffmpeg from 'fluent-ffmpeg'
 import os from 'os'
-// import gpus from './getGPU';
+import gpus from './getGPU'
 
 interface settings {
     qbHost: string
@@ -14,7 +14,7 @@ interface settings {
     key: string
     secure: boolean
     share: boolean
-    bitrate: string
+    bitrate: number
     autoBitrate: boolean
     advAccel: boolean
     platform: string
@@ -107,7 +107,7 @@ class Init {
         key: '',
         secure: false,
         share: false,
-        bitrate: '',
+        bitrate: 5,
         autoBitrate: false,
         advAccel: true,
         platform: '',
@@ -140,6 +140,8 @@ class Init {
 
     public ffmpegSuffix: string =
         os.type() == 'Linux' ? '' : os.type() == 'Windows_NT' ? '.exe' : ''
+
+    public gpus = gpus
 
     constructor() {
         for (const key in this.settingsList) {
@@ -200,9 +202,9 @@ class Init {
     }
 
     public mergeSettings(newSettings: object): void {
-        const settings: settings = Object.assign(this.settings, newSettings)
-        for (const key in settings) {
-            this.settingsList[key].value = settings[key]
+        Object.assign(this.settings, newSettings)
+        for (const key in this.settings) {
+            this.settingsList[key].value = this.settings[key]
         }
     }
 

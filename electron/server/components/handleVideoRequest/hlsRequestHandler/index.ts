@@ -20,7 +20,7 @@ class hlsRequestHandler {
     }
     handler = (app) => {
         try {
-            logger.debug('hlsRequestHandler handler 1', 'init')
+            logger.debug('hlsRequestHandler handler 1', 'init', app._router.stack.length)
             let tryTimes = 0
             let readTimeout
             let tempReqPath

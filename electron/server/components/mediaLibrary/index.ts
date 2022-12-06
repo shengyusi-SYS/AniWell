@@ -1,12 +1,17 @@
 import dandanplayScraper from './dandanplayScraper'
 import { access, writeFile, readFile } from 'fs/promises'
-import { getFileType, TaskPool, appedDirTree, event, searchLeaf } from '@s/utils'
+import { getFileType, TaskPool, appedDirTree, event, searchLeaf, Tree } from '@s/utils'
 import { logger } from '@s/utils/logger'
 import path from 'path'
 import { diffWords } from 'diff'
 import xml2js from 'xml2js'
 import init from '@s/utils/init'
 const { libraryIndex } = init
+
+export interface MediaLeaf extends Tree {
+    title?: string
+    poster?: string
+}
 
 const xmlBuilder = new xml2js.Builder()
 const taskQueue = new TaskPool(1)
@@ -37,7 +42,7 @@ async function initMediaLibrary(libraryPath = '', libraryName = '', update = fal
         await dandanplayScraper(path.resolve(libraryRootDir), existTree, { update })
 
         //dandanplayScraper是对existTree进行修改，而existTree已存入libraryIndex
-        await writeFile('./libraryIndex.json', JSON.stringify(libraryIndex, '', '\t'))
+        await writeFile('./libraryIndex.json', JSON.stringify(libraryIndex, null, '\t'))
 
         //tmdb进行第二遍刮削，待完成
 
@@ -51,7 +56,7 @@ async function initMediaLibrary(libraryPath = '', libraryName = '', update = fal
 //清理磁盘上不存在的媒体信息
 async function cleanLibrary() {
     logger.info('cleanLibrary start')
-    await writeFile('./temp/libraryIndex_backup.json', JSON.stringify(libraryIndex, '', '\t'))
+    await writeFile('./temp/libraryIndex_backup.json', JSON.stringify(libraryIndex, null, '\t'))
     async function clean(dirTree) {
         const queue = []
         const tempChildren = []
@@ -64,7 +69,7 @@ async function cleanLibrary() {
                         tempChildren.push(v)
                         await clean(v)
                     } catch (error) {}
-                    resolve()
+                    resolve(null)
                 }),
             )
         })
@@ -76,7 +81,7 @@ async function cleanLibrary() {
         allQueue.push(clean(v))
     })
     await Promise.all(allQueue)
-    await writeFile('./libraryIndex.json', JSON.stringify(libraryIndex, '', '\t'))
+    await writeFile('./libraryIndex.json', JSON.stringify(libraryIndex, null, '\t'))
     logger.info('cleanLibrary end')
 }
 

@@ -1,7 +1,7 @@
 import { logger } from '@s/utils/logger'
 import path from 'path'
 import init from '@s/utils/init'
-const { settings, osPlatform } = init
+const { settings, osPlatform, gpus } = init
 import { cleanNull } from '@s/utils'
 
 //转码串流的精髓，ffmpeg指令生成系统，自己看着都头大...
@@ -127,7 +127,6 @@ const hwaccels = {
 function generateFfmpegCommand(videoInfo, subtitleList) {
     try {
         logger.debug('generateFfmpegCommand', 'start')
-        const gpus = require('@s/utils/getGPU')
         const videoIndex = videoInfo.videoIndex
         // settings.advAccel = false
         let inputParams = []

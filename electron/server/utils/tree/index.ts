@@ -3,10 +3,10 @@ import fs from 'fs'
 import { readdir } from 'fs/promises'
 import { logger } from '../logger'
 
-interface Tree {
+export interface Tree {
     label?: unknown
     name?: unknown
-    children?: Array<object>
+    children?: Array<Tree>
     path?: string
 }
 
@@ -176,4 +176,42 @@ async function appedDirTree(dirPath = '', dirTree: Tree = {}, append = defaultAp
     }
 }
 
-export { readDirTree, readDirTreeSync, appedDirTree }
+//根据给定路径搜索dirTree中的信息
+function searchLeaf(dirTree: Tree, targetPath = ''): Tree | false {
+    try {
+        if (dirTree.path == targetPath) {
+            return dirTree
+        }
+        while (!dirTree.path) {
+            let rootLeaf = false
+            dirTree = dirTree.children.find((v) => {
+                if (v.path == targetPath) {
+                    rootLeaf = true
+                    return true
+                } else return targetPath.includes(v.path)
+            })
+            if (rootLeaf) {
+                return dirTree
+            }
+        }
+        if (!dirTree) {
+            logger.debug('not exist', targetPath)
+            return false
+        }
+
+        const branch = targetPath.replace(path.resolve(dirTree.path) + path.sep, '').split(path.sep)
+        let leaf = dirTree
+        for (let index = 0; index < branch.length; index++) {
+            const label = branch[index]
+            leaf = leaf.children.find((v) => v.label == label)
+            if (!leaf) {
+                return false
+            }
+        }
+        return leaf
+    } catch (error) {
+        // console.log(error);
+    }
+}
+
+export { readDirTree, readDirTreeSync, appedDirTree, searchLeaf }

@@ -196,7 +196,11 @@ const defaultDeepMergerParams = {
     depth: 0,
     depthLimit: 0,
 }
-const deepMerge = (toB, addA, params = defaultDeepMergerParams) => {
+const deepMerge: <T>(
+    toB: T,
+    addA: T,
+    params?: { keyword?: string; depth?: number; depthLimit?: number },
+) => T = (toB, addA, params = defaultDeepMergerParams) => {
     const { keyword, depth, depthLimit } = { ...defaultDeepMergerParams, ...params }
     if (!(depthLimit == 0) && depth >= depthLimit) {
         return toB
@@ -236,44 +240,6 @@ const deepMerge = (toB, addA, params = defaultDeepMergerParams) => {
     return toB
 }
 
-//根据给定路径搜索dirTree中的信息
-function searchLeaf(dirTree, targetPath = '') {
-    try {
-        if (dirTree.path == targetPath) {
-            return dirTree
-        }
-        while (!dirTree.path) {
-            let rootLeaf = false
-            dirTree = dirTree.children.find((v) => {
-                if (v.path == targetPath) {
-                    rootLeaf = true
-                    return true
-                } else return targetPath.includes(v.path)
-            })
-            if (rootLeaf) {
-                return dirTree
-            }
-        }
-        if (!dirTree) {
-            logger.debug('not exist', targetPath)
-            return false
-        }
-
-        const branch = targetPath.replace(path.resolve(dirTree.path) + path.sep, '').split(path.sep)
-        let leaf = dirTree
-        for (let index = 0; index < branch.length; index++) {
-            const label = branch[index]
-            leaf = leaf.children.find((v) => v.label == label)
-            if (!leaf) {
-                return false
-            }
-        }
-        return leaf
-    } catch (error) {
-        // console.log(error);
-    }
-}
-
 export {
     cleanNull,
     generatePictureUrl,
@@ -283,10 +249,9 @@ export {
     vidoeHash,
     getFileType,
     deepMerge,
-    searchLeaf,
     Seven,
     event,
     rimraf,
     TaskPool,
 }
-export { readDirTree, readDirTreeSync, appedDirTree } from './tree'
+export { readDirTree, readDirTreeSync, appedDirTree, searchLeaf, Tree } from './tree'

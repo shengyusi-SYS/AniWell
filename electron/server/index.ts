@@ -1,10 +1,10 @@
-import { log4js, logger } from './utils/logger'
+import { log4js, logger, changeLevel } from './utils/logger'
 import fs from 'fs'
 import path from 'path'
 import { readFile, writeFile } from 'fs/promises'
 import init from './utils/init'
-const { settings, settingsList, proxySettings, libraryIndex, mergeSettings } = init
-import { generatePictureUrl, searchLeaf, deepMerge } from './utils'
+const { settings, settingsList, proxySettings, libraryIndex } = init
+import { generatePictureUrl, searchLeaf, deepMerge, Tree } from './utils'
 import got from 'got'
 import cookieParser from 'cookie-parser'
 import express from 'express'
@@ -20,7 +20,7 @@ import {
     librarySettingsList,
     updateLibrarySettings,
 } from './components/mediaLibrary/librarySettings'
-import { initMediaLibrary, cleanLibrary } from './components/mediaLibrary'
+import { initMediaLibrary, cleanLibrary, MediaLeaf } from './components/mediaLibrary'
 import dandanplayScraper from './components/mediaLibrary/dandanplayScraper'
 // import moduleName from 'socket.io';
 
@@ -36,62 +36,62 @@ process.on('uncaughtException', function (err) {
 })
 // const specialCharacter = ['\\', '$', '(', ')', '*', '+', '.', '[', '?', '^', '{', '|']
 
-function initMaindata(params) {
-    got({
-        url: `${settings.qbHost}/api/v2/sync/maindata`,
-        method: 'get',
-        cookieJar,
-    })
-        .then((result) => {
-            const newData = JSON.parse(result.body)
-            let update = false
-            if (libraryIndex.allSeason) {
-                for (const hash in newData.torrents) {
-                    if (libraryIndex.allSeason[newData.torrents[hash].content_path]) {
-                        newData.torrents[hash].mediaInfo = JSON.parse(
-                            JSON.stringify(
-                                libraryIndex.allSeason[newData.torrents[hash].content_path],
-                            ),
-                        )
-                        newData.torrents[
-                            hash
-                        ].mediaInfo.poster = `/api/localFile/getFile/img.jpg?type=picture&path=${encodeURIComponent(
-                            libraryIndex.allSeason[newData.torrents[hash].content_path].poster,
-                        )}`
-                    } else if (
-                        newData.torrents[hash].content_path == newData.torrents[hash].save_path
-                    ) {
-                        if (!libraryIndex.collections[hash]) {
-                            libraryIndex.collections[hash] = {
-                                rootPath: path.resolve(newData.torrents[hash].save_path),
-                            }
-                            update = true
-                        } else if (libraryIndex.collections[hash].title) {
-                            newData.torrents[hash].mediaInfo = JSON.parse(
-                                JSON.stringify(libraryIndex.collections[hash]),
-                            )
-                            newData.torrents[
-                                hash
-                            ].mediaInfo.poster = `/api/localFile/getFile/img.jpg?type=picture&path=${encodeURIComponent(
-                                newData.torrents[hash].mediaInfo.poster,
-                            )}`
-                        }
-                    }
-                }
-                if (update) {
-                    // updateCollections()
-                }
-                fs.writeFileSync(
-                    './libraryIndex.json',
-                    JSON.stringify(libraryIndex, () => {}, '\t'),
-                )
-            }
-            deepMerge(maindataCache, newData)
-        })
-        .catch((err) => {
-            logger.error('error', err)
-        })
-}
+// function initMaindata(params) {
+//     got({
+//         url: `${settings.qbHost}/api/v2/sync/maindata`,
+//         method: 'get',
+//         cookieJar,
+//     })
+//         .then((result) => {
+//             const newData = JSON.parse(result.body)
+//             let update = false
+//             if (libraryIndex.allSeason) {
+//                 for (const hash in newData.torrents) {
+//                     if (libraryIndex.allSeason[newData.torrents[hash].content_path]) {
+//                         newData.torrents[hash].mediaInfo = JSON.parse(
+//                             JSON.stringify(
+//                                 libraryIndex.allSeason[newData.torrents[hash].content_path],
+//                             ),
+//                         )
+//                         newData.torrents[
+//                             hash
+//                         ].mediaInfo.poster = `/api/localFile/getFile/img.jpg?type=picture&path=${encodeURIComponent(
+//                             libraryIndex.allSeason[newData.torrents[hash].content_path].poster,
+//                         )}`
+//                     } else if (
+//                         newData.torrents[hash].content_path == newData.torrents[hash].save_path
+//                     ) {
+//                         if (!libraryIndex.collections[hash]) {
+//                             libraryIndex.collections[hash] = {
+//                                 rootPath: path.resolve(newData.torrents[hash].save_path),
+//                             }
+//                             update = true
+//                         } else if (libraryIndex.collections[hash].title) {
+//                             newData.torrents[hash].mediaInfo = JSON.parse(
+//                                 JSON.stringify(libraryIndex.collections[hash]),
+//                             )
+//                             newData.torrents[
+//                                 hash
+//                             ].mediaInfo.poster = `/api/localFile/getFile/img.jpg?type=picture&path=${encodeURIComponent(
+//                                 newData.torrents[hash].mediaInfo.poster,
+//                             )}`
+//                         }
+//                     }
+//                 }
+//                 if (update) {
+//                     // updateCollections()
+//                 }
+//                 fs.writeFileSync(
+//                     './libraryIndex.json',
+//                     JSON.stringify(libraryIndex, () => {}, '\t'),
+//                 )
+//             }
+//             deepMerge(maindataCache, newData)
+//         })
+//         .catch((err) => {
+//             logger.error('error', err)
+//         })
+// }
 
 app.use(log4js.connectLogger(log4js.getLogger('http'), { level: 'trace' }))
 app.use(express.json())
@@ -125,10 +125,10 @@ app.use('/api', (req, res, next) => {
             throw new Error('Fails.')
         } else {
             let newSID
-            if (req.cookies && req.cookies.SID) {
+            if (req.cookies?.SID) {
                 newSID = req.cookies.SID
-            } else if (req.query && req.query.cookie) {
-                newSID = req.query.cookie.replace('SID=', '')
+            } else if (req.query?.cookie) {
+                newSID = (req.query.cookie as string).replace('SID=', '')
             } else {
                 throw new Error('Fails.')
             }
@@ -238,23 +238,18 @@ app.use('/api/localFile/updateDir', async (req, res) => {
     res.send('Ok.')
     // }
     await dandanplayScraper(dirPath, searchLeaf(libraryIndex, dirPath), { full: true, depth: 0 })
-    await writeFile(
-        './libraryIndex.json',
-        JSON.stringify(libraryIndex, () => {}, '\t'),
-    )
+    await writeFile('./libraryIndex.json', JSON.stringify(libraryIndex, null, '\t'))
     logger.info('/api/localFile/updateDir end')
 })
 
 //更新配置项
 app.use('/api/localFile/changeFileServerSettings', async (req, res) => {
-    const data = req.body
-    mergeSettings(settingsList, settings, data)
+    const data: object = req.body
+    init.mergeSettings(data)
     try {
-        await writeFile(
-            './settings.json',
-            JSON.stringify(settings, () => {}, '\t'),
-        )
+        await writeFile('./settings.json', JSON.stringify(init.settings, null, '\t'))
         logger.info('/api/localFile/changeFileServerSettings', '已更新配置', settings)
+        changeLevel()
         res.send('Ok.')
     } catch (error) {
         logger.error('/api/localFile/changeFileServerSettings', error)
@@ -319,9 +314,9 @@ app.use('/api/localFile/getFile', async (req, res, next) => {
             }
         }
     }
-    if (req.query.path) {
+    if (req.query?.path) {
         fileType = req.query.type
-        filePath = path.resolve(req.query.path)
+        filePath = path.resolve(req.query.path as string)
     }
     logger.debug('/api/localFile/getFile', req.query)
     try {
@@ -386,9 +381,9 @@ app.use('/api/v2/sync/maindata', async (req, res, next) => {
                     } else {
                         // console.log(newData.torrents[hash]);
                         const mediaPath = newData.torrents[hash].content_path
-                        let mediaInfo = searchLeaf(libraryIndex, mediaPath)
+                        let mediaInfo: MediaLeaf | false = searchLeaf(libraryIndex, mediaPath)
                         if (mediaInfo) {
-                            mediaInfo = JSON.parse(JSON.stringify(mediaInfo))
+                            ;(mediaInfo as MediaLeaf) = JSON.parse(JSON.stringify(mediaInfo))
                             delete mediaInfo.children
                             newData.torrents[hash].mediaInfo = mediaInfo
                             if (mediaInfo.poster) {
