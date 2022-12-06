@@ -8,6 +8,10 @@ import { debounce } from 'lodash'
 let _this
 //hls请求处理
 class hlsRequestHandler {
+    videoIndex
+    HlsProcessController
+    currentProcess
+    lastTargetId
     constructor(videoIndex, HlsProcessController) {
         logger.debug('hlsRequestHandler constructor', 'start')
         this.videoIndex = videoIndex
@@ -255,6 +259,7 @@ class hlsRequestHandler {
                     ),
                 )
             }
+            console.log(app._router.stack.find((v) => v.regexp.toString().includes('output')))
             // app._router.stack.splice(used - 1, used >= 0 ? 1 : 0)
 
             //hls缓存清理
@@ -271,7 +276,7 @@ class hlsRequestHandler {
                             rimraf(path.resolve(settings.tempPath, 'output'), async (err) => {
                                 if (err) {
                                     reject()
-                                } else resolve()
+                                } else resolve(null)
                             })
                         })
                         await mkdir(path.resolve(settings.tempPath, 'output'))
