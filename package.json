@@ -1,6 +1,6 @@
 {
     "name": "FileServer-for-qBittorrent",
-    "version": "0.5",
+    "version": "0.5.0",
     "main": "dist-electron/main/index.js",
     "description": "a nodejs transcode server",
     "author": "生于斯 <shengyss@163.com>",

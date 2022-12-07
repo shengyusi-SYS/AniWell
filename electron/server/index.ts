@@ -233,7 +233,7 @@ app.use('/api/localFile/updateDir', async (req, res) => {
 //更新配置项
 app.use('/api/localFile/changeFileServerSettings', async (req, res) => {
     const data: object = req.body
-    init.mergeSettings(data)
+    init.mergeSettings(data).check()
     try {
         await writeFile('./settings.json', JSON.stringify(init.settings, null, '\t'))
         logger.info('/api/localFile/changeFileServerSettings', '已更新配置', settings)
@@ -466,28 +466,37 @@ try {
     app.use('/', proxy(proxySettings))
     logger.info('server start', '~~~qBittorrent Web UI')
 }
+
+// if (init.signUp === true) {
+//     app.use('/login', (req, res) => {
+//         res.redirect('/signup')
+//     })
+// }
 // logger.debug('debug', 'dir', __dirname, 'resolve', path.resolve(''));
 
 // app.use((req,res,next)=>{
 //     logger.debug('all',req.path)
 //     next()
 // })
-
-if (!(proxySettings.ssl.cert && proxySettings.ssl.key)) {
-    app.listen(settings.serverPort)
-    logger.info(
-        'server start',
-        `HTTP Server is running on: http://localhost:${settings.serverPort}`,
-    )
-} else {
-    const httpsServer = https.createServer(proxySettings.ssl, app)
-    const io = require('socket.io')(httpsServer)
-    httpsServer.listen(settings.serverPort, () => {
+try {
+    if (!(proxySettings.ssl.cert && proxySettings.ssl.key)) {
+        app.listen(settings.serverPort)
         logger.info(
             'server start',
-            `HTTPS Server is running on: https://localhost:${settings.serverPort}`,
+            `HTTP Server is running on: http://localhost:${settings.serverPort}`,
         )
-    })
+    } else {
+        const httpsServer = https.createServer(proxySettings.ssl, app)
+        // const io = require('socket.io')(httpsServer)
+        httpsServer.listen(settings.serverPort, () => {
+            logger.info(
+                'server start',
+                `HTTPS Server is running on: https://localhost:${settings.serverPort}`,
+            )
+        })
+    }
+} catch (error) {
+    console.log(error)
 }
 
 // io.on('connection', function (socket) {

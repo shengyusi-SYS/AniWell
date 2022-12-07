@@ -1,4 +1,4 @@
-# FileServer-for-qBittorrent v0.4.2
+# FileServer-for-qBittorrent v0.5.0
 
 [说明](#说明)
 

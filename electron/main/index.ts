@@ -13,11 +13,12 @@ process.env.DIST = join(process.env.DIST_ELECTRON, '../dist')
 process.env.PUBLIC = app.isPackaged
     ? process.env.DIST
     : join(process.env.DIST_ELECTRON, '../public')
+process.env.APPROOT = app.isPackaged ? process.env.DIST : join(process.env.DIST_ELECTRON, '../')
 
 import { app, BrowserWindow, shell, ipcMain, Menu, Tray } from 'electron'
 import { release } from 'os'
-import { join, resolve as pathResolve } from 'path'
-import '../server';
+import { join, resolve } from 'path'
+import '../server'
 
 // Disable GPU Acceleration for Windows 7
 if (release().startsWith('6.1')) app.disableHardwareAcceleration()
@@ -78,19 +79,19 @@ async function createWindow() {
 
 let tray: Tray
 app.whenReady().then(() => {
-    try {
-        const iconPath: string = pathResolve(__dirname, '../../public/favicon.ico')
-        const contextMenu = Menu.buildFromTemplate([
-            {
-                label: '重启',
-                type: 'normal',
-                click() {
-                    app.relaunch()
-                    app.quit()
-                },
+    const contextMenu = Menu.buildFromTemplate([
+        {
+            label: '重启',
+            type: 'normal',
+            click() {
+                app.relaunch()
+                app.quit()
             },
-            { label: '退出', type: 'normal', role: 'quit' },
-        ])
+        },
+        { label: '退出', type: 'normal', role: 'quit' },
+    ])
+    try {
+        const iconPath: string = join(process.env.PUBLIC, 'favicon.ico')
         tray = new Tray(iconPath)
         tray.setContextMenu(contextMenu)
         tray.setToolTip('FileServer')

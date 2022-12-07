@@ -1,5 +1,5 @@
 import { logger } from '@s/utils/logger'
-import fs from 'fs'
+import fs, { accessSync } from 'fs'
 import path from 'path'
 import Ffmpeg from 'fluent-ffmpeg'
 import os from 'os'
@@ -39,7 +39,7 @@ class Init {
             type: 'text',
             name: 'ffmpegPath',
             value: '',
-            placeholder: path.resolve(__dirname, `../thirdParty/win`),
+            placeholder: path.resolve('./resources/thirdParty/win'),
         },
         // dandanplayPath: { type: 'text', name: 'dandanplayPath', value: '', placeholder: '' },
         cert: {
@@ -143,6 +143,8 @@ class Init {
 
     public gpus = gpus
 
+    public signUp = false
+
     constructor() {
         for (const key in this.settingsList) {
             this.settings[this.settingsList[key].name] = this.settingsList[key].value
@@ -153,7 +155,12 @@ class Init {
     /**
      * init
      */
-    public init() {
+    public init(): this {
+        try {
+            accessSync('./user.json')
+        } catch (error) {
+            this.signUp = true
+        }
         try {
             //尝试读取settings.json
             const exist: string = fs.readFileSync('./settings.json').toString()
@@ -165,7 +172,8 @@ class Init {
                     throw new Error('')
                 }
                 //覆盖默认设置
-                this.mergeSettings(newSettings)
+                this.mergeSettings(newSettings).check()
+
                 fs.writeFileSync('./settings.json', JSON.stringify(this.settings, null, '\t'))
                 //备份成功设置
                 fs.writeFileSync(
@@ -191,34 +199,41 @@ class Init {
                 try {
                     fs.mkdirSync('./temp')
                 } catch (error) {}
+                this.check()
                 fs.writeFileSync('./settings.json', JSON.stringify(this.settings, null, '\t'))
                 logger.debug('init', '已写入默认配置')
             } catch (error) {}
         }
-        //检查ffmpeg路径
+        return this
+    }
+    public check(): this {
         this.setFFmpeg()
         this.setProxySettings()
         this.readLibraryIndex()
+        this.mergeSettings({})
+        return this
     }
 
-    public mergeSettings(newSettings: object): void {
+    public mergeSettings(newSettings: object): this {
         Object.assign(this.settings, newSettings)
         for (const key in this.settings) {
             this.settingsList[key].value = this.settings[key]
         }
+        return this
     }
 
     private setFFmpeg(): boolean {
         try {
             //根据设置路径检查
             if (this.settings.ffmpegPath) {
+                logger.debug(this.settings.ffmpegPath)
                 fs.accessSync(path.resolve(this.settings.ffmpegPath, 'ffmpeg' + this.ffmpegSuffix))
                 logger.info('init setFFmpeg', '已找到ffmpeg')
             } else {
                 //未设置则检查默认位置
                 let defaultFFmpegPath: string
                 if (this.osPlatform == 'win') {
-                    defaultFFmpegPath = path.resolve(__dirname, '../thirdParty/win')
+                    defaultFFmpegPath = path.resolve('./resources/thirdParty/win')
                     fs.accessSync(path.resolve(defaultFFmpegPath, 'ffmpeg.exe'))
                     this.settings.ffmpegPath = defaultFFmpegPath
                     logger.info('init setFFmpeg win', '已在默认位置找到ffmpeg')
@@ -248,7 +263,7 @@ class Init {
             return true
         } catch (error) {
             this.settings.ffmpegPath = ''
-            logger.error('init ffmpeg', '未找到ffmpeg')
+            logger.error('init ffmpeg', '未找到ffmpeg', path.resolve('.'))
             return false
         }
     }
