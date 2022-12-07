@@ -4,9 +4,9 @@ import path from 'path'
 import getVideoInfo from './getVideoInfo'
 import handleSubtitles from './handleSubtitles'
 import selectMethod from './selectMethod'
-import hlsRequestHandler from './hlsRequestHandler'
+import { hlsRequestHandler } from './hlsRequestHandler'
 import handleTranscode from './handleTranscode'
-import directPlayHandler from './directPlayHandler'
+import { directPlayHandler } from './directPlayHandler'
 import handleFonts from './handleFonts'
 let lastHlsProcessController
 let lastHandler
@@ -26,12 +26,12 @@ async function handleVideoRequest(params) {
         let handler
         if (videoInfo.method == 'direct') {
             logger.info('handleVideoRequest', 'start direct')
-            const DirectPlayHandler = new directPlayHandler(videoInfo)
-            handler = DirectPlayHandler.handler
+            directPlayHandler.init(videoInfo)
+            handler = directPlayHandler
             handler.contentType = mediaContentType(videoInfo.filePath)
         } else if (videoInfo.method == 'transcode') {
             if (videoInfo.exist) {
-                handler = lastHandler
+                handler = hlsRequestHandler
             } else {
                 logger.info('handleVideoRequest', 'start transcode')
                 if (lastHlsProcessController) {
@@ -42,12 +42,8 @@ async function handleVideoRequest(params) {
                 lastHlsProcessController = HlsProcessController
                 await HlsProcessController.generateHlsProcess('index0')
                 logger.debug('handleVideoRequest handleTranscode')
-                const HlsRequestHandler = new hlsRequestHandler(
-                    videoInfo.videoIndex,
-                    HlsProcessController,
-                )
-                handler = HlsRequestHandler.handler
-                lastHandler = handler
+                hlsRequestHandler.init(videoInfo.videoIndex, HlsProcessController)
+                handler = hlsRequestHandler
                 logger.debug('handleVideoRequest', 'end transcode', videoInfo)
             }
             handler.contentType = 'application/x-mpegURL'

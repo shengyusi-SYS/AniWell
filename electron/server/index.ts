@@ -23,6 +23,7 @@ import {
 import { initMediaLibrary, cleanLibrary, MediaLeaf } from './components/mediaLibrary'
 import dandanplayScraper from './components/mediaLibrary/dandanplayScraper'
 // import moduleName from 'socket.io';
+import router from '@s/routes'
 
 let SID: string
 let cookieTimer: NodeJS.Timeout
@@ -96,23 +97,8 @@ process.on('uncaughtException', function (err) {
 app.use(log4js.connectLogger(log4js.getLogger('http'), { level: 'trace' }))
 app.use(express.json())
 app.use(cookieParser())
-
-//test
-// app.use('/test', (req, res) => {
-//     readFile(`${settings.tempPath}output${req.path}`).then((result) => {
-//         logger.debug('debug','sent', [req.path]);
-//         // logger.debug('debug',result.toString());
-//         res.send(result)
-//     }).catch(err => {
-//         logger.debug('debug',err);
-//         res.status(404).send('not found')
-//     })
-// })
-// app.use(logger('dev'));
-// app.use(express.static(path.join(__dirname, 'public')));
-// app.get('/',(req,res)=>{
-//     res.sendFile(path.resolve(__dirname,'dist','index.html'))
-// })
+// test
+// app.use('/test', (req, res) => {})
 
 //权限验证预处理
 app.use('/api', (req, res, next) => {
@@ -188,6 +174,8 @@ app.use('/api/localFile', async (req, res, next) => {
         res.status(403).send(error)
     }
 })
+
+app.use(router)
 
 //连接状态测试，返回服务器配置项
 app.use('/api/localFile/checkFileServer', (req, res) => {
@@ -334,7 +322,7 @@ app.use('/api/localFile/getFile', async (req, res, next) => {
                 resolution: '1080p',
             }
             videoHandler = await handleVideoRequest(params)
-            videoHandler(app)
+            // videoHandler(app)
             res.send('Ok.')
         } else if (fileType == 'picture') {
             res.sendFile(path.resolve(filePath))
