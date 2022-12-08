@@ -122,7 +122,9 @@ async function dandanplayScraper(
         // await writeFile('./test.json', JSON.stringify(existTree, '', '\t'))
         // console.log('---------------------end',libraryRootPath);
         return existTree
-    } catch (error) {}
+    } catch (error) {
+        logger.error('dandanplayScraper', error)
+    }
 }
 
 export default dandanplayScraper

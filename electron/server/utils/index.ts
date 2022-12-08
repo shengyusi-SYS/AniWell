@@ -9,7 +9,7 @@ import sevenBin from '7zip-bin'
 const pathTo7zip = sevenBin.path7za
 import Seven from 'node-7z'
 import { readdir, mkdir, rename } from 'fs/promises'
-const crypto = require('crypto')
+import crypto from 'crypto'
 import fs from 'fs'
 
 //清理空字符串和数组（ffmpeg指令用）
@@ -181,10 +181,10 @@ class TaskPool {
 
 //获取文件类型
 async function getFileType(filePath) {
-    const { fileTypeFromFile } = await import('file-type')
+    //新版file-type的package.json中将默认导出设为浏览器版，vite编译时不能正确引入node版，暂未找到其它解决方案
+    const { fromFile } = await import('file-type')
     try {
-        const res = (await fileTypeFromFile(filePath)).mime.split('/')[0]
-        return res
+        return (await fromFile(filePath)).mime.split('/')[0]
     } catch (error) {
         return false
     }

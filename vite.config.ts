@@ -5,7 +5,6 @@ import electron from 'vite-plugin-electron'
 import pkg from './package.json'
 import { fileURLToPath, URL } from 'url'
 import path from 'path'
-// import alias from '@rollup/plugin-alias'
 
 rmSync('dist-electron', { recursive: true, force: true })
 const sourcemap = !!process.env.VSCODE_DEBUG
@@ -14,12 +13,6 @@ const isBuild = process.argv.slice(2).includes('build')
 // https://vitejs.dev/config/
 export default defineConfig({
     plugins: [
-        // alias({
-        //     entries: {
-        //         '/@s': './electron/server',
-        //         '/@v': './src',
-        //     },
-        // }),
         vue(),
         electron([
             {
@@ -33,12 +26,22 @@ export default defineConfig({
                     }
                 },
                 vite: {
+                    // optimizeDeps: {
+                    //     include: ['file-type'],
+                    //     force: true,
+                    //     esbuildOptions: {
+                    //         target: 'node16',
+                    //     },
+                    // },
                     build: {
                         sourcemap,
                         minify: isBuild,
                         outDir: 'dist-electron/main',
                         rollupOptions: {
-                            external: Object.keys(pkg.dependencies),
+                            external: Object.keys(pkg.dependencies).filter((name) => {
+                                const pureEsm = ['file-type']
+                                return !pureEsm.includes(name)
+                            }),
                         },
                     },
                     resolve: {

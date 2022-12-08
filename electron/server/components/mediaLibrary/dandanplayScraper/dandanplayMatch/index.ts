@@ -3,6 +3,7 @@ import { scrapeLogger } from '@s/utils/logger'
 import path from 'path'
 import fs from 'fs'
 import mergeNfo from '../../mergeNfo'
+import got from 'got'
 async function dandanplayMatch(filePath, tag) {
     try {
         const fileName = path.parse(filePath).name
@@ -22,7 +23,6 @@ async function dandanplayMatch(filePath, tag) {
             fileHash: hash,
             matchMode,
         }
-        const { got } = await import('got')
         let res = await got({
             url: `https://api.dandanplay.net/api/v2/match`,
             method: 'POST',
