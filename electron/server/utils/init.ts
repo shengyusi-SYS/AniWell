@@ -4,6 +4,7 @@ import path from 'path'
 import Ffmpeg from 'fluent-ffmpeg'
 import os from 'os'
 import gpus from './getGPU'
+import * as dotenv from 'dotenv'
 
 interface settings {
     qbHost: string
@@ -26,6 +27,15 @@ interface settings {
 }
 
 class Init {
+    public dataPath: string =
+        import.meta.env.DEV === true
+            ? './'
+            : os.type() == 'Linux'
+            ? path.resolve(os.homedir(), 'AppData/FileServer-for-qBittorrent')
+            : os.type() == 'Windows_NT'
+            ? path.resolve(os.homedir(), 'AppData/Roaming/FileServer-for-qBittorrent')
+            : '.'
+
     public settingsList = {
         qbHost: {
             type: 'text',
@@ -45,14 +55,14 @@ class Init {
         cert: {
             type: 'text',
             name: 'cert',
-            value: './ssl/domain.pem',
-            placeholder: './ssl/domain.pem',
+            value: path.resolve(this.dataPath, './ssl/domain.pem'),
+            placeholder: path.resolve(this.dataPath, './ssl/domain.pem'),
         },
         key: {
             type: 'text',
             name: 'key',
-            value: './ssl/domain.key',
-            placeholder: './ssl/domain.key',
+            value: path.resolve(this.dataPath, './ssl/domain.key'),
+            placeholder: path.resolve(this.dataPath, './ssl/domain.key'),
         },
         // burnSubtitle: { type: 'switch',name:'burnSubtitle',value:'' },
         secure: { type: 'switch', name: 'secure', value: false },
@@ -118,6 +128,10 @@ class Init {
         debug: false,
     }
 
+    public settingsPath = path.resolve(this.dataPath, 'settings.json')
+    public libraryIndexPath = path.resolve(this.dataPath, 'libraryIndex.json')
+    public librarySettingsPath = path.resolve(this.dataPath, 'librarySettings.json')
+
     public Ffmpeg = Ffmpeg
 
     public proxySettings: {
@@ -145,10 +159,20 @@ class Init {
 
     public signUp = false
 
+    public inited = false
+
     constructor() {
         for (const key in this.settingsList) {
             this.settings[this.settingsList[key].name] = this.settingsList[key].value
         }
+        try {
+            fs.mkdirSync(this.dataPath)
+        } catch (error) {}
+        // try {
+        //    let env =  dotenv.config({ path: '.env.local' }).parsed
+        // } catch (error) {
+        // }
+
         this.init()
     }
 
@@ -156,14 +180,15 @@ class Init {
      * init
      */
     public init(): this {
+        this.inited = true
         try {
-            accessSync('./user.json')
+            accessSync(path.resolve(this.dataPath, 'user.json'))
         } catch (error) {
             this.signUp = true
         }
         try {
             //尝试读取settings.json
-            const exist: string = fs.readFileSync('./settings.json').toString()
+            const exist: string = fs.readFileSync(path.resolve(this.settingsPath), 'utf8')
             let newSettings: object
             try {
                 //检查设置文件
@@ -174,7 +199,10 @@ class Init {
                 //覆盖默认设置
                 this.mergeSettings(newSettings).check()
 
-                fs.writeFileSync('./settings.json', JSON.stringify(this.settings, null, '\t'))
+                fs.writeFileSync(
+                    path.resolve(this.settingsPath),
+                    JSON.stringify(this.settings, null, '\t'),
+                )
                 //备份成功设置
                 fs.writeFileSync(
                     path.resolve(this.settings.tempPath, './settings_backup.json'),
@@ -200,8 +228,11 @@ class Init {
                     fs.mkdirSync('./temp')
                 } catch (error) {}
                 this.check()
-                fs.writeFileSync('./settings.json', JSON.stringify(this.settings, null, '\t'))
-                logger.debug('init', '已写入默认配置')
+                fs.writeFileSync(
+                    path.resolve(this.settingsPath),
+                    JSON.stringify(this.settings, null, '\t'),
+                )
+                logger.debug('init', '已写入默认配置', this.settings)
             } catch (error) {}
         }
         return this
@@ -233,7 +264,10 @@ class Init {
                 //未设置则检查默认位置
                 let defaultFFmpegPath: string
                 if (this.osPlatform == 'win') {
-                    defaultFFmpegPath = path.resolve('./resources/thirdParty/win')
+                    defaultFFmpegPath =
+                        import.meta.env.DEV === true
+                            ? './thirdParty/win'
+                            : path.resolve('./resources/thirdParty/win')
                     fs.accessSync(path.resolve(defaultFFmpegPath, 'ffmpeg.exe'))
                     this.settings.ffmpegPath = defaultFFmpegPath
                     logger.info('init setFFmpeg win', '已在默认位置找到ffmpeg')
@@ -291,7 +325,7 @@ class Init {
      */
     public readLibraryIndex() {
         try {
-            this.libraryIndex = JSON.parse(fs.readFileSync('./libraryIndex.json', 'utf8'))
+            this.libraryIndex = JSON.parse(fs.readFileSync(this.libraryIndexPath, 'utf8'))
             logger.info('debug', '已加载媒体库')
         } catch (error) {
             logger.info('debug', '媒体库不存在')

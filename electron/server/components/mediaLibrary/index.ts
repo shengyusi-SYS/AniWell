@@ -6,7 +6,7 @@ import path from 'path'
 import { diffWords } from 'diff'
 import xml2js from 'xml2js'
 import init from '@s/utils/init'
-const { libraryIndex } = init
+const { libraryIndex, libraryIndexPath } = init
 
 export interface MediaLeaf extends Tree {
     title?: string
@@ -42,7 +42,7 @@ async function initMediaLibrary(libraryPath = '', libraryName = '', update = fal
         await dandanplayScraper(path.resolve(libraryRootDir), existTree, { update })
 
         //dandanplayScraper是对existTree进行修改，而existTree已存入libraryIndex
-        await writeFile('./libraryIndex.json', JSON.stringify(libraryIndex, null, '\t'))
+        await writeFile(libraryIndexPath, JSON.stringify(libraryIndex, null, '\t'))
 
         //tmdb进行第二遍刮削，待完成
 
@@ -56,7 +56,10 @@ async function initMediaLibrary(libraryPath = '', libraryName = '', update = fal
 //清理磁盘上不存在的媒体信息
 async function cleanLibrary() {
     logger.info('cleanLibrary start')
-    await writeFile('./temp/libraryIndex_backup.json', JSON.stringify(libraryIndex, null, '\t'))
+    await writeFile(
+        path.resolve(init.settings.tempPath, 'libraryIndex_backup.json'),
+        JSON.stringify(libraryIndex, null, '\t'),
+    )
     async function clean(dirTree) {
         const queue = []
         const tempChildren = []
@@ -81,7 +84,7 @@ async function cleanLibrary() {
         allQueue.push(clean(v))
     })
     await Promise.all(allQueue)
-    await writeFile('./libraryIndex.json', JSON.stringify(libraryIndex, null, '\t'))
+    await writeFile(libraryIndexPath, JSON.stringify(libraryIndex, null, '\t'))
     logger.info('cleanLibrary end')
 }
 

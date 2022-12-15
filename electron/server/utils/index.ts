@@ -128,7 +128,7 @@ async function vidoeHash(filePath) {
         scrapeLogger.debug('vidoeHash', filePath)
         return Promise.resolve(md5)
     } catch (error) {
-        return Promise.reject
+        return Promise.reject('')
     }
 }
 

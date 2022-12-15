@@ -1,9 +1,17 @@
 import fs from 'fs'
 import path from 'path'
+import os from 'os'
 try {
     fs.mkdirSync(path.join('log'))
 } catch (error) {}
-
+const dataPath =
+    import.meta.env.DEV === true
+        ? './'
+        : os.type() == 'Linux'
+        ? path.resolve(os.homedir(), 'AppData/FileServer-for-qBittorrent')
+        : os.type() == 'Windows_NT'
+        ? path.resolve(os.homedir(), 'AppData/Roaming/FileServer-for-qBittorrent')
+        : '.'
 import logForJs from 'log4js'
 class Logger {
     private config = {
@@ -110,9 +118,11 @@ class Logger {
     constructor() {
         this.changeLevel()
     }
-    public changeLevel = () => {
+    public changeLevel = async () => {
         try {
-            var debug = JSON.parse(fs.readFileSync('./settings.json', 'utf8')).debug
+            var debug = JSON.parse(
+                fs.readFileSync(path.resolve(dataPath, 'settings.json'), 'utf8'),
+            ).debug
             if (debug) {
                 console.log('已开启debug模式')
             }

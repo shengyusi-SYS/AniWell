@@ -83,7 +83,7 @@ process.on('uncaughtException', function (err) {
 //                     // updateCollections()
 //                 }
 //                 fs.writeFileSync(
-//                     './libraryIndex.json',
+//                     init.libraryIndexPath,
 //                     JSON.stringify(libraryIndex, () => {}, '\t'),
 //                 )
 //             }
@@ -226,7 +226,7 @@ app.use('/api/localFile/updateDir', async (req, res) => {
     res.send('Ok.')
     // }
     await dandanplayScraper(dirPath, searchLeaf(libraryIndex, dirPath), { full: true, depth: 0 })
-    await writeFile('./libraryIndex.json', JSON.stringify(libraryIndex, null, '\t'))
+    await writeFile(init.libraryIndexPath, JSON.stringify(libraryIndex, null, '\t'))
     logger.info('/api/localFile/updateDir end')
 })
 
@@ -235,7 +235,7 @@ app.use('/api/localFile/changeFileServerSettings', async (req, res) => {
     const data: object = req.body
     init.mergeSettings(data).check()
     try {
-        await writeFile('./settings.json', JSON.stringify(init.settings, null, '\t'))
+        await writeFile(init.settingsPath, JSON.stringify(init.settings, null, '\t'))
         logger.info('/api/localFile/changeFileServerSettings', '已更新配置', settings)
         changeLevel()
         res.send('Ok.')
@@ -275,7 +275,7 @@ app.use('/api/localFile/videoSrc', (req, res, next) => {
 
 app.use('/api/localFile/library', (req, res, next) => {
     try {
-        const library = JSON.parse(fs.readFileSync(path.resolve('./libraryIndex.json')).toString())
+        const library = JSON.parse(fs.readFileSync(path.resolve(init.libraryIndexPath)).toString())
         res.send(library)
     } catch (error) {
         res.status(404).send('未建立媒体库')

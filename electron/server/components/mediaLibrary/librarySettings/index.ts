@@ -121,7 +121,7 @@ const librarySettingsList = {
 let first = true
 let librarySettings = {}
 try {
-    librarySettings = JSON.parse(fs.readFileSync('./librarySettings.json'))
+    librarySettings = JSON.parse(fs.readFileSync(init.librarySettingsPath, 'utf8'))
     updateLibrarySettings(librarySettings)
 } catch (error) {
     for (const key in librarySettingsList) {
@@ -217,10 +217,10 @@ function updateLibrarySettings(newSettings = librarySettings) {
     deepMerge(librarySettingsList, newList, { keyword: 'name' })
 
     try {
-        fs.writeFileSync('./librarySettings.json', JSON.stringify(librarySettings, '', '\t'))
+        fs.writeFileSync(init.librarySettingsPath, JSON.stringify(librarySettings, null, '\t'))
     } catch (error) {}
     try {
-        fs.writeFileSync('./libraryIndex.json', JSON.stringify(libraryIndex, '', '\t'))
+        fs.writeFileSync(init.libraryIndexPath, JSON.stringify(libraryIndex, null, '\t'))
     } catch (error) {}
     logger.debug('updateLibrarySettings end', newSettings)
     return librarySettingsList

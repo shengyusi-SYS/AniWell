@@ -11,7 +11,7 @@ async function dandanplayMatch(filePath, tag) {
         let matchMode
         if (filePath) {
             if ((await getFileType(filePath)) != 'video') {
-                return false
+                return
             }
             hash = await vidoeHash(filePath)
             matchMode = 'hashAndFileName'
@@ -74,7 +74,7 @@ async function dandanplayMatch(filePath, tag) {
         return res
     } catch (error) {
         scrapeLogger.error('dandanplayMatch', filePath, error)
-        return false
+        return
     }
 }
 

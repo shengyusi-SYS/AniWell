@@ -140,3 +140,5 @@ app.on('activate', () => {
 //     childWindow.loadFile(indexHtml, { hash: arg })
 //   }
 // })
+
+export default app
