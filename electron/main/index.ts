@@ -16,10 +16,9 @@ process.env.PUBLIC = app.isPackaged
 process.env.APPROOT = app.isPackaged ? process.env.DIST : join(process.env.DIST_ELECTRON, '../')
 
 import { app, BrowserWindow, shell, ipcMain, Menu, Tray } from 'electron'
-import { release } from 'os'
+import { release, type, homedir } from 'os'
 import { join, resolve } from 'path'
 import '../server'
-
 // Disable GPU Acceleration for Windows 7
 if (release().startsWith('6.1')) app.disableHardwareAcceleration()
 
@@ -76,10 +75,31 @@ async function createWindow() {
         return { action: 'deny' }
     })
 }
-
+const dataPath: string =
+    import.meta.env.DEV === true
+        ? resolve('./')
+        : type() == 'Linux'
+        ? resolve(homedir(), 'AppData/FileServer-for-qBittorrent')
+        : type() == 'Windows_NT'
+        ? resolve(homedir(), 'AppData/Roaming/FileServer-for-qBittorrent')
+        : '.'
 let tray: Tray
 app.whenReady().then(() => {
     const contextMenu = Menu.buildFromTemplate([
+        {
+            label: '数据目录',
+            type: 'normal',
+            click() {
+                shell.openPath(dataPath)
+            },
+        },
+        {
+            label: '应用目录',
+            type: 'normal',
+            click() {
+                shell.openPath(resolve('./'))
+            },
+        },
         {
             label: '重启',
             type: 'normal',

@@ -25,6 +25,10 @@
             {
                 "from": "./public",
                 "to": "public"
+            },
+            {
+                "from": "./webui",
+                "to": "dist"
             }
         ],
         "icon": "public/favicon.ico"

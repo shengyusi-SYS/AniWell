@@ -456,7 +456,9 @@ app.use('/api/v2/torrents/files', express.urlencoded({ extended: false }), (req,
 //     }
 // }));
 try {
-    const wwwroot = path.resolve(__dirname, '../dist/public')
+    const wwwroot = path.resolve(
+        import.meta.env.DEV === true ? './webui' : './resources/dist/public',
+    )
     fs.accessSync(wwwroot)
     app.use(express.static(wwwroot))
     app.use(history())
