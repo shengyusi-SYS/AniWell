@@ -53,6 +53,8 @@ async function createWindow() {
             // nodeIntegration: true,
             // contextIsolation: true,
         },
+        width: 1920,
+        height: 1080,
     })
 
     if (process.env.VITE_DEV_SERVER_URL) {
@@ -85,6 +87,7 @@ const dataPath: string =
         : '.'
 let tray: Tray
 app.whenReady().then(() => {
+    createWindow()
     const contextMenu = Menu.buildFromTemplate([
         {
             label: '数据目录',

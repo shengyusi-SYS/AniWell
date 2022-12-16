@@ -5,7 +5,11 @@ import electron from 'vite-plugin-electron'
 import pkg from './package.json'
 import { fileURLToPath, URL } from 'url'
 import path from 'path'
-
+import AutoImport from 'unplugin-auto-import/vite'
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import { VantResolver } from 'unplugin-vue-components/resolvers'
+import postcsspxtoviewport from 'postcss-px-to-viewport-8-plugin'
 rmSync('dist-electron', { recursive: true, force: true })
 const sourcemap = !!process.env.VSCODE_DEBUG
 const isBuild = process.argv.slice(2).includes('build')
@@ -72,6 +76,12 @@ export default defineConfig({
                 },
             },
         ]),
+        AutoImport({
+            resolvers: [ElementPlusResolver()],
+        }),
+        Components({
+            resolvers: [ElementPlusResolver(), VantResolver()],
+        }),
     ],
     resolve: {
         alias: {
@@ -79,6 +89,23 @@ export default defineConfig({
         },
     },
     base: './',
+    css: {
+        // 预处理器配置项
+        preprocessorOptions: {
+            less: {
+                math: 'always',
+            },
+        },
+        postcss: {
+            plugins: [
+                postcsspxtoviewport({
+                    viewportWidth: (file) => {
+                        return file.indexOf('vant') !== -1 ? 375 : 750
+                    },
+                }),
+            ],
+        },
+    },
     server: process.env.VSCODE_DEBUG
         ? (() => {
               const url = new URL(pkg.debug.env.VITE_DEV_SERVER_URL)
