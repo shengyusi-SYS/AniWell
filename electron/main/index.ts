@@ -103,6 +103,11 @@ app.whenReady().then(async () => {
     createWindow()
     const contextMenu = Menu.buildFromTemplate([
         {
+            label: '主界面',
+            type: 'normal',
+            click: createWindow,
+        },
+        {
             label: '数据目录',
             type: 'normal',
             click() {
@@ -128,10 +133,14 @@ app.whenReady().then(async () => {
     ])
     try {
         const iconPath: string = join(process.env.PUBLIC, 'favicon.ico')
-        tray = new Tray(iconPath)
+        tray = new Tray(
+            iconPath,
+            import.meta.env.DEV === true ? 'ec74c48e-4e12-4764-a8a6-bbe7e1f4d92b' : null,
+        )
         tray.setContextMenu(contextMenu)
         tray.setToolTip('FileServer')
         tray.setTitle('FileServer')
+        tray.on('double-click', createWindow)
         console.log('tray on')
     } catch (error) {
         console.log('tray off')
