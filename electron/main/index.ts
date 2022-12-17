@@ -14,8 +14,8 @@ process.env.PUBLIC = app.isPackaged
     ? process.env.DIST
     : join(process.env.DIST_ELECTRON, '../public')
 process.env.APPROOT = app.isPackaged ? process.env.DIST : join(process.env.DIST_ELECTRON, '../')
-
-import { app, BrowserWindow, shell, ipcMain, Menu, Tray } from 'electron'
+import { app, BrowserWindow, shell, ipcMain, Menu, Tray, session } from 'electron'
+import { readdir } from 'fs/promises'
 import { release, type, homedir } from 'os'
 import { join, resolve } from 'path'
 import '../server'
@@ -86,7 +86,20 @@ const dataPath: string =
         ? resolve(homedir(), 'AppData/Roaming/FileServer-for-qBittorrent')
         : '.'
 let tray: Tray
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+    //加载vue.js.devtools
+    if (import.meta.env.DEV === true) {
+        try {
+            const devtoolsPath = resolve(
+                homedir(),
+                process.env.LOCALAPPDATA,
+                'Google/Chrome/User Data/Default/Extensions/nhdogjmejiglipccpnnnanhbledajbpd',
+            )
+            const version = (await readdir(devtoolsPath)).sort((a, b) => (a > b ? -1 : 1))[0]
+            await session.defaultSession.loadExtension(resolve(devtoolsPath, version))
+            console.log('vue-devtools on')
+        } catch (error) {}
+    }
     createWindow()
     const contextMenu = Menu.buildFromTemplate([
         {

@@ -1,7 +1,7 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import ElementPlus from 'element-plus'
-import 'element-plus/theme-chalk/display.css'
+import 'element-plus/theme-chalk/display.css' //断点隐藏
 import { ConfigProvider } from 'vant'
 createApp(App)
     .use(ElementPlus, { size: 'small', zIndex: 3000 })

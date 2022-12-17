@@ -102,6 +102,8 @@ export default defineConfig({
                     viewportWidth: (file) => {
                         return file.indexOf('vant') !== -1 ? 375 : 750
                     },
+                    selectorBlackList: [/^body$/],
+                    // exclude: [/^node_modules$/],
                 }),
             ],
         },
