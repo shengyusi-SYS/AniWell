@@ -5,11 +5,15 @@ import electron from 'vite-plugin-electron'
 import pkg from './package.json'
 import { fileURLToPath, URL } from 'url'
 import path from 'path'
+import postcsspxtoviewport from 'postcss-px-to-viewport-8-plugin'
+
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import { VantResolver } from 'unplugin-vue-components/resolvers'
-import postcsspxtoviewport from 'postcss-px-to-viewport-8-plugin'
+import IconsResolver from 'unplugin-icons/resolver'
+import Icons from 'unplugin-icons/vite'
+
 rmSync('dist-electron', { recursive: true, force: true })
 const sourcemap = !!process.env.VSCODE_DEBUG
 const isBuild = process.argv.slice(2).includes('build')
@@ -30,13 +34,6 @@ export default defineConfig({
                     }
                 },
                 vite: {
-                    // optimizeDeps: {
-                    //     include: ['file-type'],
-                    //     force: true,
-                    //     esbuildOptions: {
-                    //         target: 'node16',
-                    //     },
-                    // },
                     build: {
                         sourcemap,
                         minify: isBuild,
@@ -77,15 +74,33 @@ export default defineConfig({
             },
         ]),
         AutoImport({
-            resolvers: [ElementPlusResolver()],
+            imports: ['vue', 'vue-router'],
+            resolvers: [
+                ElementPlusResolver(),
+                IconsResolver({
+                    prefix: 'Icon',
+                }),
+            ],
+            dts: './src/auto-imports.d.ts',
         }),
         Components({
-            resolvers: [ElementPlusResolver(), VantResolver()],
+            resolvers: [
+                IconsResolver({
+                    enabledCollections: ['ep', 'mdi', 'ic'],
+                }),
+                ElementPlusResolver(),
+                VantResolver(),
+            ],
+            dts: './src/components.d.ts',
+        }),
+        Icons({
+            autoInstall: true,
         }),
     ],
     resolve: {
         alias: {
             '@v': path.resolve(__dirname, 'src'),
+            '@h': path.resolve(__dirname, 'src/hooks'),
         },
     },
     base: './',

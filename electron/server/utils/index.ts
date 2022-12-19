@@ -240,6 +240,16 @@ const deepMerge: <T>(
     return toB
 }
 
+async function copyFile(oldPath, newPath) {
+    return new Promise((resolve, reject) => {
+        const input = fs.createReadStream(oldPath)
+        const output = fs.createWriteStream(newPath)
+        input.pipe(output)
+        input.once('end', resolve)
+        input.once('error', reject)
+    })
+}
+
 export {
     cleanNull,
     generatePictureUrl,
@@ -249,6 +259,7 @@ export {
     vidoeHash,
     getFileType,
     deepMerge,
+    copyFile,
     Seven,
     event,
     rimraf,

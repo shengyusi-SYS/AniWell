@@ -27,7 +27,8 @@ package-lock.json
 pnpm-lock.yaml
 yarn.lock
 dist-electron
-/test
+test
+test.*
 /output
 temp/
 /temp/
@@ -35,13 +36,11 @@ temp/
 /src/ssl
 settings.json
 in.*
-test.*
 /out
 /FileServer-for-qBittorrent-win32-x64
 libraryIndex.json
 librarySettings.json
 sync.ffs*
-.vscode
 settings_backup.json
 /log
 /webui

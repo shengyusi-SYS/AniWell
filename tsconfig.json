@@ -10,6 +10,9 @@
         "sourceMap": true,
         "baseUrl": ".",
         "paths": {
+            "@s/*": ["electron/server/*"],
+            "@v/*": ["src/*"],
+            "@h/*": ["src/hooks/*"]
         },
         "strict": true,
         "allowSyntheticDefaultImports": true,

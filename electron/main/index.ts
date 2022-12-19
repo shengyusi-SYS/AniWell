@@ -145,6 +145,10 @@ app.whenReady().then(async () => {
     } catch (error) {
         console.log('tray off')
     }
+    ipcMain.on('test', async (event, data) => {
+        // const { test } = await import('@s/test')
+        // test()
+    })
 })
 
 app.on('window-all-closed', () => {
