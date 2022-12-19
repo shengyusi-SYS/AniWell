@@ -14,11 +14,15 @@ process.env.PUBLIC = app.isPackaged
     ? process.env.DIST
     : join(process.env.DIST_ELECTRON, '../public')
 process.env.APPROOT = app.isPackaged ? process.env.DIST : join(process.env.DIST_ELECTRON, '../')
-import { app, BrowserWindow, shell, ipcMain, Menu, Tray, session } from 'electron'
+import { app, BrowserWindow, shell, ipcMain, Menu, Tray as EleTray, session } from 'electron'
+import Tray from './modules/tray'
+import vueDevtools from './modules/vueDevtools'
 import { readdir } from 'fs/promises'
 import { release, type, homedir } from 'os'
 import { join, resolve } from 'path'
 import '../server'
+import { logger } from '@s/utils/logger'
+import init from '@s/utils/init'
 // Disable GPU Acceleration for Windows 7
 if (release().startsWith('6.1')) app.disableHardwareAcceleration()
 
@@ -42,6 +46,10 @@ const url = process.env.VITE_DEV_SERVER_URL
 const indexHtml = join(process.env.DIST, 'index.html')
 
 async function createWindow() {
+    if (win) {
+        win.focus()
+        return
+    }
     win = new BrowserWindow({
         title: 'FileServer',
         icon: join(process.env.PUBLIC, 'favicon.ico'),
@@ -51,7 +59,7 @@ async function createWindow() {
             // Consider using contextBridge.exposeInMainWorld
             // Read more on https://www.electronjs.org/docs/latest/tutorial/context-isolation
             // nodeIntegration: true,
-            // contextIsolation: true,
+            contextIsolation: true,
         },
         width: 1920,
         height: 1080,
@@ -85,78 +93,40 @@ const dataPath: string =
         : type() == 'Windows_NT'
         ? resolve(homedir(), 'AppData/Roaming/FileServer-for-qBittorrent')
         : '.'
-let tray: Tray
+let tray: EleTray
 app.whenReady().then(async () => {
     //加载vue.js.devtools
-    if (import.meta.env.DEV === true) {
-        try {
-            const devtoolsPath = resolve(
-                homedir(),
-                process.env.LOCALAPPDATA,
-                'Google/Chrome/User Data/Default/Extensions/nhdogjmejiglipccpnnnanhbledajbpd',
-            )
-            const version = (await readdir(devtoolsPath)).sort((a, b) => (a > b ? -1 : 1))[0]
-            await session.defaultSession.loadExtension(resolve(devtoolsPath, version))
-            console.log('vue-devtools on')
-        } catch (error) {}
-    }
+    await vueDevtools()
+
     createWindow()
-    const contextMenu = Menu.buildFromTemplate([
-        {
-            label: '主界面',
-            type: 'normal',
-            click: createWindow,
-        },
-        {
-            label: '数据目录',
-            type: 'normal',
-            click() {
-                shell.openPath(dataPath)
-            },
-        },
-        {
-            label: '应用目录',
-            type: 'normal',
-            click() {
-                shell.openPath(resolve('./'))
-            },
-        },
-        {
-            label: '重启',
-            type: 'normal',
-            click() {
-                app.relaunch()
-                app.quit()
-            },
-        },
-        { label: '退出', type: 'normal', role: 'quit' },
-    ])
-    try {
-        const iconPath: string = join(process.env.PUBLIC, 'favicon.ico')
-        tray = new Tray(
-            iconPath,
-            import.meta.env.DEV === true ? 'ec74c48e-4e12-4764-a8a6-bbe7e1f4d92b' : null,
-        )
-        tray.setContextMenu(contextMenu)
-        tray.setToolTip('FileServer')
-        tray.setTitle('FileServer')
-        tray.on('double-click', createWindow)
-        console.log('tray on')
-    } catch (error) {
-        console.log('tray off')
-    }
+
+    tray = Tray({ app, dataPath, createWindow })
+
+    //验证是否已注册
+    ipcMain.handle('signUp', () => init.signUp)
+
     ipcMain.on('test', async (event, data) => {
+        console.log(data)
         // const { test } = await import('@s/test')
         // test()
+    })
+    ipcMain.handle('test1', () => 'test1')
+    setTimeout(() => {
+        win.webContents.send('test2', 'test2')
+    }, 2000)
+    ipcMain.on('test2', (_event, value) => {
+        console.log(value)
     })
 })
 
 app.on('window-all-closed', () => {
+    logger.debug('window-all-closed')
     win = null
     // if (process.platform !== 'darwin') app.quit()
 })
 
 app.on('second-instance', () => {
+    logger.debug('second-instance')
     if (win) {
         // Focus on the main window if the user tried to open another
         if (win.isMinimized()) win.restore()
@@ -165,6 +135,8 @@ app.on('second-instance', () => {
 })
 
 app.on('activate', () => {
+    logger.debug('activate')
+
     const allWindows = BrowserWindow.getAllWindows()
     if (allWindows.length) {
         allWindows[0].focus()

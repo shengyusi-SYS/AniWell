@@ -6,9 +6,12 @@ import isDesktop from '@h/useIsDesktop'
 const isPreferredDark = useMediaQuery('(prefers-color-scheme: dark)')
 
 const router = useRouter()
-router.push({
-    path: '/welcome',
-})
+//未注册则强制跳转到欢迎页面
+if (/* getCurrentInstance()?.proxy.signUp */ inject('signUp')) {
+    router.push({
+        path: '/welcome',
+    })
+}
 
 const el = ref<HTMLElement | null>(null)
 const { x, y, style } = useDraggable(el, {
@@ -16,12 +19,21 @@ const { x, y, style } = useDraggable(el, {
 })
 
 const menuOpenned = ref(false)
-const test = (val) => {
-    console.log(val, '')
 
-    // window.electronAPI.test('www')
-    // menuOpenned.value = !menuOpenned.value
+const test = async (a, b, c) => {
+    console.log(a, b, c)
+    console.log(window.electronAPI)
+
+    window.electronAPI.test('testto')
+
+    let res1 = await window.electronAPI.test1()
+    console.log(res1)
 }
+window.electronAPI.test2((event, value) => {
+    console.log('test2', event, value)
+
+    event.sender.send('test2', 'test2_back')
+})
 </script>
 
 <template>
@@ -71,6 +83,7 @@ const test = (val) => {
         <div style="border: 1px solid black">1REM大小</div>
         <div style="font-size: 24px; border: 1px solid black">24PX大小</div>
         <div style="font-size: 2rem; border: 1px solid black">2REM大小</div>
+        <div style="font-size: 2rem; border: 1px solid black" @click="test">test</div>
     </div>
     <VanNumberKeyboard safe-area-inset-bottom />
 </template>

@@ -14,6 +14,10 @@ const app = createApp(App)
 app.config.errorHandler = (err, instance, info) => {
     console.log('globalError', err, instance, info)
 }
+//验证是否已注册
+// const res = await window.electronAPI.signUp()
+// app.config.globalProperties.signUp = res
+app.provide('signUp', await window.electronAPI.signUp())
 
 app.use(ElementPlus, { size: 'small', zIndex: 3000 })
     .use(ConfigProvider)
