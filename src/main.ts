@@ -7,7 +7,7 @@ import * as VueRouter from 'vue-router'
 import routes from './routes'
 
 const router = VueRouter.createRouter({
-    history: VueRouter.createWebHashHistory(),
+    history: VueRouter.createWebHistory(),
     routes,
 })
 const app = createApp(App)

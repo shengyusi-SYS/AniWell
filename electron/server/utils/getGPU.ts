@@ -21,10 +21,8 @@ if (osPlatform == 'win') {
                     cardName = value.trim() + i
                 }
                 if (key == 'PNPDeviceID') {
-                    cardID = `:,vendor=0x${value
-                        .trim()
-                        .match(/VEN_\w{4}/)[0]
-                        .replace('VEN_', '')}`
+                    const val = value.trim().match(/VEN_\w{4}/)
+                    cardID = val ? `:,vendor=0x${val[0].replace('VEN_', '')}` : ''
                 }
             }
         }

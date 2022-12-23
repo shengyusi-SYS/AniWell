@@ -314,12 +314,16 @@ app.use('/api/localFile/getFile', async (req, res, next) => {
             })
         } else if (fileType == 'video') {
             const params = {
-                filePath,
-                suffix,
-                SID,
-                bitrate: settings.bitrate * 1000000,
-                autoBitrate: settings.autoBitrate,
-                resolution: '1080p',
+                ...{ //测试，待删
+                    filePath,
+                    suffix,
+                    SID,
+                    bitrate: settings.bitrate * 1000000,
+                    autoBitrate: settings.autoBitrate,
+                    resolution: '1080p',
+                    method: '', //测试，待删
+                }, //测试，待删
+                ...body.params, //测试，待删
             }
             videoHandler = await handleVideoRequest(params)
             // videoHandler(app)
@@ -455,6 +459,7 @@ app.use('/api/v2/torrents/files', express.urlencoded({ extended: false }), (req,
 //         // })
 //     }
 // }));
+// proxySettings.changeOrigin = true
 try {
     const wwwroot = path.resolve(
         import.meta.env.DEV === true ? './webui/public' : './resources/dist/public',

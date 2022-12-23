@@ -1,13 +1,13 @@
 <script setup lang="ts"></script>
 
-<script lang="ts">
+<script>
 export default {
-    name: 'Welcome',
+    name: 'Library',
 }
 </script>
 
 <template>
-    <div class="base">welcome</div>
+    <div class="base">Library</div>
 </template>
 
 <style lang="less" scoped></style>

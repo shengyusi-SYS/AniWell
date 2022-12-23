@@ -14,7 +14,7 @@ let lastHandler
 async function handleVideoRequest(params) {
     try {
         logger.debug('handleVideoRequest params', params)
-        const { filePath, bitrate, autoBitrate, resolution, SID } = params
+        const { filePath, bitrate, autoBitrate, resolution, SID, method } = params //测试，待删
         const fonts = handleFonts(filePath)
         logger.debug('handleVideoRequest handleFonts')
         let videoInfo = await getVideoInfo(filePath)
@@ -24,6 +24,7 @@ async function handleVideoRequest(params) {
         videoInfo = selectMethod(videoInfo, params)
         logger.debug('handleVideoRequest selectMethod')
         let handler
+        if (method !== 'direct') videoInfo.method = 'direct' //测试，待删
         if (videoInfo.method == 'direct') {
             logger.info('handleVideoRequest', 'start direct')
             directPlayHandler.init(videoInfo)
