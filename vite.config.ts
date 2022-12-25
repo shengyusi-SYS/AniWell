@@ -119,6 +119,8 @@ export default defineConfig({
                     },
                     selectorBlackList: [/^body$/],
                     // exclude: [/^node_modules$/],
+                    mediaQuery: false,
+                    minPixelValue: 1,
                 }),
             ],
         },

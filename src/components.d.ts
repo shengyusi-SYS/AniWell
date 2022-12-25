@@ -20,8 +20,10 @@ declare module '@vue/runtime-core' {
     IEpHouse: typeof import('~icons/ep/house')['default']
     IMdiHomeOutline: typeof import('~icons/mdi/home-outline')['default']
     IMdiHomeOutlineRounded: typeof import('~icons/mdi/home-outline-rounded')['default']
+    OInput: typeof import('./components/OInput/index.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    Selector: typeof import('./components/Selector/index.vue')['default']
     Toolbar: typeof import('./components/Toolbar/index.vue')['default']
     VanNumberKeyboard: typeof import('vant/es')['NumberKeyboard']
   }

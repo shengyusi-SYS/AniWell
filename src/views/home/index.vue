@@ -13,7 +13,7 @@ export default {
 </script>
 
 <template>
-    <ElContainer :class="`base ${isDesktop ? 'desktop' : ''}`">
+    <ElContainer :class="`home-base ${isDesktop ? 'desktop' : ''}`">
         <ElHeader class="row">
             <ElRow justify="space-between" align="middle" style="width: 100%">
                 <ElCol :span="4" class="headerLeft">
@@ -70,7 +70,7 @@ export default {
 </template>
 
 <style lang="less" scoped>
-.base {
+.home-base {
     // font-size: 1rem;
     height: 100%;
     width: 100%;
