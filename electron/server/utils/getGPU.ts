@@ -18,7 +18,7 @@ if (osPlatform == 'win') {
             if (line.includes('=')) {
                 const [key, value] = line.split('=')
                 if (key == 'Caption') {
-                    cardName = value.trim() + i
+                    cardName = i + ':' + value.trim()
                 }
                 if (key == 'PNPDeviceID') {
                     const val = value.trim().match(/VEN_\w{4}/)

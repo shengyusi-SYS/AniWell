@@ -1,11 +1,12 @@
 import { logger } from '@s/utils/logger'
 import init from '@s/utils/init'
-const { Ffmpeg, settings } = init
+const { Ffmpeg } = init
+import settings from '@s/store/settings'
 import { access } from 'fs/promises'
 import path from 'path'
 async function getVideoInfo(filePath) {
     try {
-        const res: Promise<object | Error> = await new Promise((r, j) => {
+        const res: object | Error = await new Promise((r, j) => {
             Ffmpeg.ffprobe(filePath, async (err: Error, metadata: object) => {
                 // logger.debug('getVideoInfo metadata',metadata);
                 if (err) {
@@ -30,7 +31,7 @@ async function getVideoInfo(filePath) {
                 }
                 let cleared
                 try {
-                    await access(path.resolve(settings.tempPath, 'output', 'index.m3u8'))
+                    await access(path.resolve(settings.get('tempPath'), 'output', 'index.m3u8'))
                     cleared = false
                 } catch (error) {
                     cleared = true
@@ -49,8 +50,8 @@ async function getVideoInfo(filePath) {
                     colorSpace: color_space,
                     subtitleStream,
                     cleared,
-                    platform: settings.platform,
-                    encode: settings.encode,
+                    platform: settings.get('platform'),
+                    encode: settings.get('encode'),
                 }
                 logger.debug('getVideoInfo', 'end')
                 r(videoInfo)

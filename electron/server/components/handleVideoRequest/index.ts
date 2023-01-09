@@ -24,7 +24,7 @@ async function handleVideoRequest(params) {
         videoInfo = selectMethod(videoInfo, params)
         logger.debug('handleVideoRequest selectMethod')
         let handler
-        if (method !== 'direct') videoInfo.method = 'direct' //测试，待删
+        if (method === 'direct') videoInfo.method = 'direct' //测试，待删
         if (videoInfo.method == 'direct') {
             logger.info('handleVideoRequest', 'start direct')
             directPlayHandler.init(videoInfo)

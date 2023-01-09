@@ -9,6 +9,7 @@
     "scripts": {
         "dev": "vite",
         "build": "vue-tsc --noEmit && vite build && electron-builder",
+        "skipCheck": "vite build",
         "test": "node ./test.mjs"
     },
     "engines": {
@@ -18,11 +19,14 @@
         "7zip-bin": "^5.2.0",
         "@vueuse/core": "^9.6.0",
         "body-parser": "^1.20.1",
+        "conf": "^10.2.0",
         "connect-history-api-fallback": "^2.0.0",
         "cookie-parser": "^1.4.6",
         "diff": "^5.1.0",
         "dotenv": "^16.0.3",
+        "electron-store": "^8.1.0",
         "element-plus": "^2.2.26",
+        "env-paths": "^3.0.0",
         "express": "^4.18.2",
         "file-type": "^16.5.4",
         "fluent-ffmpeg": "^2.1.2",

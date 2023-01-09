@@ -7,7 +7,7 @@ import { diffWords } from 'diff'
 import xml2js from 'xml2js'
 import init from '@s/utils/init'
 const { libraryIndex, libraryIndexPath } = init
-
+import settings from '@s/store/settings'
 export interface MediaLeaf extends Tree {
     title?: string
     poster?: string
@@ -57,7 +57,7 @@ async function initMediaLibrary(libraryPath = '', libraryName = '', update = fal
 async function cleanLibrary() {
     logger.info('cleanLibrary start')
     await writeFile(
-        path.resolve(init.settings.tempPath, 'libraryIndex_backup.json'),
+        path.resolve(settings.get('tempPath'), 'libraryIndex_backup.json'),
         JSON.stringify(libraryIndex, null, '\t'),
     )
     async function clean(dirTree) {

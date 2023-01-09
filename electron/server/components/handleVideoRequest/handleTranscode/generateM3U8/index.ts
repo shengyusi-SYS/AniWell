@@ -2,8 +2,7 @@ import { logger } from '@s/utils/logger'
 import { rimraf } from '@s/utils'
 import { mkdir, writeFile } from 'fs/promises'
 
-import init from '@s/utils/init'
-const { settings } = init
+import settings from '@s/store/settings'
 import path from 'path'
 
 //转码串流功能的次核心，预处理分段信息，同时生成m3u8清单文件
@@ -50,16 +49,16 @@ async function generateM3U8(videoInfo) {
             }
         }
         await new Promise((r, j) => {
-            rimraf(path.resolve(settings.tempPath, 'output'), (err) => {
+            rimraf(path.resolve(settings.get('tempPath'), 'output'), (err) => {
                 if (err) {
                     logger.error('error rimraf', err)
                 }
-                r()
+                r(null)
             })
         })
-        await mkdir(path.resolve(settings.tempPath, 'output'))
+        await mkdir(path.resolve(settings.get('tempPath'), 'output'))
         logger.info('debug', 'clear')
-        await writeFile(path.resolve(settings.tempPath, 'output', 'index.m3u8'), M3U8)
+        await writeFile(path.resolve(settings.get('tempPath'), 'output', 'index.m3u8'), M3U8)
     } catch (error) {
         logger.error('generateM3U8', error)
     }

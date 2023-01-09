@@ -1,7 +1,8 @@
 import { logger } from '@s/utils/logger'
 import path from 'path'
 import init from '@s/utils/init'
-const { settings, osPlatform, gpus } = init
+const { osPlatform, gpus } = init
+import  settings  from '@s/store/settings'
 import { cleanNull } from '@s/utils'
 
 //转码串流的精髓，ffmpeg指令生成系统，自己看着都头大...
@@ -128,7 +129,7 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
     try {
         logger.debug('generateFfmpegCommand', 'start')
         const videoIndex = videoInfo.videoIndex
-        // settings.advAccel = false
+        // settings.get('advAccel') = false
         let inputParams = []
         let outputParams = []
 
@@ -141,16 +142,16 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
         ]
 
         let bitrate = [
-            `-b:v ${settings.bitrate}M`,
-            `-bufsize ${settings.bitrate * 2}M`,
-            `-maxrate ${settings.bitrate}M`,
+            `-b:v ${settings.get('bitrate')}M`,
+            `-bufsize ${settings.get('bitrate') * 2}M`,
+            `-maxrate ${settings.get('bitrate')}M`,
         ]
         const bitrateVal = videoInfo.targetBitrate
-        // if (settings.autoBitrate) {
-        //     if (videoInfo.bitrate * 1.5 <= settings.bitrate * 1000000) {
-        //         bitrateVal = settings.bitrate * 1000000
-        //     } else if (videoInfo.bitrate >= settings.bitrate * 1000000 * 1.5) {
-        //         bitrateVal = settings.bitrate * 1000000 * 1.5
+        // if (settings.get('autoBitrate')) {
+        //     if (videoInfo.bitrate * 1.5 <= settings.get('bitrate') * 1000000) {
+        //         bitrateVal = settings.get('bitrate') * 1000000
+        //     } else if (videoInfo.bitrate >= settings.get('bitrate') * 1000000 * 1.5) {
+        //         bitrateVal = settings.get('bitrate') * 1000000 * 1.5
         //     } else {
         //         bitrateVal = videoInfo.bitrate * 1.2
         //     }
@@ -158,18 +159,18 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
         // }
 
         let decoder = ''
-        const advAccel = settings.advAccel
+        const advAccel = settings.get('advAccel')
         let hwaccelParams = []
         let hwDeviceId = ''
 
         for (const key in gpus) {
-            const reg = new RegExp(settings.platform, 'i')
+            const reg = new RegExp(settings.get('platform'), 'i')
             if (key.match(reg)) {
                 hwDeviceId = gpus[key]
             }
             // logger.debug('debug',hwDeviceId);
         }
-        // logger.debug('debug',hwaccels[osPlatform][settings.platform]);
+        // logger.debug('debug',hwaccels[osPlatform][settings.get('platform')]);
         const {
             hwDevice,
             hwDeviceName,
@@ -183,7 +184,7 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
             hwOutput,
             pixFormat,
             subFormat,
-        } = hwaccels[osPlatform][settings.platform]
+        } = hwaccels[osPlatform][settings.get('platform')]
         if (hwaccel == 'cuda') {
             hwaccelParams = [
                 `-init_hw_device ${hwDevice}=${hwDeviceName}`,
@@ -195,7 +196,7 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
             hwaccelParams = [
                 `-init_hw_device ${hwDevice}=${hwDeviceName}${hwDeviceId}`,
                 `${
-                    settings.platform != 'vaapi'
+                    settings.get('platform') != 'vaapi'
                         ? `-init_hw_device ${flHwDevice}=${flHwDeviceName}@${hwDeviceName}`
                         : ''
                 }`,
@@ -205,10 +206,10 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
             ]
         }
         const notSupport =
-            /yuv\d{3}p\d{0,2}/.exec(videoInfo.pix_fmt)[0].replace(/yuv\d{3}p/, '') >= 10
-        if (decoders.hasOwnProperty(settings.platform)) {
+            Number(/yuv\d{3}p\d{0,2}/.exec(videoInfo.pix_fmt)[0].replace(/yuv\d{3}p/, '')) >= 10
+        if (decoders.hasOwnProperty(settings.get('platform'))) {
             if (!(videoInfo.codec == 'h264' && notSupport)) {
-                decoder = `-c:v ${videoInfo.codec}${decoders[settings.platform]}`
+                decoder = `-c:v ${videoInfo.codec}${decoders[settings.get('platform')]}`
             }
         }
         if (hwaccel == 'vaapi') {
@@ -217,22 +218,22 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
         }
 
         const threads = '-threads 0'
-        const encoder = `-c:v ${encoders[settings.encode][settings.platform]}`
+        const encoder = `-c:v ${encoders[settings.get('encode')][settings.get('platform')]}`
         // let copyVideo = false
-        // if ((settings.encode == 'h264'&& videoInfo.codec=='h264')&&(videoInfo.bitrate<=bitrateVal)&&!videoInfo.subtitleStream[0]) {
+        // if ((settings.get('encode') == 'h264'&& videoInfo.codec=='h264')&&(videoInfo.bitrate<=bitrateVal)&&!videoInfo.subtitleStream[0]) {
         //     encoder = '-c:v copy'
         //     copyVideo = true
         // }
         let pix_fmt = ''
-        // if (settings.encode == 'h264') {
+        // if (settings.get('encode') == 'h264') {
         //     pix_fmt = `yuv420p`
         // }
-        // if (hwaccels[settings.platform] == 'd3d11va') {
+        // if (hwaccels[settings.get('platform')] == 'd3d11va') {
         //     pix_fmt = `nv12`
         // }
 
         let tag = ''
-        if (settings.encode == 'h265') {
+        if (settings.get('encode') == 'h265') {
             tag = '-tag:v hvc1'
         }
         const copyts = '-copyts'
@@ -246,7 +247,7 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
         let sub
         let subtitlePath
         const fontsDir = path
-            .resolve(settings.tempPath, 'fonts')
+            .resolve(settings.get('tempPath'), 'fonts')
             .replace(/\\/gim, '/')
             .replace(':', '\\:')
         if (subtitleList[subtitleListIndex]) {
@@ -326,7 +327,7 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
             const tempFilter = filter
             filter = (start) => tempFilter.replace('start=start', `start=${start}`)
         }
-        if (settings.platform == 'vaapi') {
+        if (settings.get('platform') == 'vaapi') {
             filter = `-vf "scale_vaapi=format=nv12${sub ? ',hwmap,format=nv12' : ''}${
                 sub
                     ? `,subtitles=f='${subtitlePath}'${
@@ -335,7 +336,7 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
                     : ''
             }"`
         }
-        if (osPlatform == 'lin' && settings.platform == 'amd') {
+        if (osPlatform == 'lin' && settings.get('platform') == 'amd') {
             hwaccelParams = []
             filter = `-vf "format=yuv420p${
                 sub
@@ -358,17 +359,17 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
                 if (sub.source == 'out') {
                     if (sub.type == 'text') {
                         filter = `-vf "format=${subFormat},subtitles=f='${subtitlePath}':alpha=1:fontsdir='${fontsDir}'${
-                            settings.platform == 'vaapi' ? ',hwupload_vaapi' : ''
+                            settings.get('platform') == 'vaapi' ? ',hwupload_vaapi' : ''
                         }"`
                     } else {
                         filter = `-vf "format=${subFormat},subtitles=f='${subtitlePath}'${
-                            settings.platform == 'vaapi' ? ',hwupload_vaapi' : ''
+                            settings.get('platform') == 'vaapi' ? ',hwupload_vaapi' : ''
                         }"`
                     }
                 } else if (sub.source == 'in') {
                     if (sub.type == 'text') {
                         filter = `-filter_complex "[0:${sub.details.index}]format=${subFormat}${
-                            settings.platform == 'vaapi' ? ',hwupload_vaapi' : ''
+                            settings.get('platform') == 'vaapi' ? ',hwupload_vaapi' : ''
                         }"`
                     } else {
                         filter = `-filter_complex "[0:${
@@ -376,7 +377,7 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
                         }]format=${subFormat},scale=s=${videoInfo.width}x${
                             videoInfo.height
                         }:flags=fast_bilinear${
-                            settings.platform == 'vaapi' ? ',hwupload_vaapi' : ''
+                            settings.get('platform') == 'vaapi' ? ',hwupload_vaapi' : ''
                         }"`
                     }
                 }
@@ -405,7 +406,7 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
             // if (sub) {
             // pix_fmt = ''
             //     let subtitlePath = sub.path
-            //     filter = `-vf "subtitles=f='${subtitlePath}':alpha=1:fontsdir='${path.resolve(settings.tempPath, 'fonts').replace(/\\\\/gim, '/').replace(':', '\\:')}'"`
+            //     filter = `-vf "subtitles=f='${subtitlePath}':alpha=1:fontsdir='${path.resolve(settings.get('tempPath'), 'fonts').replace(/\\\\/gim, '/').replace(':', '\\:')}'"`
             // }
         }
 
@@ -453,8 +454,8 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
 
         let customInputCommand = []
         let customOutputCommand = []
-        customInputCommand = settings.customInputCommand.split('\n')
-        customOutputCommand = settings.customOutputCommand.split('\n')
+        customInputCommand = settings.get('customInputCommand').split('\n')
+        customOutputCommand = settings.get('customOutputCommand').split('\n')
 
         if (customInputCommand[0].length > 0) {
             inTest = []
@@ -479,7 +480,11 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
             '-hls_segment_type mpegts',
             '-hls_flags temp_file',
             `-start_number ${videoIndex[segment].id}`,
-            `-hls_segment_filename "${path.resolve(settings.tempPath, 'output', `index%d.ts`)}"`,
+            `-hls_segment_filename "${path.resolve(
+                settings.get('tempPath'),
+                'output',
+                `index%d.ts`,
+            )}"`,
             '-hls_playlist_type event',
             '-hls_list_size 0',
         ]
@@ -512,7 +517,7 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
                 ...hlsParams(segment),
                 // '-hide_banner',
                 '-y',
-                path.resolve(settings.tempPath, 'output', 'tempList', `${segment}.m3u8`),
+                path.resolve(settings.get('tempPath'), 'output', 'tempList', `${segment}.m3u8`),
             ])
 
         const commandTemplate = (start, segment) => [

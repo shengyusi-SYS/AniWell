@@ -1,17 +1,9 @@
 import fs from 'fs'
-import path from 'path'
-import os from 'os'
+import { resolve, join } from 'path'
+import paths from './envPath'
 try {
-    fs.mkdirSync(path.join('log'))
+    fs.mkdirSync(paths.log)
 } catch (error) {}
-const dataPath =
-    import.meta.env.DEV === true
-        ? './'
-        : os.type() == 'Linux'
-        ? path.resolve(os.homedir(), 'AppData/FileServer-for-qBittorrent')
-        : os.type() == 'Windows_NT'
-        ? path.resolve(os.homedir(), 'AppData/Roaming/FileServer-for-qBittorrent')
-        : '.'
 import logForJs from 'log4js'
 class Logger {
     private config = {
@@ -21,7 +13,7 @@ class Logger {
             },
             trace: {
                 type: 'file',
-                filename: 'log/access.log',
+                filename: join(paths.log, 'access.log'),
                 'maxLogSize ': 31457280,
             },
             http: {
@@ -32,7 +24,7 @@ class Logger {
             },
             info: {
                 type: 'dateFile',
-                filename: 'log/app-info.log',
+                filename: join(paths.log, 'app-info.log'),
                 pattern: '.yyyy-MM-dd',
                 layout: {
                     type: 'pattern',
@@ -48,7 +40,7 @@ class Logger {
             },
             error: {
                 type: 'dateFile',
-                filename: 'log/app-error.log',
+                filename: join(paths.log, 'app-error.log'),
                 pattern: '.yyyy-MM-dd',
                 layout: {
                     type: 'pattern',
@@ -63,7 +55,7 @@ class Logger {
             },
             allTranscode: {
                 type: 'dateFile',
-                filename: 'log/transcode.log',
+                filename: join(paths.log, 'transcode.log'),
                 pattern: '.yyyy-MM-dd',
                 layout: {
                     type: 'pattern',
@@ -78,7 +70,7 @@ class Logger {
             },
             allScrape: {
                 type: 'dateFile',
-                filename: 'log/scrape.log',
+                filename: join(paths.log, 'scrape.log'),
                 pattern: '.yyyy-MM-dd',
                 layout: {
                     type: 'pattern',
@@ -121,7 +113,7 @@ class Logger {
     public changeLevel = async () => {
         try {
             var debug = JSON.parse(
-                fs.readFileSync(path.resolve(dataPath, 'settings.json'), 'utf8'),
+                fs.readFileSync(resolve(paths.config, 'settings.json'), 'utf8'),
             ).debug
             if (debug) {
                 console.log('已开启debug模式')

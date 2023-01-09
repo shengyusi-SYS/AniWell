@@ -6,6 +6,8 @@ const isPreferredDark = useMediaQuery('(prefers-color-scheme: dark)')
 
 const router = useRouter()
 //未注册则强制跳转到欢迎页面
+console.log(inject('signUp'))
+
 if (/* getCurrentInstance()?.proxy.signUp */ inject('signUp')) {
     router.push({
         path: '/welcome',
@@ -17,8 +19,9 @@ const { x, y, style } = useDraggable(el, {
     initialValue: { x: 100, y: 440 },
 })
 
-const test = async (a, b, c) => {
-    console.log(a, b, c)
+const test = async (a) => {
+    console.log(a)
+
     console.log(window.electronAPI)
 
     window.electronAPI.test('testto')
@@ -76,7 +79,16 @@ navigator.mediaCapabilities.decodingInfo(mediaConfig).then((result) => {
         <div style="border: 1px solid black">1REM大小</div>
         <div style="font-size: 24px; border: 1px solid black">24PX大小</div>
         <div style="font-size: 2rem; border: 1px solid black">2REM大小</div>
-        <div style="font-size: 2rem; border: 1px solid black" @click="test">test</div>
+        <div
+            style="font-size: 2rem; border: 1px solid black"
+            @click="
+                (a) => {
+                    test(a)
+                }
+            "
+        >
+            test
+        </div>
     </div>
     <VanNumberKeyboard safe-area-inset-bottom />
 </template>

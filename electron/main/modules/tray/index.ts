@@ -1,7 +1,8 @@
 import { Menu, Tray as EleTray, shell } from 'electron'
 import { resolve } from 'path'
+import paths from '@s/utils/envPath'
 
-export default function tray({ app, dataPath, createWindow }) {
+export default function tray({ app, createWindow }) {
     try {
         console.log('tray on')
 
@@ -20,7 +21,7 @@ export default function tray({ app, dataPath, createWindow }) {
                 label: '数据目录',
                 type: 'normal',
                 click() {
-                    shell.openPath(dataPath)
+                    shell.openPath(paths.data)
                 },
             },
             {

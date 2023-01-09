@@ -44,3 +44,5 @@ sync.ffs*
 settings_backup.json
 /log
 /webui
+/dev
+开发文档.md

@@ -85,22 +85,14 @@ async function createWindow() {
         return { action: 'deny' }
     })
 }
-const dataPath: string =
-    import.meta.env.DEV === true
-        ? resolve('./')
-        : type() == 'Linux'
-        ? resolve(homedir(), 'AppData/FileServer-for-qBittorrent')
-        : type() == 'Windows_NT'
-        ? resolve(homedir(), 'AppData/Roaming/FileServer-for-qBittorrent')
-        : '.'
-let tray: EleTray
+let theTray: EleTray | null = null
 app.whenReady().then(async () => {
     //加载vue.js.devtools
     await vueDevtools()
 
     createWindow()
 
-    tray = Tray({ app, dataPath, createWindow })
+    theTray = Tray({ app, createWindow })
 
     //验证是否已注册
     ipcMain.handle('signUp', () => init.signUp)

@@ -1,8 +1,7 @@
 import { readdir, access, mkdir, copyFile } from 'fs/promises'
 import path from 'path'
 import { extractFonts } from '@s/utils'
-import init from '@s/utils/init'
-const { settings } = init
+import settings from '@s/store/settings'
 import { logger } from '@s/utils/logger'
 
 let fonts
@@ -25,12 +24,15 @@ async function handleFonts(filePath) {
     if (type == 'dir') {
         try {
             try {
-                await mkdir(path.resolve(settings.tempPath, 'fonts'))
+                await mkdir(path.resolve(settings.get('tempPath'), 'fonts'))
             } catch (error) {}
             for (let index = 0; index < fileList.length; index++) {
                 const file = path.resolve(fontsPath, fileList[index])
                 try {
-                    await copyFile(file, path.resolve(settings.tempPath, 'fonts', fileList[index]))
+                    await copyFile(
+                        file,
+                        path.resolve(settings.get('tempPath'), 'fonts', fileList[index]),
+                    )
                 } catch (error) {}
             }
             fonts = fontsPath
@@ -40,7 +42,7 @@ async function handleFonts(filePath) {
     } else if ((type = 'file')) {
         if (fonts === fontsPath && fontsPath) {
             try {
-                await access(path.resolve(settings.tempPath, 'fonts'))
+                await access(path.resolve(settings.get('tempPath'), 'fonts'))
             } catch (error) {
                 return await extractFonts(fontsPath)
             }

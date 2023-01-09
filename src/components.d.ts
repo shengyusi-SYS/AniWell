@@ -8,7 +8,6 @@ export {}
 declare module '@vue/runtime-core' {
   export interface GlobalComponents {
     ElAside: typeof import('element-plus/es')['ElAside']
-    ElButton: typeof import('element-plus/es')['ElButton']
     ElCol: typeof import('element-plus/es')['ElCol']
     ElContainer: typeof import('element-plus/es')['ElContainer']
     ElHeader: typeof import('element-plus/es')['ElHeader']
@@ -17,13 +16,10 @@ declare module '@vue/runtime-core' {
     ElRow: typeof import('element-plus/es')['ElRow']
     IEpExpand: typeof import('~icons/ep/expand')['default']
     IEpFold: typeof import('~icons/ep/fold')['default']
-    IEpHouse: typeof import('~icons/ep/house')['default']
     IMdiHomeOutline: typeof import('~icons/mdi/home-outline')['default']
-    IMdiHomeOutlineRounded: typeof import('~icons/mdi/home-outline-rounded')['default']
     OInput: typeof import('./components/OInput/index.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
-    Selector: typeof import('./components/Selector/index.vue')['default']
     Toolbar: typeof import('./components/Toolbar/index.vue')['default']
     VanNumberKeyboard: typeof import('vant/es')['NumberKeyboard']
   }

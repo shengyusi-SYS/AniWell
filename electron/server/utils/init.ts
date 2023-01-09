@@ -4,133 +4,13 @@ import path from 'path'
 import Ffmpeg from 'fluent-ffmpeg'
 import os from 'os'
 import gpus from './getGPU'
-import * as dotenv from 'dotenv'
-
-interface settings {
-    qbHost: string
-    serverPort: string
-    tempPath: string
-    ffmpegPath: string
-    cert: string
-    key: string
-    secure: boolean
-    share: boolean
-    bitrate: number
-    autoBitrate: boolean
-    advAccel: boolean
-    platform: string
-    encode: string
-    tmdbKey: string
-    customInputCommand: string
-    customOutputCommand: string
-    debug: boolean
-}
+import paths from './envPath'
+import settings from '@s/store/settings'
+import { librarySettings, librarySettingsTransformer } from '@s/store/librarySettings'
 
 class Init {
-    public dataPath: string =
-        import.meta.env.DEV === true
-            ? './'
-            : os.type() == 'Linux'
-            ? path.resolve(os.homedir(), 'AppData/FileServer-for-qBittorrent')
-            : os.type() == 'Windows_NT'
-            ? path.resolve(os.homedir(), 'AppData/Roaming/FileServer-for-qBittorrent')
-            : '.'
-
-    public settingsList = {
-        qbHost: {
-            type: 'text',
-            name: 'qbHost',
-            value: 'http://localhost:8080',
-            placeholder: 'http://localhost:8080',
-        },
-        serverPort: { type: 'number', name: 'serverPort', value: 9009, placeholder: '9009' },
-        tempPath: { type: 'text', name: 'tempPath', value: os.tmpdir(), placeholder: os.tmpdir() },
-        ffmpegPath: {
-            type: 'text',
-            name: 'ffmpegPath',
-            value: '',
-            placeholder: path.resolve('./resources/thirdParty/win'),
-        },
-        // dandanplayPath: { type: 'text', name: 'dandanplayPath', value: '', placeholder: '' },
-        cert: {
-            type: 'text',
-            name: 'cert',
-            value: path.resolve(this.dataPath, './ssl/domain.pem'),
-            placeholder: path.resolve(this.dataPath, './ssl/domain.pem'),
-        },
-        key: {
-            type: 'text',
-            name: 'key',
-            value: path.resolve(this.dataPath, './ssl/domain.key'),
-            placeholder: path.resolve(this.dataPath, './ssl/domain.key'),
-        },
-        // burnSubtitle: { type: 'switch',name:'burnSubtitle',value:'' },
-        secure: { type: 'switch', name: 'secure', value: false },
-        share: { type: 'switch', name: 'share', value: false },
-        bitrate: { type: 'number', name: 'bitrate', value: '5', placeholder: '5' },
-        autoBitrate: { type: 'switch', name: 'autoBitrate', value: false },
-        advAccel: { type: 'switch', name: 'advAccel', value: true },
-        platform: {
-            type: 'radios',
-            name: 'platform',
-            value: 'nvidia',
-            placeholder: '',
-            radios: {
-                nvidia: { name: 'nvidia', value: 'nvidia' },
-                intel: { name: 'intel', value: 'intel' },
-                amd: { name: 'amd', value: 'amd' },
-                vaapi: { name: 'vaapi', value: 'vaapi' },
-            },
-        },
-        encode: {
-            type: 'radios',
-            name: 'encode',
-            value: 'h264',
-            placeholder: '',
-            radios: {
-                h264: { name: 'h264', value: 'h264' },
-                h265: { name: 'h265', value: 'h265' },
-            },
-        },
-        tmdbKey: { type: 'text', name: 'tmdbKey', value: '', placeholder: 'TMDB API KEY' },
-        customInputCommand: {
-            type: 'textarea',
-            name: 'customInputCommand',
-            value: '',
-            placeholder: '指令设定请参考readme文档，勿轻易修改',
-        },
-        customOutputCommand: {
-            type: 'textarea',
-            name: 'customOutputCommand',
-            value: '',
-            placeholder: '指令设定请参考readme文档，勿轻易修改',
-        },
-        debug: { type: 'switch', name: 'debug', value: false },
-    }
-
-    public settings: settings = {
-        qbHost: '',
-        serverPort: '',
-        tempPath: '',
-        ffmpegPath: '',
-        cert: '',
-        key: '',
-        secure: false,
-        share: false,
-        bitrate: 5,
-        autoBitrate: false,
-        advAccel: true,
-        platform: '',
-        encode: '',
-        tmdbKey: '',
-        customInputCommand: '',
-        customOutputCommand: '',
-        debug: false,
-    }
-
-    public settingsPath = path.resolve(this.dataPath, 'settings.json')
-    public libraryIndexPath = path.resolve(this.dataPath, 'libraryIndex.json')
-    public librarySettingsPath = path.resolve(this.dataPath, 'librarySettings.json')
+    public libraryIndexPath = path.resolve(paths.data, 'libraryIndex.json')
+    public librarySettingsPath = path.resolve(paths.data, 'librarySettings.json')
 
     public Ffmpeg = Ffmpeg
 
@@ -162,11 +42,8 @@ class Init {
     public inited = false
 
     constructor() {
-        for (const key in this.settingsList) {
-            this.settings[this.settingsList[key].name] = this.settingsList[key].value
-        }
         try {
-            fs.mkdirSync(this.dataPath)
+            fs.mkdirSync(paths.data)
         } catch (error) {}
         // try {
         //    let env =  dotenv.config({ path: '.env.local' }).parsed
@@ -182,83 +59,33 @@ class Init {
     public init(): this {
         this.inited = true
         try {
-            accessSync(path.resolve(this.dataPath, 'user.json'))
+            accessSync(path.resolve(paths.data, 'user.json'))
         } catch (error) {
             this.signUp = true
         }
+        //建立临时文件夹，用于复制外挂字幕
         try {
-            //尝试读取settings.json
-            const exist: string = fs.readFileSync(path.resolve(this.settingsPath), 'utf8')
-            let newSettings: object
-            try {
-                //检查设置文件
-                newSettings = JSON.parse(exist)
-                if (!newSettings) {
-                    throw new Error('')
-                }
-                //覆盖默认设置
-                this.mergeSettings(newSettings).check()
-
-                fs.writeFileSync(
-                    path.resolve(this.settingsPath),
-                    JSON.stringify(this.settings, null, '\t'),
-                )
-                //备份成功设置
-                fs.writeFileSync(
-                    path.resolve(this.settings.tempPath, './settings_backup.json'),
-                    JSON.stringify(this.settings, null, '\t'),
-                )
-                logger.info('init', '已加载本地配置', this.settings)
-            } catch (error) {
-                //设置文件错误则读取备份的成功设置
-                newSettings = JSON.parse(
-                    fs.readFileSync(
-                        path.resolve(this.settings.tempPath, './settings_backup.json'),
-                        'utf8',
-                    ),
-                )
-                this.mergeSettings(newSettings)
-                logger.info('init', '配置项错误，请检查1')
-            }
-        } catch (error) {
-            //初始化settings.json
-            try {
-                //建立临时文件夹，用于复制外挂字幕
-                try {
-                    fs.mkdirSync('./temp')
-                } catch (error) {}
-                this.check()
-                fs.writeFileSync(
-                    path.resolve(this.settingsPath),
-                    JSON.stringify(this.settings, null, '\t'),
-                )
-                logger.debug('init', '已写入默认配置', this.settings)
-            } catch (error) {}
-        }
+            fs.mkdirSync('./temp')
+        } catch (error) {}
+        try {
+            this.check()
+        } catch (error) {}
         return this
     }
     public check(): this {
         this.setFFmpeg()
         this.setProxySettings()
         this.readLibraryIndex()
-        this.mergeSettings({})
-        return this
-    }
-
-    public mergeSettings(newSettings: object): this {
-        Object.assign(this.settings, newSettings)
-        for (const key in this.settings) {
-            this.settingsList[key].value = this.settings[key]
-        }
         return this
     }
 
     private setFFmpeg(): boolean {
         try {
+            const ffmpegPath = settings.get('ffmpegPath')
             //根据设置路径检查
-            if (this.settings.ffmpegPath) {
-                logger.debug(this.settings.ffmpegPath)
-                fs.accessSync(path.resolve(this.settings.ffmpegPath, 'ffmpeg' + this.ffmpegSuffix))
+            if (ffmpegPath) {
+                logger.debug(ffmpegPath)
+                fs.accessSync(path.resolve(ffmpegPath, 'ffmpeg' + this.ffmpegSuffix))
                 logger.info('init setFFmpeg', '已找到ffmpeg')
             } else {
                 //未设置则检查默认位置
@@ -269,34 +96,28 @@ class Init {
                             ? './thirdParty/win'
                             : path.resolve('./resources/thirdParty/win')
                     fs.accessSync(path.resolve(defaultFFmpegPath, 'ffmpeg.exe'))
-                    this.settings.ffmpegPath = defaultFFmpegPath
+                    settings.set('ffmpegPath', defaultFFmpegPath)
                     logger.info('init setFFmpeg win', '已在默认位置找到ffmpeg')
                 } else if (this.osPlatform == 'lin') {
                     defaultFFmpegPath = path.resolve('/usr/share/jellyfin-ffmpeg/')
                     fs.accessSync(path.resolve(defaultFFmpegPath, 'ffmpeg'))
-                    this.settings.ffmpegPath = defaultFFmpegPath
+                    settings.set('ffmpegPath', defaultFFmpegPath)
                     logger.info('init setFFmpeg lin', '已在默认位置找到ffmpeg')
                 }
             }
             //应用检查到的路径
             try {
-                this.Ffmpeg.setFfmpegPath(
-                    path.resolve(this.settings.ffmpegPath, `ffmpeg${this.ffmpegSuffix}`),
-                )
-                this.Ffmpeg.setFfprobePath(
-                    path.resolve(this.settings.ffmpegPath, `ffprobe${this.ffmpegSuffix}`),
-                )
-                logger.info(
-                    'init',
-                    path.resolve(this.settings.ffmpegPath, `ffmpeg${this.ffmpegSuffix}`),
-                )
+                const ffmpegPath = settings.get('ffmpegPath')
+                this.Ffmpeg.setFfmpegPath(path.resolve(ffmpegPath, `ffmpeg${this.ffmpegSuffix}`))
+                this.Ffmpeg.setFfprobePath(path.resolve(ffmpegPath, `ffprobe${this.ffmpegSuffix}`))
+                logger.info('init', path.resolve(ffmpegPath, `ffmpeg${this.ffmpegSuffix}`))
             } catch (error) {
                 logger.info('init', 'ffmpeg路径错误，请检查2')
                 return false
             }
             return true
         } catch (error) {
-            this.settings.ffmpegPath = ''
+            settings.set('ffmpegPath', '')
             logger.error('init ffmpeg', '未找到ffmpeg', path.resolve('.'))
             return false
         }
@@ -307,14 +128,14 @@ class Init {
      */
     public setProxySettings() {
         this.proxySettings = {
-            target: this.settings.qbHost,
+            target: settings.get('qbHost'),
             changeOrigin: false,
-            secure: this.settings.secure,
+            secure: settings.get('secure'),
             ssl: {},
         }
         try {
-            this.proxySettings.ssl.cert = fs.readFileSync(this.settings.cert, 'utf8')
-            this.proxySettings.ssl.key = fs.readFileSync(this.settings.key, 'utf8')
+            this.proxySettings.ssl.cert = fs.readFileSync(settings.get('cert'), 'utf8')
+            this.proxySettings.ssl.key = fs.readFileSync(settings.get('key'), 'utf8')
         } catch (error) {
             logger.error('error ssl', error)
         }

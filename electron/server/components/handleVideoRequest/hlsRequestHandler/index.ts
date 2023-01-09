@@ -1,6 +1,5 @@
 import { logger } from '@s/utils/logger'
-import init from '@s/utils/init'
-const { settings } = init
+import  settings  from '@s/store/settings'
 import { rimraf } from '@s/utils'
 import { mkdir, stat } from 'fs/promises'
 import path from 'path'
@@ -49,7 +48,7 @@ class HlsRequestHandler {
                         )
                         tryTimes = 0
                         res.sendFile(
-                            path.resolve(settings.tempPath, 'output', targetSegment + '.ts'),
+                            path.resolve(settings.get('tempPath'), 'output', targetSegment + '.ts'),
                         )
                         return
                     } else {
@@ -66,7 +65,7 @@ class HlsRequestHandler {
             // }
             if (req.path == '/index.m3u8') {
                 res.header('Content-Type', 'application/x-mpegURL')
-                res.sendFile(path.resolve(settings.tempPath, 'output', 'index.m3u8'))
+                res.sendFile(path.resolve(settings.get('tempPath'), 'output', 'index.m3u8'))
                 return
             } else {
                 //处理跳转，如果所有人都把视频从头看到尾，就没它什么事了...
@@ -177,13 +176,13 @@ class HlsRequestHandler {
             logger.debug('hlsRequestHandler /api/localFile/clearVideoTemp', 'start')
             await _this.HlsProcessController.killCurrentProcess()
             await new Promise((resolve, reject) => {
-                rimraf(path.resolve(settings.tempPath, 'output'), async (err) => {
+                rimraf(path.resolve(settings.get('tempPath'), 'output'), async (err) => {
                     if (err) {
                         reject()
                     } else resolve(null)
                 })
             })
-            await mkdir(path.resolve(settings.tempPath, 'output'))
+            await mkdir(path.resolve(settings.get('tempPath'), 'output'))
             logger.info('hlsRequestHandler /api/localFile/clearVideoTemp', 'clear')
             res.send('Ok.')
         } catch (error) {

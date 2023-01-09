@@ -2,7 +2,8 @@ import { logger, transcodeLogger } from '@s/utils/logger'
 import { access } from 'fs/promises'
 import path from 'path'
 import init from '@s/utils/init'
-const { settings, ffmpegSuffix } = init
+const { ffmpegSuffix } = init
+import  settings  from '@s/store/settings'
 import kill from 'tree-kill'
 import { spawn } from 'child_process'
 import { debounce } from 'lodash'
@@ -37,11 +38,11 @@ class hlsProcessController {
                 'hlsProcessController',
                 'generateHlsProcess 2',
                 'ffmpegPath',
-                path.resolve(settings.ffmpegPath, `ffmpeg${ffmpegSuffix}`),
+                path.resolve(settings.get('ffmpegPath'), `ffmpeg${ffmpegSuffix}`),
             )
             const ffmpeg = spawn(
-                settings.ffmpegPath
-                    ? `"${path.resolve(settings.ffmpegPath, `ffmpeg${ffmpegSuffix}`)}"`
+                settings.get('ffmpegPath')
+                    ? `"${path.resolve(settings.get('ffmpegPath'), `ffmpeg${ffmpegSuffix}`)}"`
                     : 'ffmpeg',
                 params,
                 { shell: true },
@@ -80,7 +81,7 @@ class hlsProcessController {
                             try {
                                 fs.accessSync(
                                     path.resolve(
-                                        settings.tempPath,
+                                        settings.get('tempPath'),
                                         'output',
                                         `${lastWriteSegment}.ts`,
                                     ),

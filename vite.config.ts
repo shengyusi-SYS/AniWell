@@ -39,11 +39,10 @@ export default defineConfig({
                         minify: isBuild,
                         outDir: 'dist-electron/main',
                         rollupOptions: {
-                            external: Object.keys(pkg.dependencies),
-                            // .filter((name) => {
-                            //     const pureEsm = ['file-type']
-                            //     return !pureEsm.includes(name)
-                            // }),
+                            external: Object.keys(pkg.dependencies).filter((name) => {
+                                const pureEsm = ['env-paths']
+                                return !pureEsm.includes(name)
+                            }),
                         },
                     },
                     resolve: {

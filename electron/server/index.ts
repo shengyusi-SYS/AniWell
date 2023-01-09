@@ -3,7 +3,8 @@ import fs from 'fs'
 import path from 'path'
 import { readFile, writeFile } from 'fs/promises'
 import init from './utils/init'
-const { settings, settingsList, proxySettings, libraryIndex } = init
+const { proxySettings, libraryIndex } = init
+import  settings  from '@s/store/settings'
 import { generatePictureUrl, searchLeaf, deepMerge, Tree } from './utils'
 import got from 'got'
 import cookieParser from 'cookie-parser'
@@ -125,7 +126,7 @@ app.use('/api', (req, res, next) => {
             } else if (SID != newSID) {
                 checkCookie = true
                 SID = newSID
-                cookieJar.setCookieSync(`SID=${newSID}`, settings.qbHost)
+                cookieJar.setCookieSync(`SID=${newSID}`, settings.get('qbHost'))
             }
             next()
         }
@@ -141,7 +142,7 @@ app.use('/api', (req, res, next) => {
 app.use('/api/localFile', async (req, res, next) => {
     try {
         res.header('Access-Control-Allow-Origin', '*')
-        if (settings.share && /^\/localFile\/output\//i.test(req.path)) {
+        if (settings.get('share') && /^\/localFile\/output\//i.test(req.path)) {
             next()
             return
         }
@@ -149,7 +150,7 @@ app.use('/api/localFile', async (req, res, next) => {
             logger.info('/api/localFile', 'check')
             const result = (
                 await got({
-                    url: `${settings.qbHost}/api/v2/auth/login`,
+                    url: `${settings.get('qbHost')}/api/v2/auth/login`,
                     method: 'POST',
                     cookieJar,
                 })
@@ -179,7 +180,7 @@ app.use(router)
 
 //连接状态测试，返回服务器配置项
 app.use('/api/localFile/checkFileServer', (req, res) => {
-    res.send(settingsList)
+    res.send(settings.list)
 })
 //获取媒体库配置项
 app.use('/api/localFile/librarySettings', (req, res) => {
@@ -233,10 +234,9 @@ app.use('/api/localFile/updateDir', async (req, res) => {
 //更新配置项
 app.use('/api/localFile/changeFileServerSettings', async (req, res) => {
     const data: object = req.body
-    init.mergeSettings(data).check()
     try {
-        await writeFile(init.settingsPath, JSON.stringify(init.settings, null, '\t'))
-        logger.info('/api/localFile/changeFileServerSettings', '已更新配置', settings)
+        settings.update(data)
+        logger.info('/api/localFile/changeFileServerSettings', '已更新配置', settings.store)
         changeLevel()
         res.send('Ok.')
     } catch (error) {
@@ -314,12 +314,13 @@ app.use('/api/localFile/getFile', async (req, res, next) => {
             })
         } else if (fileType == 'video') {
             const params = {
-                ...{ //测试，待删
+                ...{
+                    //测试，待删
                     filePath,
                     suffix,
                     SID,
-                    bitrate: settings.bitrate * 1000000,
-                    autoBitrate: settings.autoBitrate,
+                    bitrate: settings.get('bitrate') * 1000000,
+                    autoBitrate: settings.get('autoBitrate'),
                     resolution: '1080p',
                     method: '', //测试，待删
                 }, //测试，待删
@@ -350,7 +351,7 @@ app.use('/api/localFile/getFile', async (req, res, next) => {
 
 app.use('/api/v2/sync/maindata', async (req, res, next) => {
     got({
-        url: `${settings.qbHost}/api/v2/sync/maindata?rid=${req.query.rid}`,
+        url: `${settings.get('qbHost')}/api/v2/sync/maindata?rid=${req.query.rid}`,
         method: 'get',
         cookieJar,
     })
@@ -413,7 +414,7 @@ app.use('/api/v2/torrents/files', express.urlencoded({ extended: false }), (req,
     // form.append('hash', hash)
     let file
     got({
-        url: `${settings.qbHost}/api/v2/torrents/files`,
+        url: `${settings.get('qbHost')}/api/v2/torrents/files`,
         method: 'post',
         form: { hash: hash },
         cookieJar,
@@ -487,18 +488,18 @@ try {
 // })
 try {
     if (!(proxySettings.ssl.cert && proxySettings.ssl.key)) {
-        app.listen(settings.serverPort)
+        app.listen(settings.get('serverPort'))
         logger.info(
             'server start',
-            `HTTP Server is running on: http://localhost:${settings.serverPort}`,
+            `HTTP Server is running on: http://localhost:${settings.get('serverPort')}`,
         )
     } else {
         const httpsServer = https.createServer(proxySettings.ssl, app)
         // const io = require('socket.io')(httpsServer)
-        httpsServer.listen(settings.serverPort, () => {
+        httpsServer.listen(settings.get('serverPort'), () => {
             logger.info(
                 'server start',
-                `HTTPS Server is running on: https://localhost:${settings.serverPort}`,
+                `HTTPS Server is running on: https://localhost:${settings.get('serverPort')}`,
             )
         })
     }

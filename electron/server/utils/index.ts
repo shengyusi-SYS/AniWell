@@ -1,5 +1,4 @@
-import init from './init'
-const { settings } = init
+import  settings  from '@s/store/settings'
 import { logger, scrapeLogger } from './logger'
 import rimraf from 'rimraf'
 import { EventEmitter } from 'events'
@@ -39,7 +38,7 @@ function mediaContentType(name) {
 //解压同路径下的fonts压缩包到fontsDir
 async function extractFonts(packPath, fontsDir?: string) {
     if (!fontsDir) {
-        fontsDir = path.resolve(settings.tempPath, 'fonts')
+        fontsDir = path.resolve(settings.get('tempPath'), 'fonts')
     }
     logger.debug('utils extractFonts start', fontsDir)
     try {
