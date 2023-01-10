@@ -63,5 +63,5 @@ class DirectPlayHandler {
         }
     }
 }
-
-export const directPlayHandler = new DirectPlayHandler()
+const directPlayHandler = new DirectPlayHandler()
+export default directPlayHandler

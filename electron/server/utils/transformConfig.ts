@@ -4,6 +4,7 @@ interface ComplexCell {
     name: string
     value?: string | number | boolean
     radios?: object
+    private?: boolean
     cells?: ComplexCell[]
 }
 export interface Complex {
@@ -44,14 +45,31 @@ export class TransformConfig {
         }
         return output
     }
-    s2c(input: Simple, output: Complex | ComplexCell[] = this.complex) {
+    s2c(
+        input: Simple,
+        output: Complex | ComplexCell['cells'] = this.complex,
+        template?: ComplexCell,
+    ) {
         for (const key in input) {
             if (Object.prototype.hasOwnProperty.call(input, key)) {
                 const value = input[key]
                 if (typeof value === 'object') {
+                    //Simple类型的每一层代表Complex类型中的一个cellGroup
                     if (output instanceof Array) {
-                        this.s2c(value, output.find((v) => v.name === key).cells)
+                        //output为ComplexCell[],递归时使用
+                        const exist = output.find((v) => v.name === key) //处理差异
+                        if (exist) {
+                            this.s2c(value, output.find((v) => v.name === key).cells)
+                        } else {
+                            if (!template) {
+                                template = JSON.parse(JSON.stringify(output[0]))
+                            }
+                            template.name = key
+                            output.push(template)
+                            this.s2c(value, template.cells)
+                        }
                     } else {
+                        //output为Complex，最外层使用
                         this.s2c(value, output[key].cells)
                     }
                 } else {

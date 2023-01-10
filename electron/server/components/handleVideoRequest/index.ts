@@ -4,9 +4,9 @@ import path from 'path'
 import getVideoInfo from './getVideoInfo'
 import handleSubtitles from './handleSubtitles'
 import selectMethod from './selectMethod'
-import { hlsRequestHandler } from './hlsRequestHandler'
+import hlsRequestHandler from './hlsRequestHandler'
 import handleTranscode from './handleTranscode'
-import { directPlayHandler } from './directPlayHandler'
+import directPlayHandler from './directPlayHandler'
 import handleFonts from './handleFonts'
 let lastHlsProcessController
 let lastHandler

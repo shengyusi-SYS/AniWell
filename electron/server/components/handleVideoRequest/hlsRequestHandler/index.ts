@@ -1,5 +1,5 @@
 import { logger } from '@s/utils/logger'
-import  settings  from '@s/store/settings'
+import settings from '@s/store/settings'
 import { rimraf } from '@s/utils'
 import { mkdir, stat } from 'fs/promises'
 import path from 'path'
@@ -193,5 +193,5 @@ class HlsRequestHandler {
         res.send('Ok.')
     }
 }
-
-export const hlsRequestHandler = new HlsRequestHandler()
+const hlsRequestHandler = new HlsRequestHandler()
+export default hlsRequestHandler

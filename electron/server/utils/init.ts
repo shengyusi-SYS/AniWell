@@ -7,7 +7,20 @@ import gpus from './getGPU'
 import paths from './envPath'
 import settings from '@s/store/settings'
 import { librarySettings, librarySettingsTransformer } from '@s/store/librarySettings'
-
+import { users } from '@s/store/users'
+// users.store.clear()
+// users.modify({
+//     admin: {
+//         password: 'gerer',
+//         alias: 'aaa',
+//         salt: 'ffff',
+//         access: {
+//             admin: false,
+//         },
+//     },
+// })
+// users.store.clear()
+// console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!', JSON.stringify(users.data(), null, '\t'))
 class Init {
     public libraryIndexPath = path.resolve(paths.data, 'libraryIndex.json')
     public librarySettingsPath = path.resolve(paths.data, 'librarySettings.json')

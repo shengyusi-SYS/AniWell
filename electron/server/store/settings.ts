@@ -1,10 +1,10 @@
 import path from 'path'
-import gpus from '@s/utils/getGPU'
 import paths from '@s/utils/envPath'
 import Store from 'electron-store'
 import { TransformConfig, Simple, Complex } from '@s/utils/transformConfig'
+import gpus from '@s/utils/getGPU'
 
-interface settings extends Simple {
+interface SettingsData extends Simple {
     qbHost: string
     serverPort: string
     tempPath: string
@@ -96,23 +96,25 @@ const settingsList: Complex = {
 }
 import init from '@s/utils/init'
 class Settings {
-    public store: Store<settings>
+    public store: Store<SettingsData>
     public transformer: TransformConfig
+    readonly data: SettingsData
     constructor() {
         this.transformer = new TransformConfig(settingsList)
-        const defaults = JSON.parse(JSON.stringify(this.transformer.simple)) as unknown as settings
+        const defaults = JSON.parse(
+            JSON.stringify(this.transformer.simple),
+        ) as unknown as SettingsData
         this.store = new Store({
             name: 'settings',
             cwd: paths.config,
             defaults,
         })
+        this.data = this.store.store
     }
     /**
      * get
      */
     public get(target: string): any {
-        console.log('!~~~~~~~~~~~~~~~~~~~~~~~~~~~~', this.store.debug)
-
         return this.store.get(target)
     }
     /**

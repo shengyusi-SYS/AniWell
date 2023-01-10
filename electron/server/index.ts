@@ -1,10 +1,13 @@
 import { log4js, logger, changeLevel } from './utils/logger'
+process.on('uncaughtException', function (err) {
+    logger.error('Caught exception ', err)
+})
 import fs from 'fs'
 import path from 'path'
 import { readFile, writeFile } from 'fs/promises'
 import init from './utils/init'
 const { proxySettings, libraryIndex } = init
-import  settings  from '@s/store/settings'
+import settings from '@s/store/settings'
 import { generatePictureUrl, searchLeaf, deepMerge, Tree } from './utils'
 import got from 'got'
 import cookieParser from 'cookie-parser'
@@ -24,7 +27,7 @@ import {
 import { initMediaLibrary, cleanLibrary, MediaLeaf } from './components/mediaLibrary'
 import dandanplayScraper from './components/mediaLibrary/dandanplayScraper'
 // import moduleName from 'socket.io';
-import router from '@s/routes'
+import router from '@s/apis'
 
 let SID: string
 let cookieTimer: NodeJS.Timeout
@@ -33,9 +36,6 @@ const maindataCache: { torrents: object } = { torrents: {} }
 let videoHandler
 const bannedSIDs: string[] = []
 
-process.on('uncaughtException', function (err) {
-    logger.error('Caught exception ', err)
-})
 // const specialCharacter = ['\\', '$', '(', ')', '*', '+', '.', '[', '?', '^', '{', '|']
 
 // function initMaindata(params) {
@@ -176,11 +176,11 @@ app.use('/api/localFile', async (req, res, next) => {
     }
 })
 
-app.use(router)
+app.use('/api/localFile', router)
 
 //连接状态测试，返回服务器配置项
 app.use('/api/localFile/checkFileServer', (req, res) => {
-    res.send(settings.list)
+    res.send(settings.list())
 })
 //获取媒体库配置项
 app.use('/api/localFile/librarySettings', (req, res) => {
@@ -344,10 +344,6 @@ app.use('/api/localFile/getFile', async (req, res, next) => {
         next()
     }
 })
-
-// app.use("/", (req,res,next)=>{
-
-// });
 
 app.use('/api/v2/sync/maindata', async (req, res, next) => {
     got({
