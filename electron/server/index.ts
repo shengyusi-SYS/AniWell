@@ -19,15 +19,12 @@ const cookieJar = new CookieJar()
 import history from 'connect-history-api-fallback'
 import proxyMw from 'http-proxy-middleware'
 const proxy = proxyMw.createProxyMiddleware
-import handleVideoRequest from './components/handleVideoRequest'
-import {
-    librarySettingsList,
-    updateLibrarySettings,
-} from './components/mediaLibrary/librarySettings'
-import { initMediaLibrary, cleanLibrary, MediaLeaf } from './components/mediaLibrary'
-import dandanplayScraper from './components/mediaLibrary/dandanplayScraper'
+import handleVideoRequest from './modules/handleVideoRequest'
+import { librarySettingsList, updateLibrarySettings } from './modules/mediaLibrary/librarySettings'
+import { initMediaLibrary, cleanLibrary, MediaLeaf } from './modules/mediaLibrary'
+import dandanplayScraper from './modules/mediaLibrary/dandanplayScraper'
 // import moduleName from 'socket.io';
-import router from '@s/apis'
+import router from '@s/api'
 
 let SID: string
 let cookieTimer: NodeJS.Timeout
@@ -97,6 +94,7 @@ const bannedSIDs: string[] = []
 
 app.use(log4js.connectLogger(log4js.getLogger('http'), { level: 'trace' }))
 app.use(express.json())
+app.use(express.urlencoded({ extended: false }))
 app.use(cookieParser())
 // test
 // app.use('/test', (req, res) => {})
@@ -105,7 +103,11 @@ app.use(cookieParser())
 app.use('/api', (req, res, next) => {
     // logger.debug('/api',req.path);
     try {
-        if (req.path == '/v2/auth/login' || /^\/localFile\/output\//i.test(req.path)) {
+        if (
+            req.path == '/v2/auth/login' ||
+            req.path == '/localFile/users/login' ||
+            /^\/localFile\/output\//i.test(req.path)
+        ) {
             // logger.debug('/v2/auth/login', req.headers)
             next()
         } else if (!req.cookies && !req.query.cookie) {
@@ -143,6 +145,10 @@ app.use('/api/localFile', async (req, res, next) => {
     try {
         res.header('Access-Control-Allow-Origin', '*')
         if (settings.get('share') && /^\/localFile\/output\//i.test(req.path)) {
+            next()
+            return
+        }
+        if (req.path === '/users/login') {
             next()
             return
         }
@@ -404,7 +410,7 @@ app.use('/api/v2/sync/maindata', async (req, res, next) => {
 //         })
 //     }
 // }));
-app.use('/api/v2/torrents/files', express.urlencoded({ extended: false }), (req, res, next) => {
+app.use('/api/v2/torrents/files', (req, res, next) => {
     const hash = req.body.hash
     // let form = new FormData()
     // form.append('hash', hash)

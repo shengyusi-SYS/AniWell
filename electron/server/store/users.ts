@@ -88,6 +88,12 @@ class Users {
         return this.store.store
     }
     /**
+     * getUser
+     */
+    public getUser(userName: string): UsersData['users']['userName'] {
+        return this.get('users.' + userName)
+    }
+    /**
      * update
      */
     public update(newSettings: Simple): this {
@@ -133,6 +139,15 @@ class Users {
      */
     public isAdmin(userName: string) {
         return this.checkAccess(userName, 'admin') === true
+    }
+    /**
+     * verify
+     */
+    public verify(userName: string, password: string) {
+        let salt: string
+        try {
+            salt = this.getUser(userName).salt
+        } catch (error) {}
     }
 }
 

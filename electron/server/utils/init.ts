@@ -8,6 +8,7 @@ import paths from './envPath'
 import settings from '@s/store/settings'
 import { librarySettings, librarySettingsTransformer } from '@s/store/librarySettings'
 import { users } from '@s/store/users'
+import pkg from '../../../package.json'
 // users.store.clear()
 // users.modify({
 //     admin: {
@@ -54,6 +55,9 @@ class Init {
 
     public inited = false
 
+    public appName = pkg.name
+
+    public version = pkg.version
     constructor() {
         try {
             fs.mkdirSync(paths.data)
