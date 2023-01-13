@@ -105,7 +105,7 @@ app.use('/api', (req, res, next) => {
     try {
         if (
             req.path == '/v2/auth/login' ||
-            req.path == '/localFile/users/login' ||
+            req.path.includes('/localFile/users/login') ||
             /^\/localFile\/output\//i.test(req.path)
         ) {
             // logger.debug('/v2/auth/login', req.headers)
@@ -148,7 +148,7 @@ app.use('/api/localFile', async (req, res, next) => {
             next()
             return
         }
-        if (req.path === '/users/login') {
+        if (req.path.includes('/users/login')) {
             next()
             return
         }

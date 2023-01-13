@@ -9,7 +9,7 @@ import { sign, verify } from '@s/utils/jwt'
 //会随新ui换成多级路由
 
 router.use('/', async (req, res, next) => {
-    if (req.path === '/users/login') {
+    if (req.path.includes('/users/login')) {
         next()
     } else {
         try {

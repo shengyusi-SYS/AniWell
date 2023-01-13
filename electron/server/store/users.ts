@@ -2,18 +2,22 @@ import path from 'path'
 import paths from '@s/utils/envPath'
 import Store from 'electron-store'
 import { TransformConfig, Simple, Complex } from '@s/utils/transformConfig'
+import bcrypt from 'bcrypt'
 export interface UsersData extends Simple {
     users: {
         [userName: string]: {
+            userName?: string
             password: string
             alias: string
             salt: string
+            administrator: boolean
             access: {
                 [accessName: string]: boolean
             }
         }
     }
 }
+export type UserData = UsersData['users']['userName']
 const usersList: Complex = {
     users: {
         name: 'users',
@@ -37,7 +41,13 @@ const usersList: Complex = {
                     {
                         name: 'salt',
                         type: 'salt',
-                        value: '',
+                        value: 'salt',
+                        private: true,
+                    },
+                    {
+                        name: 'administrator',
+                        type: 'boolean',
+                        value: true,
                         private: true,
                     },
                     {
@@ -67,6 +77,20 @@ class Users {
             cwd: paths.config,
             defaults,
         })
+        try {
+            const defaultSalt = this.store.get('users.admin.salt')
+            const defaultPassword = this.store.get('users.admin.password')
+            let newSalt: string
+            if (defaultSalt === 'salt') {
+                newSalt = bcrypt.genSaltSync(10)
+                this.store.set('users.admin.salt', newSalt)
+            }
+            if (defaultPassword === 'adminUser') {
+                const passowrdHash = bcrypt.hashSync(defaultPassword, newSalt)
+                const savedPassword = bcrypt.hashSync(passowrdHash, 10)
+                this.store.set('users.admin.password', savedPassword)
+            }
+        } catch (error) {}
     }
     /**
      * get
@@ -92,6 +116,13 @@ class Users {
      */
     public getUser(userName: string): UsersData['users']['userName'] {
         return this.get('users.' + userName)
+    }
+    /**
+     * addUser
+     */
+    public addUser(userName: string, userData: UserData): this {
+        this.set('users.' + userName, userData)
+        return this
     }
     /**
      * update
@@ -143,11 +174,16 @@ class Users {
     /**
      * verify
      */
-    public verify(userName: string, password: string) {
-        let salt: string
+    public async verify(userName: string, passwordHash: string) {
+        if (!userName || !passwordHash) {
+            return false
+        }
         try {
-            salt = this.getUser(userName).salt
-        } catch (error) {}
+            const savedPasswordHash = this.getUser(userName).password
+            return await bcrypt.compare(passwordHash, savedPasswordHash)
+        } catch (error) {
+            return false
+        }
     }
 }
 
