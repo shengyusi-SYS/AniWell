@@ -4,6 +4,7 @@ import login from './login'
 import multer from 'multer'
 const upload = multer()
 import { UserData, users } from '@s/store/users'
+import { v4 as uuidv4 } from 'uuid'
 
 router.use('/modify', async (req, res, next) => {
     console.log(req)
@@ -27,6 +28,7 @@ router.post('/signup', upload.none(), async (req, res, next) => {
         //TODO：验证添加用户的权限
         try {
             users.addUser(userName, {
+                UID: uuidv4(),
                 password,
                 alias,
                 salt,

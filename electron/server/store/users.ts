@@ -3,10 +3,12 @@ import paths from '@s/utils/envPath'
 import Store from 'electron-store'
 import { TransformConfig, Simple, Complex } from '@s/utils/transformConfig'
 import bcrypt from 'bcrypt'
+import { v4 as uuidv4 } from 'uuid'
 export interface UsersData extends Simple {
     users: {
         [userName: string]: {
             userName?: string
+            UID: string
             password: string
             alias: string
             salt: string
@@ -27,6 +29,11 @@ const usersList: Complex = {
                 name: 'admin',
                 type: 'cellGroup',
                 cells: [
+                    {
+                        name: 'UID',
+                        type: 'UID',
+                        value: 'UID',
+                    },
                     {
                         name: 'password',
                         type: 'password',
@@ -80,6 +87,7 @@ class Users {
         try {
             const defaultSalt = this.store.get('users.admin.salt')
             const defaultPassword = this.store.get('users.admin.password')
+            const defaultUID = this.store.get('users.admin.UID')
             let newSalt: string
             if (defaultSalt === 'salt') {
                 newSalt = bcrypt.genSaltSync(10)
@@ -89,6 +97,9 @@ class Users {
                 const passowrdHash = bcrypt.hashSync(defaultPassword, newSalt)
                 const savedPassword = bcrypt.hashSync(passowrdHash, 10)
                 this.store.set('users.admin.password', savedPassword)
+            }
+            if (defaultUID === 'UID') {
+                this.store.set('users.admin.UID', uuidv4())
             }
         } catch (error) {}
     }
@@ -114,8 +125,20 @@ class Users {
     /**
      * getUser
      */
-    public getUser(userName: string): UsersData['users']['userName'] {
-        return this.get('users.' + userName)
+    public getUser({ userName, UID }): UsersData['users']['userName'] {
+        if (UID) {
+            const users: UsersData['users'] = this.get('users')
+            for (const key in users) {
+                if (Object.prototype.hasOwnProperty.call(users, key)) {
+                    const userData = users[key]
+                    if (userData.UID === UID) {
+                        return userData
+                    }
+                }
+            }
+        }
+        const userData: UsersData['users']['userName'] = this.get('users.' + userName)
+        return userData
     }
     /**
      * addUser
