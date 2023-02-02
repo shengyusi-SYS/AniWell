@@ -2,24 +2,26 @@ import path from 'path'
 import paths from '@s/utils/envPath'
 import Store from 'electron-store'
 import { TransformConfig, Simple, Complex } from '@s/utils/transformConfig'
-import bcrypt from 'bcrypt'
 import { v4 as uuidv4 } from 'uuid'
+import bcrypt from 'bcryptjs'
+import bannedToken from '@s/store/bannedToken'
+
 export interface UsersData extends Simple {
     users: {
-        [userName: string]: {
-            userName?: string
-            UID: string
+        [username: string]: {
+            username: string
+            UID?: string
             password: string
-            alias: string
+            alias?: string
             salt: string
-            administrator: boolean
-            access: {
+            administrator?: boolean
+            access?: {
                 [accessName: string]: boolean
             }
         }
     }
 }
-export type UserData = UsersData['users']['userName']
+export type UserData = UsersData['users']['username']
 const usersList: Complex = {
     users: {
         name: 'users',
@@ -62,7 +64,7 @@ const usersList: Complex = {
                         type: 'cellGroup',
                         cells: [
                             {
-                                name: 'admin',
+                                name: 'test',
                                 type: 'access',
                                 value: true,
                             },
@@ -73,9 +75,14 @@ const usersList: Complex = {
         ],
     },
 }
+interface UserInfo {
+    username?: string
+    UID?: string
+}
 class Users {
     public store: Store<UsersData>
     public transformer: TransformConfig
+    public first: boolean
     constructor() {
         this.transformer = new TransformConfig(usersList)
         const defaults = JSON.parse(JSON.stringify(this.transformer.simple)) as unknown as UsersData
@@ -89,18 +96,25 @@ class Users {
             const defaultPassword = this.store.get('users.admin.password')
             const defaultUID = this.store.get('users.admin.UID')
             let newSalt: string
+            let count = 0
             if (defaultSalt === 'salt') {
                 newSalt = bcrypt.genSaltSync(10)
                 this.store.set('users.admin.salt', newSalt)
+                count++
             }
             if (defaultPassword === 'adminUser') {
-                const passowrdHash = bcrypt.hashSync(defaultPassword, newSalt)
-                const savedPassword = bcrypt.hashSync(passowrdHash, 10)
+                const passwordHash = bcrypt.hashSync(defaultPassword, newSalt)
+                const savedPassword = bcrypt.hashSync(passwordHash, 10)
                 this.store.set('users.admin.password', savedPassword)
+                count++
             }
             if (defaultUID === 'UID') {
                 this.store.set('users.admin.UID', uuidv4())
+                count++
             }
+            this.first = count === 3
+
+            this.first = true //to del
         } catch (error) {}
     }
     /**
@@ -125,26 +139,41 @@ class Users {
     /**
      * getUser
      */
-    public getUser({ userName, UID }): UsersData['users']['userName'] {
-        if (UID) {
-            const users: UsersData['users'] = this.get('users')
-            for (const key in users) {
-                if (Object.prototype.hasOwnProperty.call(users, key)) {
-                    const userData = users[key]
-                    if (userData.UID === UID) {
-                        return userData
+    public getUser(userInfo: UserInfo): UsersData['users']['username'] | false {
+        try {
+            const { username, UID } = userInfo
+            if (UID) {
+                const users: UsersData['users'] = this.get('users')
+                for (const key in users) {
+                    if (Object.prototype.hasOwnProperty.call(users, key)) {
+                        const userData = users[key]
+                        if (userData.UID === UID) {
+                            return userData
+                        }
                     }
                 }
             }
+            const userData: UsersData['users']['username'] = this.get('users.' + username)
+            return userData
+        } catch (error) {
+            return false
         }
-        const userData: UsersData['users']['userName'] = this.get('users.' + userName)
+    }
+    /**
+     * newUser
+     */
+    public newUserData(userData: UserData, isAdmin = false) {
+        typeof userData.UID !== 'undefined' ? null : (userData.UID = uuidv4())
+        typeof userData.alias !== 'undefined' ? null : (userData.alias = userData.username)
+        typeof userData.administrator !== 'undefined' ? null : (userData.administrator = isAdmin)
+        typeof userData.access !== 'undefined' ? null : (userData.access = { admin: isAdmin })
         return userData
     }
     /**
      * addUser
      */
-    public addUser(userName: string, userData: UserData): this {
-        this.set('users.' + userName, userData)
+    public addUser(userData: UserData): this {
+        this.set('users.' + userData.username, userData)
         return this
     }
     /**
@@ -174,39 +203,37 @@ class Users {
      * add
      */
     public modify(users: UsersData['users']): this {
-        for (const userName in users) {
-            if (Object.prototype.hasOwnProperty.call(users, userName)) {
-                const user = users[userName]
-                this.store.set('users.' + userName, user)
+        for (const username in users) {
+            if (Object.prototype.hasOwnProperty.call(users, username)) {
+                const user = users[username]
+                this.store.set('users.' + username, user)
             }
         }
         return this
     }
     /**
-     * checkAccess
-     */
-    public checkAccess(userName: string, accessName: string): boolean {
-        return this.store.get(`users.${userName}.access.${accessName}`) === true
-    }
-    /**
-     * isAdmin
-     */
-    public isAdmin(userName: string) {
-        return this.checkAccess(userName, 'admin') === true
-    }
-    /**
      * verify
      */
-    public async verify(userName: string, passwordHash: string) {
-        if (!userName || !passwordHash) {
+    public async verify(username: string, passwordHash: string) {
+        if (!username || !passwordHash) {
             return false
         }
-        try {
-            const savedPasswordHash = this.getUser(userName).password
+        const user = this.getUser({ username })
+        if (user === false) {
+            return false
+        } else {
+            const savedPasswordHash = user.password
             return await bcrypt.compare(passwordHash, savedPasswordHash)
-        } catch (error) {
-            return false
         }
+    }
+    /**
+     * firstSignUp
+     */
+    public async firstSignUp(userData: UserData) {
+        this.store.delete('users.admin')
+        userData.password = await bcrypt.hash(userData.password, 10)
+        this.addUser(this.newUserData(userData, true))
+        return this
     }
 }
 

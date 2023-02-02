@@ -1,4 +1,10 @@
-import { readFileSync, rmSync, writeFileSync } from 'fs'
+// import * as conifg from './vite.config'
+// import { defineConfig } from 'vite'
+// import { deepMerge } from './electron/server/utils'
+// const con = deepMerge({}, conifg.config)
+// con.plugins.splice(conifg.config.plugins.length - 1, 1)
+// export default defineConfig(con)
+import { rmSync, writeFileSync } from 'fs'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import electron from 'vite-plugin-electron'
@@ -19,11 +25,6 @@ const sourcemap = !!process.env.VSCODE_DEBUG
 const isBuild = process.argv.slice(2).includes('build')
 // import eslintPlugin from 'vite-plugin-eslint/'
 // https://vitejs.dev/config/
-let proxyPort = 9009
-try {
-    proxyPort = +JSON.parse(readFileSync('./dev/Config/settings.json', 'utf8')).serverPort + 1
-} catch (error) {}
-
 export const config = {
     plugins: [
         vue(),
@@ -50,57 +51,6 @@ export const config = {
         Icons({
             autoInstall: true,
         }),
-        electron([
-            {
-                // Main-Process entry file of the Electron App.
-                entry: 'electron/main/index.ts',
-                onstart(options) {
-                    if (process.env.VSCODE_DEBUG) {
-                        console.log(/* For `.vscode/.debug.script.mjs` */ '[startup] Electron App')
-                    } else {
-                        options.startup()
-                    }
-                },
-                vite: {
-                    build: {
-                        sourcemap,
-                        minify: isBuild,
-                        outDir: 'dist-electron/main',
-                        rollupOptions: {
-                            external: Object.keys(pkg.dependencies).filter((name) => {
-                                const pureEsm = ['env-paths']
-                                return !pureEsm.includes(name)
-                            }),
-                        },
-                    },
-                    resolve: {
-                        alias: {
-                            '@s': path.resolve(__dirname, './electron/server'),
-                        },
-                        conditions: [],
-                    },
-                    base: './',
-                },
-            },
-            {
-                entry: 'electron/preload/index.ts',
-                onstart(options) {
-                    // Notify the Renderer-Process to reload the page when the Preload-Scripts build is complete,
-                    // instead of restarting the entire Electron App.
-                    options.reload()
-                },
-                vite: {
-                    build: {
-                        sourcemap,
-                        minify: isBuild,
-                        outDir: 'dist-electron/preload',
-                        rollupOptions: {
-                            external: Object.keys(pkg.dependencies),
-                        },
-                    },
-                },
-            },
-        ]),
     ],
     resolve: {
         alias: {
@@ -138,15 +88,7 @@ export const config = {
                   port: +url.port,
               }
           })()
-        : {
-              port: 5566,
-              proxy: {
-                  '/api': {
-                      target: 'http://localhost:' + proxyPort,
-                      changeOrigin: true,
-                  },
-              },
-          },
+        : undefined,
     clearScreen: false,
 }
 export default defineConfig(config)

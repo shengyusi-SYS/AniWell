@@ -51,13 +51,15 @@ class Init {
 
     public gpus = gpus
 
-    public signUp = false
+    // public signUp = false
 
     public inited = false
 
     public appName = pkg.name
 
     public version = pkg.version
+
+    // public devServer = pkg.debug.env.VITE_DEV_SERVER_URL
     constructor() {
         try {
             fs.mkdirSync(paths.data)
@@ -75,11 +77,11 @@ class Init {
      */
     public init(): this {
         this.inited = true
-        try {
-            accessSync(path.resolve(paths.data, 'user.json'))
-        } catch (error) {
-            this.signUp = true
-        }
+        // try {
+        //     accessSync(path.resolve(paths.data, 'user.json'))
+        // } catch (error) {
+        //     this.signUp = true
+        // }
         //建立临时文件夹，用于复制外挂字幕
         try {
             fs.mkdirSync('./temp')

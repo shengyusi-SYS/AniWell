@@ -23,6 +23,8 @@ import { join, resolve } from 'path'
 import '../server'
 import { logger } from '@s/utils/logger'
 import init from '@s/utils/init'
+import { fstat, readFileSync } from 'fs'
+import { users } from '@s/store/users'
 // Disable GPU Acceleration for Windows 7
 if (release().startsWith('6.1')) app.disableHardwareAcceleration()
 
@@ -95,7 +97,7 @@ app.whenReady().then(async () => {
     theTray = Tray({ app, createWindow })
 
     //验证是否已注册
-    ipcMain.handle('signUp', () => init.signUp)
+    ipcMain.handle('signUp', () => users.first)
 
     ipcMain.on('test', async (event, data) => {
         console.log(data)

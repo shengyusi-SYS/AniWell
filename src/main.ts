@@ -3,13 +3,8 @@ import App from './App.vue'
 import ElementPlus from 'element-plus'
 import 'element-plus/theme-chalk/display.css' //断点隐藏
 import { ConfigProvider } from 'vant'
-import * as VueRouter from 'vue-router'
-import routes from './routes'
+import router from './router'
 
-const router = VueRouter.createRouter({
-    history: VueRouter.createWebHistory(),
-    routes,
-})
 const app = createApp(App)
 app.config.errorHandler = (err, instance, info) => {
     console.log('globalError', err, instance, info)
@@ -18,7 +13,9 @@ app.config.errorHandler = (err, instance, info) => {
     //验证是否已注册
     // const res = await window.electronAPI.signUp()
     // app.config.globalProperties.signUp = res
-    app.provide('signUp', await window.electronAPI.signUp())
+    try {
+        app.provide('signUp', await window.electronAPI.signUp())
+    } catch (error) {}
 
     app.use(ElementPlus, { size: 'small', zIndex: 3000 })
         .use(ConfigProvider)

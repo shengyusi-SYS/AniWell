@@ -1,33 +1,75 @@
+import { logger } from '@s/utils/logger'
 import express from 'express'
 const router = express.Router()
-import login from './login'
 import multer from 'multer'
 const upload = multer()
 import { UserData, users } from '@s/store/users'
 import { v4 as uuidv4 } from 'uuid'
+import { signAccessToken, signRefreshToken, verify } from '@s/utils/jwt'
+import bannedToken from '@s/store/bannedToken'
 
-router.use('/modify', async (req, res, next) => {
-    console.log(req)
-    res.send({})
+router.get('/salt', async (req, res, next) => {
+    const username = req.query?.username
+    if (typeof username === 'string') {
+        const user = users.getUser({ username })
+        if (user === false) {
+            res.status(404).json({ error: '用户名不存在' })
+        } else {
+            const salt = user.salt
+            res.json({ salt })
+        }
+    } else {
+        res.status(400).json({ error: '请求错误' })
+    }
 })
 
-router.use('/login', upload.none(), login)
+router.post('/login', upload.none(), async (req, res, next) => {
+    const { username, password } = req.body
+    if (typeof username === 'string' && typeof password === 'string') {
+        try {
+            const verify = await users.verify(username, password)
+            const user = users.getUser({ username })
+            if (verify === true && user) {
+                res.cookie('refreshToken', signRefreshToken(user), {
+                    maxAge: 1000 * 3600 * 24 * 30,
+                    httpOnly: true,
+                    secure: true,
+                })
+                    .cookie('accessToken', signAccessToken(user), {
+                        maxAge: 1000 * 60,
+                        httpOnly: true,
+                        secure: true,
+                    })
+                    .status(200)
+                    .end()
+                return
+            } else {
+                res.status(401).json({ error: '用户名或密码错误' })
+            }
+        } catch (error) {
+            res.status(401).json({ error: '用户名或密码错误' })
+        }
+    } else {
+        res.status(400).json({ error: '请求错误' })
+    }
+})
 
 router.post('/signup', upload.none(), async (req, res, next) => {
     const {
-        userName,
+        username,
         password,
         alias,
         salt,
         administrator = false,
         access = { admin: false },
     } = req.body as UserData
-    if (!userName || !password || !salt) {
+    if (!username || !password || !salt) {
         res.status(400).json({ error: '请求错误' })
     } else {
         //TODO：验证添加用户的权限
         try {
-            users.addUser(userName, {
+            users.addUser({
+                username,
                 UID: uuidv4(),
                 password,
                 alias,
@@ -36,9 +78,38 @@ router.post('/signup', upload.none(), async (req, res, next) => {
                 access,
             })
         } catch (error) {
-            res.status(500).json({ error: '服务器错误' })
+            logger.error('/signup', error)
+            res.status(500).json({ error: '/signup 服务器错误' })
         }
     }
 })
+if (users.first === true) {
+    router.post('/modify', async (req, res, next) => {
+        try {
+            const { username, password, salt } = req.body
+            const { refreshToken } = req.cookies
+            if (!username || !password || !salt) {
+                res.status(400).json({ error: '请求错误' })
+                return
+            }
+            await users.firstSignUp(req.body as UserData)
+            const user = users.getUser({ username })
+            if (user !== false) {
+                bannedToken.add(refreshToken)
+                res.cookie('refreshToken', signRefreshToken(user), {
+                    maxAge: 1000 * 3600 * 24 * 30,
+                    httpOnly: true,
+                    secure: true,
+                })
+                    .status(200)
+                    .end()
+            }
+            return
+        } catch (error) {
+            logger.error('/modify', error)
+            res.status(500).json({ error: '/modify 服务器错误' })
+        }
+    })
+}
 
 export default router
