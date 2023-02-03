@@ -83,31 +83,47 @@ router.post('/signup', upload.none(), async (req, res, next) => {
         }
     }
 })
+
+router.get('/first', (req, res) => {
+    if (users.first === true) {
+        res.status(200).end()
+    } else {
+        res.status(503).json({ error: '非初次使用' })
+    }
+})
+
 if (users.first === true) {
     router.post('/modify', async (req, res, next) => {
-        try {
-            const { username, password, salt } = req.body
-            const { refreshToken } = req.cookies
-            if (!username || !password || !salt) {
-                res.status(400).json({ error: '请求错误' })
+        if (users.first === true) {
+            try {
+                const { username, password, salt } = req.body
+                const { refreshToken } = req.cookies
+                if (!username || !password || !salt) {
+                    res.status(400).json({ error: '请求错误' })
+                    return
+                }
+
+                await users.firstSignUp(req.body as UserData)
+                const user = users.getUser({ username })
+                if (user !== false) {
+                    bannedToken.add(refreshToken)
+                    res.cookie('refreshToken', signRefreshToken(user), {
+                        maxAge: 1000 * 3600 * 24 * 30,
+                        httpOnly: true,
+                        secure: true,
+                    })
+                        .status(200)
+                        .end()
+                    users.first = false
+                    console.log(users.first)
+                }
                 return
+            } catch (error) {
+                logger.error('/modify', error)
+                res.status(500).json({ error: '/modify 服务器错误' })
             }
-            await users.firstSignUp(req.body as UserData)
-            const user = users.getUser({ username })
-            if (user !== false) {
-                bannedToken.add(refreshToken)
-                res.cookie('refreshToken', signRefreshToken(user), {
-                    maxAge: 1000 * 3600 * 24 * 30,
-                    httpOnly: true,
-                    secure: true,
-                })
-                    .status(200)
-                    .end()
-            }
-            return
-        } catch (error) {
-            logger.error('/modify', error)
-            res.status(500).json({ error: '/modify 服务器错误' })
+        } else {
+            res.status(500).json({ error: '已完成初始化' })
         }
     })
 }

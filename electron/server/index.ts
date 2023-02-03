@@ -1,11 +1,10 @@
-import { log4js, logger, changeLevel } from './utils/logger'
+import { log4js, httpLogger, logger, changeLevel } from './utils/logger'
 process.on('uncaughtException', function (err) {
     logger.error('Caught exception ', err)
 })
 import fs from 'fs'
 import path from 'path'
 import init from './utils/init'
-import { users } from '@s/store/users'
 const { proxySettings } = init
 import settings from '@s/store/settings'
 import cookieParser from 'cookie-parser'
@@ -18,21 +17,26 @@ const proxy = proxyMw.createProxyMiddleware
 // import moduleName from 'socket.io';
 import router from '@s/api'
 
-app.use(log4js.connectLogger(log4js.getLogger('http'), { level: 'trace' }))
+app.use(log4js.connectLogger(httpLogger, { level: 'trace' }))
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
 app.use(cookieParser())
 app.use(history())
-app.use('/api/v2', proxy(proxySettings))
+app.use('/api/old/v2', proxy(proxySettings))
 app.use('/api', router)
-let tt = true
-app.use('/index.html', (req, res, next) => {
-    if (users.first === true && tt) {
-        tt = false
-        res.redirect('/welcome')
-    }
+// let tt = true
+app.use((req, res, next) => {
+    console.log('~~~~~~~~~~~~~', req.path)
     next()
 })
+// app.use('/index.html', (req, res, next) => {
+//     console.log('wwwwwwwwwwwwwwwwwwww', users.first, tt)
+//     if (users.first === true && tt) {
+//         tt = false
+//         res.redirect('/welcome')
+//     }
+//     next()
+// })
 
 try {
     const oldwww = path.resolve(
@@ -82,7 +86,14 @@ try {
     } else {
         const httpsServer = https.createServer(proxySettings.ssl, app)
         // const io = require('socket.io')(httpsServer)
-        if (import.meta.env.DEV === true) app.listen(+settings.get('serverPort') + 1)
+        if (import.meta.env.DEV === true)
+            app.listen(+settings.get('serverPort') + 1, () => {
+                logger.info(
+                    `dev http server is running on: http://localhost:${
+                        +settings.get('serverPort') + 1
+                    }`,
+                )
+            })
         httpsServer.listen(settings.get('serverPort'), () => {
             logger.info(
                 'server start',

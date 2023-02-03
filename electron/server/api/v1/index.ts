@@ -8,7 +8,7 @@ import { users as usersStore } from '@s/store/users'
 //会随新ui换成多级路由
 
 router.use('/', async (req, res, next) => {
-    if (/^\/users\/(login|salt)/.test(req.path)) {
+    if (/^\/users\/(login|salt|first)/.test(req.path)) {
         next()
     } else {
         const { refreshToken, accessToken } = req.cookies

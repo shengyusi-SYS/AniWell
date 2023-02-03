@@ -5,7 +5,7 @@ const store = new Store({
     name: 'bannedToken',
     cwd: paths.cache,
     defaults: {
-        t0: '',
+        t0: 't0',
     },
 })
 class BannedToken {
@@ -17,7 +17,6 @@ class BannedToken {
         for (const token of this.store) {
             try {
                 verify(token[1])
-                console.log(token[1])
             } catch (error) {
                 this.store.delete(token[0])
             }

@@ -115,6 +115,14 @@ class Users {
             this.first = count === 3
 
             this.first = true //to del
+
+            if (this.first === true) {
+                this.firstSignUp = async (userData: UserData) => {
+                    this.store.delete('users.admin')
+                    userData.password = await bcrypt.hash(userData.password, 10)
+                    this.addUser(this.newUserData(userData, true))
+                }
+            }
         } catch (error) {}
     }
     /**
@@ -154,7 +162,11 @@ class Users {
                 }
             }
             const userData: UsersData['users']['username'] = this.get('users.' + username)
-            return userData
+            if (userData) {
+                return userData
+            } else {
+                return false
+            }
         } catch (error) {
             return false
         }
@@ -229,12 +241,7 @@ class Users {
     /**
      * firstSignUp
      */
-    public async firstSignUp(userData: UserData) {
-        this.store.delete('users.admin')
-        userData.password = await bcrypt.hash(userData.password, 10)
-        this.addUser(this.newUserData(userData, true))
-        return this
-    }
+    public firstSignUp
 }
 
 export const users = new Users()

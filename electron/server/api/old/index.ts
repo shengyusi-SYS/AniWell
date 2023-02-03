@@ -18,10 +18,99 @@ const router = express.Router()
 import hlsRequestHandler from '@s/modules/handleVideoRequest/hlsRequestHandler'
 import directPlayHandler from '@s/modules/handleVideoRequest/directPlayHandler'
 
+const app = express()
+
 let SID: string
+let cookieTimer: NodeJS.Timeout
+let checkCookie = true
+const bannedSIDs: string[] = []
+
+//权限验证预处理
+router.use('/', (req, res, next) => {
+    // logger.debug('/api',req.path);
+    try {
+        if (
+            req.path == '/v2/auth/login' ||
+            /^\/v1/.test(req.path) ||
+            /^\/localFile\/output\//i.test(req.path)
+        ) {
+            // logger.debug('/v2/auth/login', req.headers)
+            next()
+        } else if (!req.cookies && !req.query.cookie) {
+            throw new Error('Fails.')
+        } else {
+            let newSID
+            if (req.cookies?.SID) {
+                newSID = req.cookies.SID
+            } else if (req.query?.cookie) {
+                newSID = (req.query.cookie as string).replace('SID=', '')
+            } else {
+                throw new Error('Fails.')
+            }
+
+            if (bannedSIDs.includes(newSID)) {
+                logger.error('/api', 'bannedSIDs')
+                throw new Error('Fails.')
+            } else if (SID != newSID) {
+                checkCookie = true
+                SID = newSID
+                cookieJar.setCookieSync(`SID=${newSID}`, settings.get('qbHost'))
+            }
+            next()
+        }
+    } catch (error) {
+        if (req.path != '/v2/sync/maindata') {
+            logger.error('/api', req.path, req.headers, req.cookies, error)
+        }
+        res.status(403).send(error)
+    }
+})
+
+//权限验证
+router.use('/localFile', async (req, res, next) => {
+    try {
+        res.header('Access-Control-Allow-Origin', '*')
+        if (settings.get('share') && /^\/localFile\/output\//i.test(req.path)) {
+            next()
+            return
+        }
+        if (/^\/v1/.test(req.path)) {
+            next()
+            return
+        }
+        if (checkCookie) {
+            logger.info('/api/localFile', 'check')
+            const result = (
+                await got({
+                    url: `${settings.get('qbHost')}/api/v2/auth/login`,
+                    method: 'POST',
+                    cookieJar,
+                })
+            ).body
+            if (result == 'Ok.') {
+                checkCookie = false
+                clearTimeout(cookieTimer)
+                cookieTimer = setTimeout(() => {
+                    checkCookie = true
+                }, 30 * 60 * 1000)
+                next()
+            } else {
+                logger.info('/api/localFile', 'banned', SID)
+                bannedSIDs.push(SID)
+                throw new Error('Fails.')
+            }
+        } else {
+            next()
+        }
+    } catch (error) {
+        logger.error('/api/localFile', error)
+        res.status(403).send(error)
+    }
+})
+
 const maindataCache: { torrents: object } = { torrents: {} }
 let videoHandler
-router.use('/', (req, res, next) => {
+router.use('/localFile', (req, res, next) => {
     if (req.cookies?.SID) {
         SID = req.cookies.SID
     } else if (req.query?.cookie) {
@@ -29,19 +118,19 @@ router.use('/', (req, res, next) => {
     }
     next()
 })
-router.use('/output', hlsRequestHandler.output)
-router.use('/clearVideoTemp', hlsRequestHandler.clearVideoTemp)
-router.use('/directPlay', directPlayHandler.directPlay)
+router.use('/localFile/output', hlsRequestHandler.output)
+router.use('/localFile/clearVideoTemp', hlsRequestHandler.clearVideoTemp)
+router.use('/localFile/directPlay', directPlayHandler.directPlay)
 //连接状态测试，返回服务器配置项
-router.use('/checkFileServer', (req, res) => {
+router.use('/localFile/checkFileServer', (req, res) => {
     res.send(settings.list())
 })
 //获取媒体库配置项
-router.use('/librarySettings', (req, res) => {
+router.use('/localFile/librarySettings', (req, res) => {
     res.send(librarySettingsList)
 })
 //更新媒体库设定
-router.use('/updateLibrarySettings', (req, res) => {
+router.use('/localFile/updateLibrarySettings', (req, res) => {
     const result = updateLibrarySettings(req.body)
     if (result) {
         res.send({ success: true })
@@ -53,7 +142,7 @@ router.use('/updateLibrarySettings', (req, res) => {
     }
 })
 //更新指定媒体库
-router.use('/updateLibrary', async (req, res) => {
+router.use('/localFile/updateLibrary', async (req, res) => {
     const { libraryPath, libraryName } = req.body
     if (!searchLeaf(libraryIndex, libraryPath)) {
         res.send({
@@ -69,7 +158,7 @@ router.use('/updateLibrary', async (req, res) => {
     logger.info('/updateLibrary end')
 })
 //更新指定文件夹
-router.use('/updateDir', async (req, res) => {
+router.use('/localFile/updateDir', async (req, res) => {
     const { dirPath } = req.body
     // if (!searchLeaf(libraryIndex,dirPath)) {
     //     res.send({
@@ -86,7 +175,7 @@ router.use('/updateDir', async (req, res) => {
 })
 
 //更新配置项
-router.use('/changeFileServerSettings', async (req, res) => {
+router.use('/localFile/changeFileServerSettings', async (req, res) => {
     const data: object = req.body
     try {
         settings.update(data)
@@ -99,7 +188,7 @@ router.use('/changeFileServerSettings', async (req, res) => {
     }
 })
 
-// router.use('/killFFmpeg', (req, res, next) => {
+// router.use('/localFile/killFFmpeg', (req, res, next) => {
 //     if (FFmpegProcess) {
 //         // spawn('taskkill',['-PID',FFmpegProcess.pid,'-F'])
 //         kill(FFmpegProcess.pid, 'SIGKILL')
@@ -109,7 +198,7 @@ router.use('/changeFileServerSettings', async (req, res) => {
 // })
 
 //hls地址生成
-router.use('/videoSrc', (req, res, next) => {
+router.use('/localFile/videoSrc', (req, res, next) => {
     // const path = req.headers.referer.split(':')
     if (videoHandler.method == 'direct') {
         res.send({
@@ -127,7 +216,7 @@ router.use('/videoSrc', (req, res, next) => {
     // logger.debug('debug','src', fileRootPath);
 })
 
-router.use('/library', (req, res, next) => {
+router.use('/localFile/library', (req, res, next) => {
     try {
         const library = JSON.parse(fs.readFileSync(path.resolve(init.libraryIndexPath)).toString())
         res.send(library)
@@ -137,7 +226,7 @@ router.use('/library', (req, res, next) => {
 })
 
 //文件请求处理
-router.use('/getFile', async (req, res, next) => {
+router.use('/localFile/getFile', async (req, res, next) => {
     let filePath
     const formatList = {
         text: ['txt'],
@@ -199,7 +288,7 @@ router.use('/getFile', async (req, res, next) => {
     }
 })
 
-router.use('/api/v2/sync/maindata', async (req, res, next) => {
+router.use('/localFile/api/v2/sync/maindata', async (req, res, next) => {
     got({
         url: `${settings.get('qbHost')}/api/v2/sync/maindata?rid=${req.query.rid}`,
         method: 'get',
@@ -258,7 +347,7 @@ router.use('/api/v2/sync/maindata', async (req, res, next) => {
 //         })
 //     }
 // }));
-router.use('/api/v2/torrents/files', (req, res, next) => {
+router.use('/localFile/api/v2/torrents/files', (req, res, next) => {
     const hash = req.body.hash
     // let form = new FormData()
     // form.append('hash', hash)

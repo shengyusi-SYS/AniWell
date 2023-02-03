@@ -107,6 +107,7 @@ class Logger {
     public logger = this.log4js.getLogger('maxInfo')
     public transcodeLogger = this.log4js.getLogger('transcode')
     public scrapeLogger = this.log4js.getLogger('scrape')
+    public httpLogger = this.log4js.getLogger('http')
     constructor() {
         this.changeLevel()
     }
@@ -124,18 +125,22 @@ class Logger {
         }
         const cat = this.config.categories
         for (const key in cat) {
-            if (debug === false) {
-                cat[key].level = 'info'
-            } else if (debug === true) {
-                cat[key].level = 'debug'
+            if (['maxInfo', 'transcode', 'scrape'].includes(key)) {
+                if (debug === false) {
+                    cat[key].level = 'info'
+                } else if (debug === true) {
+                    cat[key].level = 'debug'
+                }
             }
         }
         this.log4js.configure(this.config)
         this.logger = this.log4js.getLogger('maxInfo')
         this.transcodeLogger = this.log4js.getLogger('transcode')
         this.scrapeLogger = this.log4js.getLogger('scrape')
+        this.httpLogger = this.log4js.getLogger('http')
         this.logger.debug('changeLevel~~~~~~~~~~~~~~~~~~~~~~~~~~')
     }
 }
 
-export const { log4js, logger, transcodeLogger, scrapeLogger, changeLevel } = new Logger()
+export const { log4js, logger, transcodeLogger, scrapeLogger, httpLogger, changeLevel } =
+    new Logger()

@@ -34,6 +34,9 @@ export const signAccessToken = ({ username, UID, alias, administrator, access }:
     })
 export const verifyToken = (token: string): userInfoPayload | false => {
     try {
+        if (!token) {
+            return false
+        }
         if (bannedToken.has(token)) {
             return false
         }

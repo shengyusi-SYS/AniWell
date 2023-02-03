@@ -1,21 +1,9 @@
 <script setup lang="ts">
 import { useMediaQuery, useDraggable } from '@vueuse/core'
 import { computed, ref, watch, getCurrentInstance } from 'vue'
-import { reqLogin } from '@v/api'
 const isPreferredDark = useMediaQuery('(prefers-color-scheme: dark)')
 
 const router = useRouter()
-//未注册则强制跳转到欢迎页面
-try {
-    console.log(inject('signUp'))
-} catch (error) {}
-try {
-    if (/* getCurrentInstance()?.proxy.signUp */ inject('signUp')) {
-        router.push({
-            path: '/welcome',
-        })
-    }
-} catch (error) {}
 
 const el = ref<HTMLElement | null>(null)
 const { x, y, style } = useDraggable(el, {
@@ -74,15 +62,6 @@ navigator.mediaCapabilities.decodingInfo(mediaConfig).then((result) => {
         console.log("Video can't play!")
     }
 })
-
-const login = () =>
-    reqLogin('admin', 'adminUser')
-        .then((result) => {
-            console.log(result)
-        })
-        .catch((err) => {
-            console.log(err)
-        })
 </script>
 
 <template>
@@ -92,7 +71,7 @@ const login = () =>
         <div style="border: 1px solid black">1REM大小</div>
         <div style="font-size: 24px; border: 1px solid black">24PX大小</div>
         <div style="font-size: 2rem; border: 1px solid black">2REM大小</div>
-        <div style="font-size: 2rem; border: 1px solid black" @click="login">test</div>
+        <div style="font-size: 2rem; border: 1px solid black" @click="">test</div>
     </div>
     <VanNumberKeyboard safe-area-inset-bottom />
 </template>
