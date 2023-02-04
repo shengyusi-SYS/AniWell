@@ -18,8 +18,6 @@ const router = express.Router()
 import hlsRequestHandler from '@s/modules/handleVideoRequest/hlsRequestHandler'
 import directPlayHandler from '@s/modules/handleVideoRequest/directPlayHandler'
 
-const app = express()
-
 let SID: string
 let cookieTimer: NodeJS.Timeout
 let checkCookie = true
@@ -28,6 +26,8 @@ const bannedSIDs: string[] = []
 //权限验证预处理
 router.use('/', (req, res, next) => {
     // logger.debug('/api',req.path);
+    // console.log('------------', req.path)
+
     try {
         if (
             req.path == '/v2/auth/login' ||
@@ -202,14 +202,14 @@ router.use('/localFile/videoSrc', (req, res, next) => {
     // const path = req.headers.referer.split(':')
     if (videoHandler.method == 'direct') {
         res.send({
-            src: `/api/localFile/directPlay/${videoHandler.id}?cookie=SID=${encodeURIComponent(
+            src: `/api/old/localFile/directPlay/${videoHandler.id}?cookie=SID=${encodeURIComponent(
                 SID,
             )}`, //id只是凑格式的，目标路径在handler中
             type: videoHandler.contentType,
         })
     } else if (videoHandler.method == 'transcode') {
         res.send({
-            src: `/api/localFile/output/index.m3u8`,
+            src: `/api/old/localFile/output/index.m3u8`,
             type: videoHandler.contentType,
         })
     }

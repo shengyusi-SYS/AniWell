@@ -19,7 +19,7 @@ const sourcemap = !!process.env.VSCODE_DEBUG
 const isBuild = process.argv.slice(2).includes('build')
 // import eslintPlugin from 'vite-plugin-eslint/'
 // https://vitejs.dev/config/
-let proxyPort = 9009
+let proxyPort = 9010
 try {
     proxyPort = +JSON.parse(readFileSync('./dev/Config/settings.json', 'utf8')).serverPort + 1
 } catch (error) {}
@@ -143,7 +143,11 @@ export const config = {
               proxy: {
                   '/api': {
                       target: 'http://localhost:' + proxyPort,
-                      changeOrigin: true,
+                      //   changeOrigin: false,
+                  },
+                  '/old': {
+                      target: 'http://localhost:' + proxyPort,
+                      //   changeOrigin: true,
                   },
               },
           },

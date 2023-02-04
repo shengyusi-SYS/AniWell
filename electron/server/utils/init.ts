@@ -9,6 +9,7 @@ import settings from '@s/store/settings'
 import { librarySettings, librarySettingsTransformer } from '@s/store/librarySettings'
 import { users } from '@s/store/users'
 import pkg from '../../../package.json'
+import { Options } from 'http-proxy-middleware'
 // users.store.clear()
 // users.modify({
 //     admin: {
@@ -28,15 +29,7 @@ class Init {
 
     public Ffmpeg = Ffmpeg
 
-    public proxySettings: {
-        target: string
-        changeOrigin: boolean
-        secure: boolean
-        ssl: {
-            cert?: string
-            key?: string
-        }
-    }
+    public proxySettings: Options
 
     public libraryIndex: {
         label: string
@@ -151,6 +144,7 @@ class Init {
             changeOrigin: false,
             secure: settings.get('secure'),
             ssl: {},
+            pathRewrite: { '/old': '' },
         }
         try {
             this.proxySettings.ssl.cert = fs.readFileSync(settings.get('cert'), 'utf8')

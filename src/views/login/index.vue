@@ -3,13 +3,18 @@ import { reqLogin } from '@v/api'
 const router = useRouter()
 
 const loginUser = reactive({ username: 'admins', password: 'adminUsers' })
-const login = async () => {
+const login = async (qb = false) => {
     const res = await reqLogin(loginUser.username, loginUser.password)
     console.log(localStorage.getItem('first'), res)
 
     if (res) {
         if (localStorage.getItem('first') === 'false') {
-            router.push('/home')
+            if (qb === true) {
+                // router.push('/old/home')
+                window.location.replace('/old/index.html')
+            } else {
+                router.push('/home')
+            }
         } else {
             router.push('/welcome')
         }
@@ -43,7 +48,8 @@ export default {
             />
         </div>
         <div>
-            <ElButton @click="login">登录</ElButton>
+            <ElButton @click="login(true)">qbit</ElButton>
+            <ElButton @click="login(false)">登录</ElButton>
             <ElButton @click="router.push('/welcome')">wel</ElButton>
         </div>
     </div>

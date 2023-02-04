@@ -6,6 +6,7 @@ import * as VueRouter from 'vue-router'
 import { reqFirst } from '@v/api'
 
 import { useSessionStorage } from '@vueuse/core'
+import { el } from 'element-plus/es/locale'
 
 const routes = [
     { path: '/', redirect: '/login' },
@@ -43,9 +44,13 @@ router.beforeEach(async (to, from) => {
             return false
         }
         return true
+    } else {
+        if (sessionStorage.getItem('loggedIn') === 'true') {
+            return true
+        } else {
+            return '/login'
+        }
     }
-
-    return true
 })
 
 export default router

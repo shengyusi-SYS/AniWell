@@ -17,18 +17,18 @@ const proxy = proxyMw.createProxyMiddleware
 // import moduleName from 'socket.io';
 import router from '@s/api'
 
+app.use((req, res, next) => {
+    // console.log('--------------', req.path)
+    next()
+})
 app.use(log4js.connectLogger(httpLogger, { level: 'trace' }))
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
 app.use(cookieParser())
-app.use(history())
 app.use('/api/old/v2', proxy(proxySettings))
 app.use('/api', router)
+
 // let tt = true
-app.use((req, res, next) => {
-    console.log('~~~~~~~~~~~~~', req.path)
-    next()
-})
 // app.use('/index.html', (req, res, next) => {
 //     console.log('wwwwwwwwwwwwwwwwwwww', users.first, tt)
 //     if (users.first === true && tt) {
@@ -48,23 +48,7 @@ try {
     logger.error(error)
 }
 
-if (import.meta.env.DEV === true) {
-    try {
-        // app.use(
-        //     '/',
-        //     (req, res, next) => {
-        //         console.log('~~~~~~~~~~~~~~~~~', req.path)
-        //         next()
-        //     },
-        //     proxy({ target: 'http://localhost:5566/', pathRewrite: { '/www': '' } }),
-        // )
-        const wwwroot = path.resolve('./dist')
-        fs.accessSync(wwwroot)
-        app.use(express.static(wwwroot))
-    } catch (error) {
-        logger.error('运行yarn devB')
-    }
-} else {
+if (import.meta.env.DEV !== true) {
     try {
         const wwwroot = path.resolve('./resources/app/dist')
         fs.accessSync(wwwroot)
@@ -73,8 +57,6 @@ if (import.meta.env.DEV === true) {
         logger.error(error)
     }
 }
-
-// logger.debug('debug', 'dir', __dirname, 'resolve', path.resolve(''));
 
 try {
     if (!(proxySettings.ssl.cert && proxySettings.ssl.key)) {
@@ -104,6 +86,9 @@ try {
 } catch (error) {
     console.log(error)
 }
+
+app.use(history())
+
 // io.on('connection', function (socket) {
 //     logger.debug('debug','cccccon');
 //     // 发送数据

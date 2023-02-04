@@ -5,7 +5,7 @@ import multer from 'multer'
 const upload = multer()
 import { UserData, users } from '@s/store/users'
 import { v4 as uuidv4 } from 'uuid'
-import { signAccessToken, signRefreshToken, verify } from '@s/utils/jwt'
+import { signAccessToken, signRefreshToken, verify, verifyToken } from '@s/utils/jwt'
 import bannedToken from '@s/store/bannedToken'
 
 router.get('/salt', async (req, res, next) => {
@@ -24,6 +24,11 @@ router.get('/salt', async (req, res, next) => {
 })
 
 router.post('/login', upload.none(), async (req, res, next) => {
+    const { refreshToken } = req.cookies
+    if (verifyToken(refreshToken)) {
+        res.status(200).end()
+        return
+    }
     const { username, password } = req.body
     if (typeof username === 'string' && typeof password === 'string') {
         try {

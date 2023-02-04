@@ -125,13 +125,13 @@ class Logger {
         }
         const cat = this.config.categories
         for (const key in cat) {
-            if (['maxInfo', 'transcode', 'scrape'].includes(key)) {
-                if (debug === false) {
-                    cat[key].level = 'info'
-                } else if (debug === true) {
-                    cat[key].level = 'debug'
-                }
+            // if (['maxInfo', 'transcode', 'scrape'].includes(key)) {
+            if (debug === false) {
+                cat[key].level = 'info'
+            } else if (debug === true) {
+                cat[key].level = 'debug'
             }
+            // }
         }
         this.log4js.configure(this.config)
         this.logger = this.log4js.getLogger('maxInfo')
