@@ -2,6 +2,7 @@ import { logger } from '@s/utils/logger'
 import express from 'express'
 const router = express.Router()
 import users from './users'
+import library from './library'
 import auth from '@s/modules/auth'
 import { signAccessToken, verifyToken } from '@s/utils/jwt'
 import { users as usersStore } from '@s/store/users'
@@ -49,8 +50,6 @@ router.use('/video', async (req, res, next) => {
     next()
 })
 
-router.use('/library', async (req, res, next) => {
-    next()
-})
+router.use('/library', library)
 
 export default router

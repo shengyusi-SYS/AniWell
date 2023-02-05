@@ -3,16 +3,22 @@ import Login from '@v/views/login/index.vue'
 import Home from '@v/views/home/index.vue'
 import Library from '@v/views/home/library/index.vue'
 import * as VueRouter from 'vue-router'
-import { reqFirst } from '@v/api'
+import { reqIsFirst } from '@v/api'
 
 import { useSessionStorage } from '@vueuse/core'
-import { el } from 'element-plus/es/locale'
 
 const routes = [
     { path: '/', redirect: '/login' },
     { path: '/welcome', component: Welcome },
     { path: '/login', component: Login },
-    { path: '/home', component: Home, children: [{ path: 'library', component: Library }] },
+    {
+        path: '/home',
+        component: Home,
+        children: [
+            { path: '', redirect: '/home/library' },
+            { path: 'library', component: Library },
+        ],
+    },
 ]
 
 const router = VueRouter.createRouter({
@@ -21,16 +27,19 @@ const router = VueRouter.createRouter({
 })
 
 router.beforeEach(async (to, from) => {
-    console.log(from.path, to.path)
+    console.log('from', from.path, 'to', to.path)
 
     if (to.path === '/welcome') {
         const first = localStorage.getItem('first')
         if (first === 'true') {
             return true
         } else if (first === 'false') {
+            // if (from.path === '/login') {
+            //     return '/home'
+            // }
             return false
         } else {
-            return await reqFirst()
+            return await reqIsFirst()
         }
     }
     if (to.path === '/login') {
@@ -41,13 +50,19 @@ router.beforeEach(async (to, from) => {
             sessionStorage.getItem('loggedIn') === 'true' &&
             sessionStorage.getItem('logout') !== 'true'
         ) {
+            if (from.path === '/') {
+                return '/home'
+            }
             return false
         }
         return true
     } else {
         if (sessionStorage.getItem('loggedIn') === 'true') {
+            console.log('~~~', to.path)
+
             return true
         } else {
+            console.log('~~~', '/login')
             return '/login'
         }
     }

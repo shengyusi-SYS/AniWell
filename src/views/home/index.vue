@@ -4,6 +4,7 @@ import { computed, ref, watch, getCurrentInstance } from 'vue'
 const menuOpenned = ref(false)
 
 const router = useRouter()
+// router.push('/home/library')
 </script>
 
 <script lang="ts">
@@ -13,7 +14,7 @@ export default {
 </script>
 
 <template>
-    <ElContainer :class="`home-base ${isDesktop ? 'desktop' : ''}`">
+    <ElContainer direction="vertical" :class="`home-base ${isDesktop ? 'desktop' : ''}`">
         <ElHeader class="row">
             <ElRow justify="space-between" align="middle" style="width: 100%">
                 <ElCol :span="4" class="headerLeft">
@@ -42,7 +43,7 @@ export default {
                 </ElCol>
             </ElRow>
         </ElHeader>
-        <ElContainer direction="horizontal">
+        <ElContainer direction="horizontal" class="home-container">
             <ElAside :class="!isDesktop ? 'overlay' : ''">
                 <ElRow
                     class="menu"
@@ -64,17 +65,65 @@ export default {
                     </Transition>
                 </ElRow>
             </ElAside>
-            <ElMain class="col"><RouterView></RouterView> </ElMain>
+            <ElMain class="col">
+                <ElScrollbar>
+                    <RouterView></RouterView>
+                </ElScrollbar>
+            </ElMain>
         </ElContainer>
     </ElContainer>
 </template>
 
 <style lang="less" scoped>
 .home-base {
-    // font-size: 1rem;
     height: 100%;
     width: 100%;
     position: relative;
+
+    .home-container {
+        overflow: hidden;
+        .el-aside {
+            color: var(--el-text-color-primary);
+            // background: var(--el-color-primary-light-8);
+            width: auto;
+            // max-width: 30vw;
+            .menu {
+                overflow: hidden;
+                white-space: nowrap;
+                .menu-title {
+                    width: 6em;
+                    // transform: scaleX(1);
+                    // transform-origin: left;
+                }
+                .menu-icon:extend(.menu-title) {
+                    width: 4rem;
+                }
+                .menu-title-enter-active,
+                .menu-title-leave-active,
+                .menu-icon-enter-active,
+                .menu-icon-leave-active {
+                    transition:/*  transform 0.3s ease, */ width 0.3s;
+                }
+                .menu-title-enter-from,
+                .menu-title-leave-to,
+                .menu-icon-enter-from,
+                .menu-icon-leave-to {
+                    width: 0;
+                    // transform: scaleX(0);
+                }
+            }
+            &.overlay {
+                position: absolute;
+                z-index: 100;
+                height: 100%;
+            }
+        }
+        .el-main {
+            padding: 0;
+            overflow-y: scroll;
+            overflow-x: hidden;
+        }
+    }
     .el-header {
         position: relative;
         background-color: var(--el-color-primary-light-7);
@@ -84,49 +133,13 @@ export default {
         min-height: 2em;
         padding: 0;
     }
-    .el-aside {
-        color: var(--el-text-color-primary);
-        background: var(--el-color-primary-light-8);
-        width: auto;
-        // max-width: 30vw;
-        .menu {
-            overflow: hidden;
-            white-space: nowrap;
-            .menu-title {
-                width: 6em;
-                // transform: scaleX(1);
-                // transform-origin: left;
-            }
-            .menu-icon:extend(.menu-title) {
-                width: 4rem;
-            }
-            .menu-title-enter-active,
-            .menu-title-leave-active,
-            .menu-icon-enter-active,
-            .menu-icon-leave-active {
-                transition:/*  transform 0.3s ease, */ width 0.3s;
-            }
-            .menu-title-enter-from,
-            .menu-title-leave-to,
-            .menu-icon-enter-from,
-            .menu-icon-leave-to {
-                width: 0;
-                // transform: scaleX(0);
-            }
-        }
-        &.overlay {
-            position: absolute;
-            z-index: 100;
-            height: 100%;
-        }
-    }
+
     .el-footer {
         background-color: var(--el-color-primary-light-7);
         height: 3em;
         max-height: 30vh;
     }
-    .el-main {
-    }
+
     .el-icon {
         margin: 0.5em;
     }

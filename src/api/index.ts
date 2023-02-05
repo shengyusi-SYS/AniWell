@@ -36,7 +36,7 @@ export const reqModify = async (
     salt: string,
 ): Promise<true | Error> => requests.post('/users/modify', { username, password, salt })
 
-export const reqFirst = async (): Promise<boolean> => {
+export const reqIsFirst = async (): Promise<boolean> => {
     try {
         await requests.get('/users/first')
         localStorage.setItem('first', 'true')
@@ -46,5 +46,7 @@ export const reqFirst = async (): Promise<boolean> => {
         return false
     }
 }
+
+export const reqOldLibrary = async () => requests.get('/library/old')
 
 export * from './old'

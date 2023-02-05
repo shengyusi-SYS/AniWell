@@ -84,6 +84,9 @@ html {
     @media screen and(min-width: 426px) and(min-height: 426px) {
         font-size: 16px;
     }
+    background: #2a2a2a;
+    color: #fff;
+    // background-color: #404040;
 }
 .col {
     display: flex;
@@ -103,5 +106,8 @@ html {
     height: 100vh;
     width: 100vw;
     overflow: hidden;
+}
+::-webkit-scrollbar {
+    width: 0px;
 }
 </style>

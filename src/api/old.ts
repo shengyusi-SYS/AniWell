@@ -218,7 +218,7 @@ export const reqStopTranscode = (data) =>
         url: `/localFile/stopTranscode`,
     })
 
-export const reqLibrary = (data) =>
+export const reqLibrary = () =>
     requests({
         method: 'get',
         url: `/localFile/library`,
