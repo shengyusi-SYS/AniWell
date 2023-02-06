@@ -114,8 +114,6 @@ class Users {
             }
             this.first = count === 3
 
-            this.first = true //to del
-
             if (this.first === true) {
                 this.firstSignUp = async (userData: UserData) => {
                     this.store.delete('users.admin')

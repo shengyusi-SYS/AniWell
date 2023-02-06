@@ -83,8 +83,8 @@ export default {
     .home-container {
         overflow: hidden;
         .el-aside {
-            color: var(--el-text-color-primary);
-            // background: var(--el-color-primary-light-8);
+            // color: var(--el-text-color-primary);
+            background: var(--background-color-d1);
             width: auto;
             // max-width: 30vw;
             .menu {
@@ -126,8 +126,8 @@ export default {
     }
     .el-header {
         position: relative;
-        background-color: var(--el-color-primary-light-7);
-        color: var(--el-text-color-primary);
+        background-color: var(--background-color-l1);
+        // color: var(--el-text-color-primary);
         height: 4rem;
         max-height: 15vh;
         min-height: 2em;
@@ -135,7 +135,7 @@ export default {
     }
 
     .el-footer {
-        background-color: var(--el-color-primary-light-7);
+        // background-color: var(--el-color-primary-light-7);
         height: 3em;
         max-height: 30vh;
     }

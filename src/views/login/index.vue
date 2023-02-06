@@ -59,6 +59,6 @@ export default {
 .login-base {
     width: 100%;
     height: 100%;
-    background-color: #f7f8fa;
+    // background-color: #f7f8fa;
 }
 </style>

@@ -6,7 +6,6 @@ import library from './library'
 import auth from '@s/modules/auth'
 import { signAccessToken, verifyToken } from '@s/utils/jwt'
 import { users as usersStore } from '@s/store/users'
-//会随新ui换成多级路由
 
 router.use('/', async (req, res, next) => {
     if (/^\/users\/(login|salt|first)/.test(req.path)) {

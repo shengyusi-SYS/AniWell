@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import isDesktop from '@h/useIsDesktop'
-import { reqOldLibrary } from '@v/api'
+import { reqLibrary } from '@v/api'
 import { useElementSize } from '@v/hooks/useElementSize'
+
+const router = useRouter()
+const props = defineProps(['catagory'])
+
+console.log(props.catagory, router.currentRoute.value.query)
 
 let newData: Array<object> = reactive([])
 const cardData = computed(() => {
@@ -11,11 +16,6 @@ const cardData = computed(() => {
     } else return []
 })
 
-const router = useRouter()
-
-const customAspectRatio = reactive({ width: 3, height: 4 })
-const aspectRatio = computed(() => customAspectRatio.width / customAspectRatio.height)
-
 const xNum = ref(isDesktop.value ? 5 : 2)
 const gutter = ref('6em')
 
@@ -24,25 +24,33 @@ const elSize = useElementSize(library)
 const fontSize = ref('16px')
 const fontPercent = ref(1)
 const gutterPercent = ref(1)
-const watchFontSize = watch(elSize, (v) => {
-    const posterWidth = v.elWidth / xNum.value
+
+onMounted(() => {
+    if (typeof router.currentRoute.value.query.path === 'string') {
+        reqLibrary(router.currentRoute.value.query.path)
+            .then((library) => {
+                library.children.forEach((element, i) => {
+                    i < 20 ? newData.push(element) : null
+                })
+            })
+            .catch((err) => {})
+    } else {
+        reqLibrary('old')
+            .then((library) => {
+                library.children.forEach((element, i) => {
+                    i < 20 ? newData.push(element) : null
+                })
+            })
+            .catch((err) => {})
+    }
+})
+onBeforeUpdate(() => {
+    const posterWidth = elSize.elWidth / xNum.value
     const newSize = (posterWidth / 20) * fontPercent.value
     fontSize.value = (newSize < 16 ? newSize : 16) + 'px'
     gutter.value = (newSize < 16 ? newSize : 16) * 2 * gutterPercent.value + 'px'
 })
-
-onMounted(() => {
-    reqOldLibrary()
-        .then((library) => {
-            library.children[0].children.forEach((element, i) => {
-                i < 200 ? newData.push(element) : null
-            })
-        })
-        .catch((err) => {})
-})
-onUnmounted(() => {
-    watchFontSize()
-})
+onUnmounted(() => {})
 const test = () => {
     console.log(router.currentRoute.value)
 
@@ -63,22 +71,12 @@ export default {
         <ElButton @click="test"></ElButton>
         <div>{{ elSize }}</div>
         <div>{{ fontSize }}</div>
-        <div>
-            <div>width:<input v-model="customAspectRatio.width" /></div>
-            <div>height:<input v-model="customAspectRatio.height" /></div>
-            <div>{{ aspectRatio }}</div>
-        </div>
         <div>gutter:<input v-model="gutterPercent" /></div>
         <div>
             <VanGrid :column-num="xNum" :gutter="gutter" :border="false">
                 <VanGridItem v-for="data in cardData">
                     <LazyComponent>
-                        <Card
-                            :key="data.title"
-                            :data="data"
-                            :aspect-ratio="aspectRatio"
-                            class="item-card"
-                        />
+                        <Card :key="data.title" :data="data" class="item-card" />
                     </LazyComponent>
                 </VanGridItem>
             </VanGrid>
@@ -96,6 +94,7 @@ export default {
         padding: 0;
     }
     .item-card {
+        max-width: 100%;
     }
 }
 </style>

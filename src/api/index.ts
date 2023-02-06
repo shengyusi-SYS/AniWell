@@ -1,6 +1,7 @@
 import requests from './request'
 import bcrypt from 'bcryptjs'
 // export const req = async () => requests.post('')
+let tried = false
 
 export const reqSalt = (username: string): Promise<{ salt: string } | Error> =>
     requests.get('/users/salt?username=' + username)
@@ -19,10 +20,16 @@ export const reqLogin = async (username: string, password: string): Promise<bool
         try {
             await requests.post('/users/login', { username, password: passwordHash })
             sessionStorage.setItem('loggedIn', 'true')
+            tried = false
             return true
         } catch (error) {
             localStorage.removeItem('salt')
-            return reqLogin(username, password)
+            if (tried === true) {
+                return false
+            } else {
+                tried = true
+                return reqLogin(username, password)
+            }
         }
     } catch (error) {
         sessionStorage.setItem('loggedIn', 'false')
@@ -48,5 +55,7 @@ export const reqIsFirst = async (): Promise<boolean> => {
 }
 
 export const reqOldLibrary = async () => requests.get('/library/old')
+
+export const reqLibrary = async (catagory: string) => requests.get(`/library?catagory=${catagory}`)
 
 export * from './old'

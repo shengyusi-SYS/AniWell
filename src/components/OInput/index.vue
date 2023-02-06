@@ -96,7 +96,7 @@ export default {
         width: v-bind(width);
         border-radius: v-bind(radius);
         border: 1px solid var(--el-border-color);
-        background-color: white;
+        // background-color: white;
         align-content: center;
         align-items: center;
         input {
@@ -111,7 +111,7 @@ export default {
             position: absolute;
             top: -0.7em;
             left: 1em;
-            background-color: rgba(255, 255, 255, 1);
+            // background-color: rgba(255, 255, 255, 1);
         }
     }
     &.multiRow {

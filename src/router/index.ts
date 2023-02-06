@@ -15,8 +15,13 @@ const routes = [
         path: '/home',
         component: Home,
         children: [
-            { path: '', redirect: '/home/library' },
-            { path: 'library', component: Library },
+            { path: '', redirect: '/home/library/video' },
+            {
+                path: 'library/:catagory',
+                component: Library,
+                props: true,
+                // children: [{ path: '', redirect: '' }]
+            },
         ],
     },
 ]

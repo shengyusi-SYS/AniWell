@@ -5,10 +5,18 @@ interface CardData {
     note?: string
     itemId?: string
     type?: string
+    path?: string
 }
 const props = defineProps<{ data: CardData; aspectRatio?: number; fontSize?: any }>()
-const { title, poster, note } = props.data
-let aspectRatio = computed(() => (props.aspectRatio ? props.aspectRatio : 0.75))
+const { title, poster, path, itemId } = props.data
+
+const router = useRouter()
+const go = () => {
+    console.log(props.data)
+    if (props.data.path) {
+        router.push(router.currentRoute.value.path + '?path=' + encodeURIComponent(props.data.path))
+    }
+}
 </script>
 
 <script lang="ts">
@@ -18,68 +26,66 @@ export default {
 </script>
 
 <template>
-    <div class="card-base col">
-        <div class="title-overlay">
-            <div class="title van-multi-ellipsis--l2">{{ title }}</div>
-            <div class="note">{{ note }}</div>
+    <div
+        class="card-base col"
+        :style="`background-image:url('/api/v1/library/poster/img.jpg?path=${encodeURIComponent(
+            poster,
+        )}')`"
+    >
+        <div class="overlay" @click="go">
+            <div class="info">
+                <div class="title van-multi-ellipsis--l2">{{ title }}</div>
+                <div class="note van-multi-ellipsis--l2">{{ path }}</div>
+            </div>
         </div>
-        <div class="poster-overlay"></div>
-        <ElImage
-            class="poster"
-            :src="`/api/v1/library/poster/img.jpg?type=picture&path=${encodeURIComponent(poster)}`"
-            fit="cover"
-        />
     </div>
 </template>
 
 <style lang="less" scoped>
 .card-base {
-    // width: 100%;
-    // height: 100%;
-    aspect-ratio: v-bind(aspectRatio);
-    position: relative;
-    // margin: 4px;
-    justify-content: center;
-    align-items: center;
-    font-size: 1em;
-    .poster {
-        width: 100%;
-        height: 100%;
-        z-index: 0;
+    // aspect-ratio: v-bind(aspectRatio);
+    aspect-ratio: var(--card-aspect-ratio);
+    background-size: cover;
+    box-shadow: var(--card-shadow);
+    &:hover {
+        box-shadow: var(--card-shadow-hover);
     }
-    .poster-overlay {
-        box-shadow: inset 0 -2em 2em 0 rgba(0, 0, 0, 0.2), 0 0 2rem 0.6rem rgba(0, 0, 0, 0.4);
-        bottom: -1px;
-        position: absolute;
-        aspect-ratio: v-bind(aspectRatio);
+    .overlay {
+        max-width: 100%;
         height: 100%;
-        z-index: 1;
+        // word-break:break-all;
+        text-align: left;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        box-sizing: border-box;
+        .info {
+            margin: 2em 1.5em;
+            .title {
+                font-family: Lato, Helvetica, Arial, sans-serif;
+                font-weight: 700;
+                font-size: 2em;
+                color: var(--font-color-title);
+                // -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3CforeignObject width='100%25' height='100%25'%3E%3Cbody class='wrap' xmlns='http://www.w3.org/1999/xhtml'%3E%3Cstyle%3E.wrap%7Bbox-sizing:border-box;margin:0;height:100%25;padding:10px%7D.shadow%7Bheight:100%25;background:%23000;border-radius:10px;box-shadow:0 0 5px %23000,0 0 10px %23000,0 0 15px %23000%7D%3C/style%3E%3Cdiv class='shadow'/%3E%3C/body%3E%3C/foreignObject%3E%3C/svg%3E");
+            }
+            .note {
+                color: var(--font-color-secondary);
+            }
+        }
         background: linear-gradient(
             to bottom,
             rgba(0, 0, 0, 0) 0%,
-            rgba(0, 0, 0, 0) 50%,
+            rgba(0, 0, 0, 0.2) 50%,
             rgba(0, 0, 0, 0.8) 100%
         );
         &:hover {
-            box-shadow: inset 0 -1em 3em 0 rgba(0, 0, 0, 0.4), 0 0 2rem 0.6rem rgba(0, 0, 0, 0.6);
-        }
-    }
-    .title-overlay {
-        z-index: 3;
-        max-width: 100%;
-        word-break: break-all;
-        padding: 0 1em;
-        position: absolute;
-        bottom: 3em;
-        .title {
-            font-family: Lato, Helvetica, Arial, sans-serif;
-            font-weight: 700;
-            font-size: 2em;
-            color: white;
-            // -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3CforeignObject width='100%25' height='100%25'%3E%3Cbody class='wrap' xmlns='http://www.w3.org/1999/xhtml'%3E%3Cstyle%3E.wrap%7Bbox-sizing:border-box;margin:0;height:100%25;padding:10px%7D.shadow%7Bheight:100%25;background:%23000;border-radius:10px;box-shadow:0 0 5px %23000,0 0 10px %23000,0 0 15px %23000%7D%3C/style%3E%3Cdiv class='shadow'/%3E%3C/body%3E%3C/foreignObject%3E%3C/svg%3E");
-        }
-        .note {
-            color: gray;
+            // box-shadow: var(--card-shadow-hover);
+            background: linear-gradient(
+                to bottom,
+                rgba(0, 0, 0, 0) 0%,
+                rgba(0, 0, 0, 0.3) 50%,
+                rgba(0, 0, 0, 0.9) 100%
+            );
         }
     }
 }
