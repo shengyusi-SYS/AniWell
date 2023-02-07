@@ -1,8 +1,9 @@
 import express from 'express'
 import fs from 'fs'
-import path from 'path'
+import path, { resolve } from 'path'
 import init from '@s/utils/init'
 import { getFileType, searchLeaf } from '@s/utils'
+import { encode, decode } from 'js-base64'
 const router = express.Router()
 router.use('/', async (req, res, next) => {
     // console.log(req.path, req.query)
@@ -20,21 +21,38 @@ router.get('/old', (req, res, next) => {
     }
 })
 
-router.get('/', (req, res, next) => {
+router.get('/:catagory', (req, res, next) => {
     try {
-        const catagory = req.query?.catagory
+        const catagory = req.params?.catagory
+        const reqPath = req.query.itemId
+        const range = req.query.range
+        if (typeof range === 'string') {
+            var start = Number(range.split(',')[0])
+            var end = Number(range.split(',')[1])
+        }
+
         const library = JSON.parse(fs.readFileSync(path.resolve(init.libraryIndexPath)).toString())
-        console.log(catagory, req.query)
+        console.log(catagory, resolve(decode(reqPath)))
         if (typeof catagory === 'string') {
-            if (catagory === 'old') {
-                // delete library.children
+            if (catagory === 'video' && !reqPath) {
+                const result = []
+                for (; start < end && start < library.children.length; start++) {
+                    const element = library.children[start]
+                    result.push(element)
+                }
+                library.children = result
                 res.send(library)
                 return
             }
-            const result = searchLeaf(library, catagory)
-            if (result) {
-                // delete result.children
-                res.send(result)
+            const search = searchLeaf(library, resolve(decode(reqPath)))
+            if (search) {
+                const result = []
+                for (; start < end && start < search.children.length; start++) {
+                    const element = search.children[start]
+                    result.push(element)
+                }
+                search.children = result
+                res.send(search)
             } else {
                 res.status(404).send('不存在')
             }

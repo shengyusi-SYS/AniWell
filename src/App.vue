@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useMediaQuery, useDraggable } from '@vueuse/core'
 import { computed, ref, watch, getCurrentInstance } from 'vue'
+import { useGlobalStore } from '@v/stores/global'
+import { storeToRefs } from 'pinia'
 const isPreferredDark = useMediaQuery('(prefers-color-scheme: dark)')
 
 const router = useRouter()
@@ -63,21 +65,9 @@ navigator.mediaCapabilities.decodingInfo(mediaConfig).then((result) => {
     }
 })
 
-const theme = reactive({
-    testHeight: '30em',
-    backgroundColor: '#2a2a2a',
-    backgroundColorL1: '#3a3a3a',
-    backgroundColorD1: '#1a1a1a',
-    fontSize: '16px',
-    fontSizeB1: '24px',
-    fontSizeS1: '10px',
-    fontColor: '#999',
-    fontColorTitle: '#fff',
-    fontColorSecondary: '#66',
-    cardShadow: '0 0 35px 5px rgb(0 0 0 / 40%)',
-    cardShadowHover: '0 0 35px 5px rgb(0 0 0 / 60%)',
-    cardAspectRatio: 0.75,
-})
+const store = useGlobalStore()
+
+const { theme } = storeToRefs(store)
 </script>
 
 <template>

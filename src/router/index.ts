@@ -9,8 +9,40 @@ import { useSessionStorage } from '@vueuse/core'
 
 const routes = [
     { path: '/', redirect: '/login' },
-    { path: '/welcome', component: Welcome },
-    { path: '/login', component: Login },
+    {
+        path: '/welcome',
+        component: Welcome,
+        beforeEnter: async (to, from) => {
+            console.log('welcome!', to, from)
+            const first = localStorage.getItem('first')
+            if (first === 'true') {
+                return true
+            } else if (first === 'false') {
+                return false
+            } else {
+                return await reqIsFirst()
+            }
+        },
+    },
+    {
+        path: '/login',
+        component: Login,
+        beforeEnter: (to, from) => {
+            console.log('login!', to, from)
+            if (from.path === '/welcome') {
+                return true
+            }
+            if (
+                sessionStorage.getItem('loggedIn') === 'true' &&
+                sessionStorage.getItem('logout') !== 'true'
+            ) {
+                if (from.path === '/') {
+                    return '/home'
+                }
+                return false
+            } else return true
+        },
+    },
     {
         path: '/home',
         component: Home,
@@ -32,44 +64,13 @@ const router = VueRouter.createRouter({
 })
 
 router.beforeEach(async (to, from) => {
-    console.log('from', from.path, 'to', to.path)
-
-    if (to.path === '/welcome') {
-        const first = localStorage.getItem('first')
-        if (first === 'true') {
-            return true
-        } else if (first === 'false') {
-            // if (from.path === '/login') {
-            //     return '/home'
-            // }
-            return false
-        } else {
-            return await reqIsFirst()
-        }
-    }
-    if (to.path === '/login') {
-        if (from.path === '/welcome') {
-            return true
-        }
-        if (
-            sessionStorage.getItem('loggedIn') === 'true' &&
-            sessionStorage.getItem('logout') !== 'true'
-        ) {
-            if (from.path === '/') {
-                return '/home'
-            }
-            return false
-        }
+    console.log('from', from.path, '>>>>>', 'to', to.path)
+    if (sessionStorage.getItem('loggedIn') === 'true') {
         return true
     } else {
-        if (sessionStorage.getItem('loggedIn') === 'true') {
-            console.log('~~~', to.path)
-
+        if (to.path === '/login') {
             return true
-        } else {
-            console.log('~~~', '/login')
-            return '/login'
-        }
+        } else return '/login'
     }
 })
 

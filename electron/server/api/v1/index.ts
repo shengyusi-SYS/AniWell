@@ -13,7 +13,7 @@ router.use('/', async (req, res, next) => {
     } else {
         const { refreshToken, accessToken } = req.cookies
         const refreshTokenInfo = verifyToken(refreshToken)
-        const accessTokenInfo = verifyToken(accessToken)
+        // const accessTokenInfo = verifyToken(accessToken)
         if (refreshTokenInfo === false) {
             res.status(401).json({ error: '/v1 令牌错误' })
             return
@@ -23,13 +23,13 @@ router.use('/', async (req, res, next) => {
                 res.status(401).json({ error: '令牌或用户错误' })
                 return
             }
-            if (accessTokenInfo === false) {
-                res.cookie('accessToken', signAccessToken(user), {
-                    maxAge: 1000 * 60,
-                    httpOnly: true,
-                    secure: true,
-                })
-            }
+            // if (accessTokenInfo === false) {
+            //     res.cookie('accessToken', signAccessToken(user), {
+            //         maxAge: 1000 * 60,
+            //         httpOnly: true,
+            //         secure: true,
+            //     })
+            // }
             if (auth.isAdmin({ UID: user.UID }) === true) {
                 next()
             } else {

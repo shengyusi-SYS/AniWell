@@ -40,11 +40,11 @@ router.post('/login', upload.none(), async (req, res, next) => {
                     httpOnly: true,
                     secure: true,
                 })
-                    .cookie('accessToken', signAccessToken(user), {
-                        maxAge: 1000 * 60,
-                        httpOnly: true,
-                        secure: true,
-                    })
+                    // .cookie('accessToken', signAccessToken(user), {
+                    //     maxAge: 1000 * 60,
+                    //     httpOnly: true,
+                    //     secure: true,
+                    // })
                     .status(200)
                     .end()
                 return

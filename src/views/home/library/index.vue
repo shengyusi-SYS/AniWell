@@ -2,19 +2,23 @@
 import isDesktop from '@h/useIsDesktop'
 import { reqLibrary } from '@v/api'
 import { useElementSize } from '@v/hooks/useElementSize'
+import { CardData } from '@v/stores/library'
 
 const router = useRouter()
 const props = defineProps(['catagory'])
 
-console.log(props.catagory, router.currentRoute.value.query)
+let cardData: CardData = reactive({ title: '', poster: '', children: [] })
+const query = async (catagory: string, itemId?: string) => {
+    const res = await reqLibrary(catagory, itemId)
+    for (const key in res) {
+        if (Object.prototype.hasOwnProperty.call(res, key)) {
+            const element = res[key]
+            cardData[key] = element
+        }
+    }
+}
 
-let newData: Array<object> = reactive([])
-const cardData = computed(() => {
-    // console.log(newData)
-    if (newData) {
-        return newData
-    } else return []
-})
+console.log('dadawfwaf', props.catagory, router.currentRoute.value.query.path)
 
 const xNum = ref(isDesktop.value ? 5 : 2)
 const gutter = ref('6em')
@@ -24,25 +28,18 @@ const elSize = useElementSize(library)
 const fontSize = ref('16px')
 const fontPercent = ref(1)
 const gutterPercent = ref(1)
-
-onMounted(() => {
-    if (typeof router.currentRoute.value.query.path === 'string') {
-        reqLibrary(router.currentRoute.value.query.path)
-            .then((library) => {
-                library.children.forEach((element, i) => {
-                    i < 20 ? newData.push(element) : null
-                })
-            })
-            .catch((err) => {})
+onBeforeRouteUpdate(async (to, from, next) => {
+    // console.log(from.params.catagory, '----->', to.params.catagory)
+    // console.log(from.query.path, '====>', to.query.path)
+    if (typeof to.query.path !== 'undefined') {
+        query(to.params.catagory, to.query.path)
     } else {
-        reqLibrary('old')
-            .then((library) => {
-                library.children.forEach((element, i) => {
-                    i < 20 ? newData.push(element) : null
-                })
-            })
-            .catch((err) => {})
+        query(props.catagory)
     }
+    next()
+})
+onMounted(() => {
+    query(props.catagory, router.currentRoute.value.query.path)
 })
 onBeforeUpdate(() => {
     const posterWidth = elSize.elWidth / xNum.value
@@ -51,11 +48,7 @@ onBeforeUpdate(() => {
     gutter.value = (newSize < 16 ? newSize : 16) * 2 * gutterPercent.value + 'px'
 })
 onUnmounted(() => {})
-const test = () => {
-    console.log(router.currentRoute.value)
-
-    router.push(router.currentRoute.value.fullPath + '/item')
-}
+const test = () => {}
 </script>
 
 <script lang="ts">
@@ -74,9 +67,9 @@ export default {
         <div>gutter:<input v-model="gutterPercent" /></div>
         <div>
             <VanGrid :column-num="xNum" :gutter="gutter" :border="false">
-                <VanGridItem v-for="data in cardData">
+                <VanGridItem v-for="data in cardData.children">
                     <LazyComponent>
-                        <Card :key="data.title" :data="data" class="item-card" />
+                        <Card :key="data.title" :data="data" class="library-item" />
                     </LazyComponent>
                 </VanGridItem>
             </VanGrid>
@@ -88,13 +81,15 @@ export default {
 .library-base {
     min-height: 100%;
     width: 100%;
-    font-size: v-bind(fontSize);
+    font-size: var(--font-size);
     :deep(.van-grid-item__content) {
         display: block;
         padding: 0;
     }
-    .item-card {
+    .library-item {
         max-width: 100%;
+        width: 100%;
+        aspect-ratio: var(--card-aspect-ratio);
     }
 }
 </style>

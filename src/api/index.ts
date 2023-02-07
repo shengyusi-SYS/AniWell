@@ -1,5 +1,6 @@
 import requests from './request'
 import bcrypt from 'bcryptjs'
+import { CardData } from '@v/stores/library'
 // export const req = async () => requests.post('')
 let tried = false
 
@@ -56,6 +57,11 @@ export const reqIsFirst = async (): Promise<boolean> => {
 
 export const reqOldLibrary = async () => requests.get('/library/old')
 
-export const reqLibrary = async (catagory: string) => requests.get(`/library?catagory=${catagory}`)
+export const reqLibrary = async (
+    catagory: string,
+    itemId = '',
+    params = { start: 0, end: 20 },
+): Promise<CardData> =>
+    requests.get(`/library/${catagory}?itemId=${itemId}&range=${params.start},${params.end}`)
 
 export * from './old'

@@ -1,20 +1,15 @@
 <script setup lang="ts">
-interface CardData {
-    title: string
-    poster: string
-    note?: string
-    itemId?: string
-    type?: string
-    path?: string
-}
+import { encode, decode } from 'js-base64'
+import { CardData } from '@v/stores/library'
 const props = defineProps<{ data: CardData; aspectRatio?: number; fontSize?: any }>()
 const { title, poster, path, itemId } = props.data
 
 const router = useRouter()
+
 const go = () => {
-    console.log(props.data)
+    // console.log('~~~~~~', router.currentRoute.value.path + `?path=${encode(props.data.path)}`)
     if (props.data.path) {
-        router.push(router.currentRoute.value.path + '?path=' + encodeURIComponent(props.data.path))
+        router.push(router.currentRoute.value.path + `?path=${encode(props.data.path)}`)
     }
 }
 </script>
@@ -45,6 +40,8 @@ export default {
 .card-base {
     // aspect-ratio: v-bind(aspectRatio);
     aspect-ratio: var(--card-aspect-ratio);
+    width: 100%;
+    height: 100%;
     background-size: cover;
     box-shadow: var(--card-shadow);
     &:hover {
@@ -53,7 +50,7 @@ export default {
     .overlay {
         max-width: 100%;
         height: 100%;
-        // word-break:break-all;
+        word-break: break-all;
         text-align: left;
         display: flex;
         flex-direction: column;

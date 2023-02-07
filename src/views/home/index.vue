@@ -36,7 +36,7 @@ export default {
                 </ElCol>
                 <ElCol :span="4" class="headerRight">
                     <ElRow justify="end">
-                        <ElIcon size="2rem" @click="router.push('/home')"
+                        <ElIcon size="2rem" @click="router.push('/home/library/video')"
                             ><IMdiHomeOutline
                         /></ElIcon>
                     </ElRow>
