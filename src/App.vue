@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { useMediaQuery, useDraggable } from '@vueuse/core'
-import { computed, ref, watch, getCurrentInstance } from 'vue'
+import { useDraggable } from '@vueuse/core'
 import { useGlobalStore } from '@v/stores/global'
 import { storeToRefs } from 'pinia'
-const isPreferredDark = useMediaQuery('(prefers-color-scheme: dark)')
 
-const router = useRouter()
+const store = useGlobalStore()
+const { theme } = storeToRefs(store)
 
-const el = ref<HTMLElement | null>(null)
+const el = ref()
 const { x, y, style } = useDraggable(el, {
     initialValue: { x: 100, y: 440 },
 })
+
 // try {
 //     const test = async (a) => {
 //         console.log(a)
@@ -64,10 +64,6 @@ navigator.mediaCapabilities.decodingInfo(mediaConfig).then((result) => {
         console.log("Video can't play!")
     }
 })
-
-const store = useGlobalStore()
-
-const { theme } = storeToRefs(store)
 </script>
 
 <template>

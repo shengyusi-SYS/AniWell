@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import isDesktop from '@h/useIsDesktop'
-import { computed, ref, watch, getCurrentInstance } from 'vue'
+
 const menuOpenned = ref(false)
 
 const router = useRouter()
-// router.push('/home/library')
 </script>
 
 <script lang="ts">
@@ -82,10 +81,14 @@ export default {
 
     .home-container {
         overflow: hidden;
+        position: relative;
         .el-aside {
             // color: var(--el-text-color-primary);
+            // position: absolute;
             background: var(--background-color-d1);
             width: auto;
+            // height: calc(100vh - 2em);
+            // z-index: 99;
             // max-width: 30vw;
             .menu {
                 overflow: hidden;
