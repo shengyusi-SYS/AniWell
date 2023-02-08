@@ -50,6 +50,7 @@ const routes = [
             { path: '', redirect: '/home/library/video' },
             {
                 path: 'library/:catagory',
+                name: 'library',
                 component: Library,
                 props: true,
                 // children: [{ path: '', redirect: '' }]

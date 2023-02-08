@@ -5,14 +5,20 @@ import { useGlobalStore } from '@v/stores/global'
 import { storeToRefs } from 'pinia'
 const globalStore = useGlobalStore()
 const { theme } = storeToRefs(globalStore)
-const props = defineProps<{ data: CardData; fontSize?: any }>()
+const props = defineProps<{ data: CardData; fontSize?: any; replace?: () => boolean }>()
 const { title, poster, path, itemId, result } = props.data
 
 const router = useRouter()
 
 const go = () => {
     if (props.data.path) {
-        router.push(router.currentRoute.value.path + `?path=${encode(props.data.path)}`)
+        console.log(router.currentRoute.value.params)
+        router.push({
+            name: router.currentRoute.value.name ? router.currentRoute.value.name : 'library',
+            query: { path: encode(props.data.path) },
+            params: router.currentRoute.value.params,
+            replace: props.replace ? props.replace() : false,
+        })
     }
 }
 

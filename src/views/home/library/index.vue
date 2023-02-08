@@ -18,6 +18,8 @@ const librarySize = useElementSize(library)
 theme.value.libraryWidth = librarySize.width
 const fontSize = computed(() => {
     const posterWidth = theme.value.libraryWidth / theme.value.libraryColumnNum
+    console.log(posterWidth)
+
     const newSize =
         (posterWidth / 20) * theme.value.libraryFontSizePercent < 16
             ? (posterWidth / 20) * theme.value.libraryFontSizePercent
@@ -25,7 +27,7 @@ const fontSize = computed(() => {
     return newSize * theme.value.libraryFontSizePercent + 'px'
 })
 const gutter = computed(() => {
-    return parseInt(fontSize.value) * theme.value.libraryGutterPercent + 'px'
+    return parseInt(fontSize.value) * 2 * theme.value.libraryGutterPercent + 'px'
 })
 
 let cardData: CardData = reactive({ title: '', poster: '', children: [] })
@@ -38,10 +40,11 @@ const defaultOptions: { catagory?: string; itemId?: string; start?: number } = {
     start: 0,
 }
 const query = async (options = defaultOptions) => {
-    let { catagory, itemId, start } = { ...defaultOptions, ...options }
-    if (!itemId && typeof router.currentRoute.value.query.path === 'string') {
-        itemId = router.currentRoute.value.query.path
-    }
+    const { catagory, itemId, start } = { ...defaultOptions, ...options }
+    // console.log(catagory, itemId, {
+    //     start: (currentPage.value - 1) * pageSize.value,
+    //     end: currentPage.value * pageSize.value,
+    // })
     const newData = await reqLibrary(catagory, itemId, {
         start: (currentPage.value - 1) * pageSize.value,
         end: currentPage.value * pageSize.value,
@@ -70,29 +73,40 @@ const query = async (options = defaultOptions) => {
     })
 }
 const onSizeChange = (size: number) => {
-    query()
+    query({ itemId: router.currentRoute.value.query.path })
 }
 const onPageChange = (page: number) => {
     currentPage.value = page
-    console.log('4', page)
-    query()
+    // console.log('4', page)
+    query({ itemId: router.currentRoute.value.query.path })
 }
 
+let clean = false
+let replace = () => {
+    if (clean) {
+        clean = false
+        return true
+    } else {
+        return false
+    }
+}
 onBeforeRouteUpdate(async (to, from, next) => {
     if (typeof to.params.catagory === 'string' && typeof to.query.path === 'string') {
-        console.log('1')
         try {
+            // console.log('1')
             await query({ catagory: to.params.catagory, itemId: to.query.path })
         } catch (error) {
-            next(false)
+            clean = true
+            next()
             return
         }
     } else {
-        console.log('2')
+        // console.log('2', to.query)
         try {
             await query()
         } catch (error) {
-            next(false)
+            clean = true
+            next()
             return
         }
     }
@@ -100,7 +114,7 @@ onBeforeRouteUpdate(async (to, from, next) => {
 })
 
 onMounted(() => {
-    console.log('3')
+    // console.log('3')
     query({ itemId: router.currentRoute.value.query.path })
 })
 
@@ -136,7 +150,12 @@ export default {
             <VanGrid :column-num="theme.libraryColumnNum" :gutter="gutter" :border="false">
                 <VanGridItem v-for="data in cardData.children">
                     <LazyComponent class="library-lazy">
-                        <Card :key="data.title" :data="data" class="library-item" />
+                        <Card
+                            :key="data.title"
+                            :data="data"
+                            class="library-item"
+                            :replace="replace"
+                        />
                     </LazyComponent>
                 </VanGridItem>
             </VanGrid>
