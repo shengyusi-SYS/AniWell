@@ -3,28 +3,40 @@ import { encode } from 'js-base64'
 import { CardData } from '@v/stores/library'
 import { useGlobalStore } from '@v/stores/global'
 import { storeToRefs } from 'pinia'
+import { reqLibraryItem } from '@v/api'
 const globalStore = useGlobalStore()
 const { theme } = storeToRefs(globalStore)
-const props = defineProps<{ data: CardData; fontSize?: any; replace?: () => boolean }>()
-const { title, poster, path, itemId, result } = props.data
+const props = defineProps<{
+    data: CardData
+    fontSize?: any
+    replace?: () => boolean
+    playSrc?: (src: object) => void
+}>()
+// const { title, poster, path, itemId, result } = props.data
 
 const router = useRouter()
 
-const go = () => {
-    if (props.data.path) {
-        console.log(router.currentRoute.value.params)
-        router.push({
-            name: router.currentRoute.value.name ? router.currentRoute.value.name : 'library',
-            query: { path: encode(props.data.path) },
-            params: router.currentRoute.value.params,
-            replace: props.replace ? props.replace() : false,
-        })
+const go = async () => {
+    if (props.data.result === 'episodedetails') {
+        const src = await reqLibraryItem({ path: props.data.path })
+        if (props.playSrc) {
+            props.playSrc(src)
+        }
+    } else {
+        if (props.data.path) {
+            console.log(router.currentRoute.value.params)
+            router.push({
+                name: router.currentRoute.value.name ? router.currentRoute.value.name : 'library',
+                query: { path: encode(props.data.path) },
+                params: router.currentRoute.value.params,
+                replace: props.replace ? props.replace() : false,
+            })
+        }
     }
 }
 
 const aspectRatio = computed(() => {
-    // console.log(result, theme.value.cardAspectRatio, theme.value.libraryItemAspectRatio)
-    return result === 'episodedetails'
+    return props.data.result === 'episodedetails'
         ? theme.value.cardAspectRatio
         : theme.value.libraryItemAspectRatio
 })
@@ -40,13 +52,13 @@ export default {
     <div
         class="card-base col"
         :style="`background-image:url('/api/v1/library/poster/img.jpg?path=${encodeURIComponent(
-            poster,
+            data.poster,
         )}')`"
     >
         <div class="overlay" @click="go">
             <div class="info">
-                <div class="title van-multi-ellipsis--l2">{{ title }}</div>
-                <div class="note van-multi-ellipsis--l2">{{ path }}</div>
+                <div class="title van-multi-ellipsis--l2">{{ data.title }}</div>
+                <div class="note van-multi-ellipsis--l2">{{ data.path }}</div>
             </div>
         </div>
     </div>
@@ -75,7 +87,7 @@ export default {
         .info {
             // position: relative;
             .title {
-                margin: 0.5em 1em;
+                margin: 0.5em 0.5em;
                 font-family: Lato, Helvetica, Arial, sans-serif;
                 font-weight: 700;
                 font-size: 2em;

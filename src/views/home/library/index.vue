@@ -18,11 +18,12 @@ const librarySize = useElementSize(library)
 theme.value.libraryWidth = librarySize.width
 const fontSize = computed(() => {
     const posterWidth = theme.value.libraryWidth / theme.value.libraryColumnNum
-    console.log(posterWidth)
-
+    // console.log(posterWidth)
     const newSize =
         (posterWidth / 20) * theme.value.libraryFontSizePercent < 16
-            ? (posterWidth / 20) * theme.value.libraryFontSizePercent
+            ? (posterWidth / 20) *
+              theme.value.libraryFontSizePercent *
+              theme.value.libraryItemAspectRatio
             : 16
     return newSize * theme.value.libraryFontSizePercent + 'px'
 })
@@ -41,10 +42,6 @@ const defaultOptions: { catagory?: string; itemId?: string; start?: number } = {
 }
 const query = async (options = defaultOptions) => {
     const { catagory, itemId, start } = { ...defaultOptions, ...options }
-    // console.log(catagory, itemId, {
-    //     start: (currentPage.value - 1) * pageSize.value,
-    //     end: currentPage.value * pageSize.value,
-    // })
     const newData = await reqLibrary(catagory, itemId, {
         start: (currentPage.value - 1) * pageSize.value,
         end: currentPage.value * pageSize.value,
@@ -56,6 +53,11 @@ const query = async (options = defaultOptions) => {
             cardData[key] = element
         }
     }
+    cardData.children?.forEach((v) => {
+        if (!v.path) {
+            v.path = cardData.path + '\\' + v.label
+        }
+    })
     cardData.children?.sort((a, b) => {
         let result = a.episode - b.episode
         if (result) {
@@ -125,6 +127,12 @@ onBeforeUpdate(() => {})
 onUnmounted(() => {})
 
 const show = ref(false)
+const videoSrc = reactive({ src: '', type: '' })
+const playSrc = (src) => {
+    show.value = true
+    videoSrc.src = src.src
+    videoSrc.type = src.type
+}
 const test = () => {
     console.log('test')
 
@@ -155,6 +163,8 @@ export default {
                             :data="data"
                             class="library-item"
                             :replace="replace"
+                            :root="cardData.path"
+                            :play-src="playSrc"
                         />
                     </LazyComponent>
                 </VanGridItem>
@@ -162,7 +172,7 @@ export default {
         </div>
         <VanOverlay :show="show" @click="show = false">
             <div v-if="show" class="wrapper" @click.stop>
-                <VideoPlayer url="/api/v1/video/test.mp4"></VideoPlayer>
+                <VideoPlayer :src="videoSrc"></VideoPlayer>
             </div>
         </VanOverlay>
         <ElPagination

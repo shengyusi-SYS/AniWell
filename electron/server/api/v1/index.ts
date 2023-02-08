@@ -3,6 +3,7 @@ import express from 'express'
 const router = express.Router()
 import users from './users'
 import library from './library'
+import video from './video'
 import auth from '@s/modules/auth'
 import { signAccessToken, verifyToken } from '@s/utils/jwt'
 import { users as usersStore } from '@s/store/users'
@@ -46,18 +47,7 @@ router.use('/server', async (req, res, next) => {
     next()
 })
 
-router.use('/video', async (req, res, next) => {
-    console.log(req.path)
-    if (req.path === '/test.mp4') {
-        const directPlayHandler = await import('@s/modules/handleVideoRequest/directPlayHandler')
-        return directPlayHandler.default
-            .init({
-                filePath: path.resolve(''),
-            })
-            .directPlay(req, res)
-    }
-    // next()
-})
+router.use('/video', video)
 
 router.use('/library', library)
 
