@@ -18,10 +18,12 @@ const librarySize = useElementSize(library)
 theme.value.libraryWidth = librarySize.width
 const fontSize = computed(() => {
     const posterWidth = theme.value.libraryWidth / theme.value.libraryColumnNum
+    const posterHeight = posterWidth / theme.value.libraryItemAspectRatio
+    const reference = posterWidth < posterHeight ? posterWidth : posterHeight
     // console.log(posterWidth)
     const newSize =
-        (posterWidth / 20) * theme.value.libraryFontSizePercent < 16
-            ? (posterWidth / 20) *
+        reference / 20 < 16
+            ? (reference / 20) *
               theme.value.libraryFontSizePercent *
               theme.value.libraryItemAspectRatio
             : 16
@@ -165,6 +167,7 @@ export default {
                             :replace="replace"
                             :root="cardData.path"
                             :play-src="playSrc"
+                            :font-size="fontSize"
                         />
                     </LazyComponent>
                 </VanGridItem>

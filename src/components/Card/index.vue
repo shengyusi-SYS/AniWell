@@ -4,11 +4,13 @@ import { CardData } from '@v/stores/library'
 import { useGlobalStore } from '@v/stores/global'
 import { storeToRefs } from 'pinia'
 import { reqLibraryItem } from '@v/api'
+import { ComputedRef } from 'vue'
+import { el } from 'element-plus/es/locale'
 const globalStore = useGlobalStore()
 const { theme } = storeToRefs(globalStore)
 const props = defineProps<{
     data: CardData
-    fontSize?: any
+    fontSize?: ComputedRef<string>
     replace?: () => boolean
     playSrc?: (src: object) => void
 }>()
@@ -40,6 +42,13 @@ const aspectRatio = computed(() => {
         ? theme.value.cardAspectRatio
         : theme.value.libraryItemAspectRatio
 })
+
+const cardFontSize = computed(() => {
+    const libraryFontSize = parseInt(props.fontSize)
+    if (props.data.result === 'episodedetails') {
+        return libraryFontSize / aspectRatio.value + 'px'
+    } else return libraryFontSize + 'px'
+})
 </script>
 
 <script lang="ts">
@@ -67,6 +76,7 @@ export default {
 <style lang="less" scoped>
 .card-base {
     aspect-ratio: v-bind(aspectRatio);
+    font-size: v-bind('cardFontSize');
     // aspect-ratio: 2;
     width: 100%;
     // height: 100%;

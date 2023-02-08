@@ -24,7 +24,7 @@ router.get('/:catagory', (req, res, next) => {
         }
 
         const library = JSON.parse(fs.readFileSync(path.resolve(init.libraryIndexPath)).toString())
-        console.log(catagory, resolve(decode(reqPath)))
+        // console.log(catagory, resolve(decode(reqPath)))
         if (typeof catagory === 'string') {
             if (catagory === 'video' && !reqPath) {
                 library.total = library.children.length
@@ -109,7 +109,6 @@ router.post('/item', async (req, res, next) => {
             return
         } catch (error) {
             console.log(error)
-
             res.status(500).json({ message: '无对应处理程序' })
         }
     } else {
