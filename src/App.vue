@@ -104,6 +104,7 @@ navigator.mediaCapabilities.decodingInfo(mediaConfig).then((result) => {
     --card-shadow: v-bind('theme.cardShadow');
     --card-shadow-hover: v-bind('theme.cardShadowHover');
     --card-aspect-ratio: v-bind('theme.cardAspectRatio');
+    --library-item-aspect-ratio: v-bind('theme.libraryItemAspectRatio');
     background-color: var(--background-color);
     font-size: var(--font-size);
     color: var(--font-color);

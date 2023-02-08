@@ -15,6 +15,7 @@ class DirectPlayHandler {
         this.contentType = mediaContentType(this.filePath)
         _this = this
         console.log(_this)
+        return this
     }
     directPlay = async (req, res) => {
         try {

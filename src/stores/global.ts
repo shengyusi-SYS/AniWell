@@ -26,12 +26,13 @@ export const useGlobalStore = defineStore('counter', () => {
         fontColorSecondary: '#66',
         cardShadow: '0 0 35px 5px rgb(0 0 0 / 40%)',
         cardShadowHover: '0 0 35px 5px rgb(0 0 0 / 60%)',
-        cardAspectRatio: 0.75,
+        cardAspectRatio: 16 / 9,
         libraryWidth: 1920,
         libraryHeight: 0,
         libraryFontSizePercent: 1,
         libraryColumnNum: isDesktop ? 5 : 2,
         libraryGutterPercent: 2,
+        libraryItemAspectRatio: 0.75,
     })
 
     return { theme, clientState, isDesktop }

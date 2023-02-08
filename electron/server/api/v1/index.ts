@@ -6,6 +6,7 @@ import library from './library'
 import auth from '@s/modules/auth'
 import { signAccessToken, verifyToken } from '@s/utils/jwt'
 import { users as usersStore } from '@s/store/users'
+import path from 'path'
 
 router.use('/', async (req, res, next) => {
     if (/^\/users\/(login|salt|first)/.test(req.path)) {
@@ -46,7 +47,16 @@ router.use('/server', async (req, res, next) => {
 })
 
 router.use('/video', async (req, res, next) => {
-    next()
+    console.log(req.path)
+    if (req.path === '/test.mp4') {
+        const directPlayHandler = await import('@s/modules/handleVideoRequest/directPlayHandler')
+        return directPlayHandler.default
+            .init({
+                filePath: path.resolve(''),
+            })
+            .directPlay(req, res)
+    }
+    // next()
 })
 
 router.use('/library', library)

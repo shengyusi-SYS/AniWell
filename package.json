@@ -18,7 +18,6 @@
     },
     "dependencies": {
         "7zip-bin": "^5.2.0",
-        "@types/bcryptjs": "^2.4.2",
         "@vueuse/core": "^9.6.0",
         "axios": "^1.3.1",
         "bcryptjs": "^2.4.3",
@@ -28,6 +27,7 @@
         "cookie-parser": "^1.4.6",
         "diff": "^5.1.0",
         "dotenv": "^16.0.3",
+        "dplayer": "^1.27.1",
         "electron-store": "^8.1.0",
         "element-plus": "^2.2.26",
         "env-paths": "^3.0.0",
@@ -35,6 +35,7 @@
         "file-type": "^16.5.4",
         "fluent-ffmpeg": "^2.1.2",
         "got": "^11",
+        "hls.js": "^1.3.2",
         "http-proxy-middleware": "^2.0.6",
         "js-base64": "^3.7.4",
         "jsonwebtoken": "^9.0.0",
@@ -54,6 +55,8 @@
         "xml2js": "^0.4.23"
     },
     "devDependencies": {
+        "@types/bcryptjs": "^2.4.2",
+        "@types/dplayer": "^1.25.2",
         "@iconify-json/ep": "^1.1.8",
         "@iconify-json/ic": "^1.1.10",
         "@iconify-json/mdi": "^1.1.38",

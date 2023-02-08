@@ -35,23 +35,29 @@ router.get('/:catagory', (req, res, next) => {
         console.log(catagory, resolve(decode(reqPath)))
         if (typeof catagory === 'string') {
             if (catagory === 'video' && !reqPath) {
+                library.total = library.children.length
                 const result = []
                 for (; start < end && start < library.children.length; start++) {
                     const element = library.children[start]
                     result.push(element)
                 }
                 library.children = result
+                library.start = start
+                library.pageSize = library.children.length
                 res.send(library)
                 return
             }
             const search = searchLeaf(library, resolve(decode(reqPath)))
             if (search) {
+                search.total = search.children.length
                 const result = []
                 for (; start < end && start < search.children.length; start++) {
                     const element = search.children[start]
                     result.push(element)
                 }
                 search.children = result
+                search.start = start
+                search.pageSize = search.children.length
                 res.send(search)
             } else {
                 res.status(404).send('不存在')

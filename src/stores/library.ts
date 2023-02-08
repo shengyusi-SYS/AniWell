@@ -7,21 +7,12 @@ export interface CardData {
     itemId?: string
     type?: string
     path?: string
+    result?: string
+    total: number
+    start: number
+    pageSize: number
     children?: Array<CardData>
 }
 export const useLibraryStore = defineStore('counter', () => {
-    let cardData: CardData = reactive({ title: '', poster: '', children: [] })
-    function replace(newData: CardData) {
-        cardData.title = 'rr'
-        console.log(cardData)
-        cardData = { a: '' }
-        console.log(cardData)
-    }
-
-    const clear = () => (cardData.length = 0)
-    const query = async (catagory: string, itemId?: string) => {
-        const res = await reqLibrary(catagory, itemId)
-        replace(res)
-    }
-    return { cardData, replace }
+    return {}
 })

@@ -4,6 +4,7 @@ import { useGlobalStore } from '@v/stores/global'
 import { CardData } from '@v/stores/library'
 import { useElementSize, useWindowSize } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
+// import VideoPlayer from '@v/components/VideoPlayer/index.vue'
 // import { useElementSize } from '@v/hooks/useElementSize'
 // import isDesktop from '@h/useIsDesktop'
 
@@ -28,29 +29,79 @@ const gutter = computed(() => {
 })
 
 let cardData: CardData = reactive({ title: '', poster: '', children: [] })
-const query = async (catagory: string, itemId?: string) => {
-    const res = await reqLibrary(catagory, itemId)
-    for (const key in res) {
-        if (Object.prototype.hasOwnProperty.call(res, key)) {
-            const element = res[key]
+const currentPage = ref(1)
+const pageSize = ref(20)
+const total = ref(20)
+const defaultOptions: { catagory?: string; itemId?: string; start?: number } = {
+    catagory: props.catagory,
+    itemId: '',
+    start: 0,
+}
+const query = async (options = defaultOptions) => {
+    let { catagory, itemId, start } = { ...defaultOptions, ...options }
+    if (!itemId && typeof router.currentRoute.value.query.path === 'string') {
+        itemId = router.currentRoute.value.query.path
+    }
+    const newData = await reqLibrary(catagory, itemId, {
+        start: (currentPage.value - 1) * pageSize.value,
+        end: currentPage.value * pageSize.value,
+    })
+    total.value = newData.total
+    for (const key in newData) {
+        if (Object.prototype.hasOwnProperty.call(newData, key)) {
+            const element = newData[key]
             cardData[key] = element
         }
     }
+    cardData.children?.sort((a, b) => {
+        let result = a.episode - b.episode
+        if (result) {
+            return result
+        }
+        if (a.children && b.children) {
+            return 0
+        }
+        if (a.children) {
+            return -1
+        }
+        if (b.children) {
+            return 1
+        }
+    })
+}
+const onSizeChange = (size: number) => {
+    query()
+}
+const onPageChange = (page: number) => {
+    currentPage.value = page
+    console.log('4', page)
+    query()
 }
 
 onBeforeRouteUpdate(async (to, from, next) => {
-    // console.log(from.params.catagory, '----->', to.params.catagory)
-    // console.log(from.query.path, '====>', to.query.path)
-    if (typeof to.query.path !== 'undefined') {
-        query(to.params.catagory, to.query.path)
+    if (typeof to.params.catagory === 'string' && typeof to.query.path === 'string') {
+        console.log('1')
+        try {
+            await query({ catagory: to.params.catagory, itemId: to.query.path })
+        } catch (error) {
+            next(false)
+            return
+        }
     } else {
-        query(props.catagory)
+        console.log('2')
+        try {
+            await query()
+        } catch (error) {
+            next(false)
+            return
+        }
     }
     next()
 })
 
 onMounted(() => {
-    query(props.catagory, router.currentRoute.value.query.path)
+    console.log('3')
+    query({ itemId: router.currentRoute.value.query.path })
 })
 
 onBeforeMount(() => {})
@@ -58,7 +109,13 @@ onBeforeMount(() => {})
 onBeforeUpdate(() => {})
 
 onUnmounted(() => {})
-const test = () => {}
+
+const show = ref(false)
+const test = () => {
+    console.log('test')
+
+    show.value = true
+}
 </script>
 
 <script lang="ts">
@@ -78,12 +135,27 @@ export default {
         <div>
             <VanGrid :column-num="theme.libraryColumnNum" :gutter="gutter" :border="false">
                 <VanGridItem v-for="data in cardData.children">
-                    <LazyComponent>
+                    <LazyComponent class="library-lazy">
                         <Card :key="data.title" :data="data" class="library-item" />
                     </LazyComponent>
                 </VanGridItem>
             </VanGrid>
         </div>
+        <VanOverlay :show="show" @click="show = false">
+            <div v-if="show" class="wrapper" @click.stop>
+                <VideoPlayer url="/api/v1/video/test.mp4"></VideoPlayer>
+            </div>
+        </VanOverlay>
+        <ElPagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :page-sizes="[20, 24, 30, 60]"
+            :background="true"
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="total"
+            @size-change="onSizeChange"
+            @current-change="onPageChange"
+        />
     </div>
 </template>
 
@@ -92,14 +164,21 @@ export default {
     min-height: 100%;
     width: 100%;
     font-size: v-bind('fontSize');
+    .library-lazy {
+        display: flex;
+        align-items: center;
+        height: 100%;
+    }
     :deep(.van-grid-item__content) {
         display: block;
+
         max-width: 100%;
         padding: 0;
+        --van-grid-item-content-background: none;
     }
-    .library-item {
-        width: 100%;
-        aspect-ratio: var(--card-aspect-ratio);
-    }
+    // .library-item {
+    //     width: 100%;
+    //     aspect-ratio: var(--library-item-aspect-ratio);
+    // }
 }
 </style>

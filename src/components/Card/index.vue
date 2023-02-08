@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { encode } from 'js-base64'
 import { CardData } from '@v/stores/library'
-
-const props = defineProps<{ data: CardData; aspectRatio?: number; fontSize?: any }>()
-const { title, poster, path, itemId } = props.data
+import { useGlobalStore } from '@v/stores/global'
+import { storeToRefs } from 'pinia'
+const globalStore = useGlobalStore()
+const { theme } = storeToRefs(globalStore)
+const props = defineProps<{ data: CardData; fontSize?: any }>()
+const { title, poster, path, itemId, result } = props.data
 
 const router = useRouter()
 
@@ -12,6 +15,13 @@ const go = () => {
         router.push(router.currentRoute.value.path + `?path=${encode(props.data.path)}`)
     }
 }
+
+const aspectRatio = computed(() => {
+    // console.log(result, theme.value.cardAspectRatio, theme.value.libraryItemAspectRatio)
+    return result === 'episodedetails'
+        ? theme.value.cardAspectRatio
+        : theme.value.libraryItemAspectRatio
+})
 </script>
 
 <script lang="ts">
@@ -38,10 +48,10 @@ export default {
 
 <style lang="less" scoped>
 .card-base {
-    // aspect-ratio: v-bind(aspectRatio);
-    aspect-ratio: var(--card-aspect-ratio);
+    aspect-ratio: v-bind(aspectRatio);
+    // aspect-ratio: 2;
     width: 100%;
-    height: 100%;
+    // height: 100%;
     background-size: cover;
     box-shadow: var(--card-shadow);
     &:hover {
