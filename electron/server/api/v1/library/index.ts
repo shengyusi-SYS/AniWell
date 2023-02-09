@@ -101,7 +101,7 @@ router.post('/item', async (req, res, next) => {
 
     if (typeof itemType === 'string') {
         try {
-            const handler = (await import(`./handler/${itemType}.ts`)).default
+            const handler = (await import(`./handler/video`)).default
             console.log('1', handler)
 
             await handler(req, res, next)

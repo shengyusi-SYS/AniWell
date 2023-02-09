@@ -1,33 +1,22 @@
 import { logger } from './logger'
 import os from 'os'
-import child_process from 'child_process'
+import { spawnSync } from 'child_process'
 
 const osPlatform: string = os.type() == 'Linux' ? 'lin' : os.type() == 'Windows_NT' ? 'win' : ''
 let gpus = {}
 
 if (osPlatform == 'win') {
-    const output = child_process
-        .execSync('wmic path Win32_VideoController get /format:list')
-        .toString()
-    const cards = output.trim().split('\r\r\n\r\r')
-    cards.forEach((card, i) => {
-        const lines = card.split('\n')
-        let cardName = ''
-        let cardID = ''
-        for (const line of lines) {
-            if (line.includes('=')) {
-                const [key, value] = line.split('=')
-                if (key == 'Caption') {
-                    cardName = i + ':' + value.trim()
-                }
-                if (key == 'PNPDeviceID') {
-                    const val = value.trim().match(/VEN_\w{4}/)
-                    cardID = val ? `:,vendor=0x${val[0].replace('VEN_', '')}` : ''
-                }
-            }
-        }
+    const output = spawnSync('wmic', ['path Win32_VideoController get /format:list'], {
+        shell: true,
+    }).stdout.toString('utf8')
+    const com = /Caption=(?<caption>.+)(.|\s)*?PNPDeviceID=PCI\\VEN_(?<deviceID>\w{4})(.|\n)+?/g
+    const cards = output.matchAll(com)
+    let i = 0
+    for (const match of cards) {
+        const cardName = i++ + ':' + match.groups.caption
+        const cardID = `:,vendor=0x${match.groups.deviceID}`
         gpus[cardName] = cardID
-    })
+    }
 }
 if (osPlatform == 'lin') {
     gpus = {
