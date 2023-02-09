@@ -1,4 +1,4 @@
-import  settings  from '@s/store/settings'
+import settings from '@s/store/settings'
 import { logger, scrapeLogger } from './logger'
 import rimraf from 'rimraf'
 import { EventEmitter } from 'events'
@@ -96,7 +96,7 @@ async function vidoeHashS(filePath) {
     })
 }
 
-function readChunkSync(filePath, { length, startPosition }) {
+export function readChunkSync(filePath, { length = 1024, startPosition = 0 }) {
     let buffer = Buffer.alloc(length)
     const fileDescriptor = fs.openSync(filePath, 'r')
 

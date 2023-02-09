@@ -20,23 +20,27 @@ export default class VideoTask implements VideoTask {
     public async init(params) {
         const { filePath, bitrate, autoBitrate, resolution, SID, method } = params //测试，待删
         this.videoInfo = await getVideoInfo(filePath)
-        this.subtitleList = await handleSubtitles(filePath, this.videoInfo)
-        this.videoInfo = selectMethod(this.videoInfo, params)
-        if (method === 'direct') this.videoInfo.method = 'direct' //测试，待删
+        console.log(this.videoInfo)
 
-        if (this.videoInfo.method == 'direct') {
-        } else if (this.videoInfo.method == 'transcode') {
-            await handleFonts(filePath)
-        }
-        this.contentType = 'application/x-mpegURL'
+        // this.subtitleList = await handleSubtitles(filePath, this.videoInfo)
+        // this.videoInfo = selectMethod(this.videoInfo, params)
+        // if (method === 'direct') this.videoInfo.method = 'direct' //测试，待删
 
-        this.method = this.videoInfo.method
-        this.taskId = path.basename(filePath)
+        // if (this.videoInfo.method == 'direct') {
+        // } else if (this.videoInfo.method == 'transcode') {
+        //     await handleFonts(filePath)
+        // }
+        // this.contentType = 'application/x-mpegURL'
+
+        // this.method = this.videoInfo.method
+        // this.taskId = path.basename(filePath)
     }
     /**
      * stop
      */
-    public async stop() {}
+    public async stop() {
+        return Promise.resolve()
+    }
     /**
      * handleRequest
      */

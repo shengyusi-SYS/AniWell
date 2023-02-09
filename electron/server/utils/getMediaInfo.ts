@@ -2,11 +2,13 @@ import { spawnSync, spawn } from 'child_process'
 import settings from '@s/store/settings'
 import path from 'path'
 import init from '@s/utils/init'
+import MP4Box from 'mp4box'
+import { readChunkSync } from '@s/utils'
 
-const ffprobePath = settings.get('ffmpegPath')
-    ? `"${path.resolve(settings.get('ffmpegPath'), `ffprobe${init.ffmpegSuffix}`)}"`
-    : 'ffprobe'
-export function getMediaInfoSync(filePath: string) {
+export function getMediaInfoSync(filePath: string): Promise<mediaInfo> {
+    const ffprobePath = settings.get('ffmpegPath')
+        ? `"${path.resolve(settings.get('ffmpegPath'), `ffprobe${init.ffmpegSuffix}`)}"`
+        : 'ffprobe'
     const process = spawnSync(
         ffprobePath,
         [
@@ -22,7 +24,10 @@ export function getMediaInfoSync(filePath: string) {
     return result
 }
 
-export async function getMediaInfo(filePath: string) {
+export async function getMediaInfo(filePath: string): Promise<mediaInfo> {
+    const ffprobePath = settings.get('ffmpegPath')
+        ? `"${path.resolve(settings.get('ffmpegPath'), `ffprobe${init.ffmpegSuffix}`)}"`
+        : 'ffprobe'
     return new Promise((resolve, reject) => {
         const process = spawn(
             ffprobePath,
@@ -50,55 +55,102 @@ export async function getMediaInfo(filePath: string) {
     })
 }
 
-// export interface
-const mediaInfo = {
+export async function getScreenedMediaInfo(filePath: string) {
+    const metadata = await getMediaInfo(filePath)
+    const vidoeStream = metadata.streams.find((v) => {
+        return v.codec_type == 'video'
+    })
+    const audioStreams = metadata.streams.filter((v) => {
+        return v.codec_type == 'audio'
+    })
+    const subtitleStreams = metadata.streams.filter((v) => {
+        return v.codec_type == 'subtitle'
+    })
+    return {
+        format: metadata.format,
+        vidoeStream,
+        audioStreams,
+        subtitleStreams,
+    }
+}
+
+export async function getVideoMimeType(filePath: string) {
+    const readMediaHeader = () => {
+        if (path.extname(filePath) === '.mkv') {
+            //ffmpeg不能直接获得标准的mime codec，MP4box不能直接解析mkv格式，就很烦
+            //解决方案：ffmpeg提取MP4格式的视频头，交给MP4box解析
+            return null
+        } else {
+            return readChunkSync(filePath, { length: 5 * 1024 * 1024 })
+        }
+    }
+    const mp4boxfile = MP4Box.createFile()
+    const chunk = readMediaHeader()
+    if (!chunk) {
+        return Promise.reject()
+    }
+    const arrayBuffer = new Uint8Array(chunk).buffer
+    arrayBuffer.fileStart = 0
+    return new Promise<string | Error>((resolve, reject) => {
+        mp4boxfile.onReady = (info) => {
+            resolve(info?.mime)
+        }
+        mp4boxfile.onError = function (e) {
+            reject(e)
+        }
+        mp4boxfile.appendBuffer(arrayBuffer)
+    })
+}
+
+export interface mediaInfo {
     streams: [
         {
-            index: 0,
-            codec_name: 'hevc',
-            codec_long_name: 'H.265 / HEVC (High Efficiency Video Coding)',
-            profile: 'Main 10',
-            codec_type: 'video',
-            codec_tag_string: '[0][0][0][0]',
-            codec_tag: '0x0000',
-            width: 1920,
-            height: 1080,
-            coded_width: 1920,
-            coded_height: 1080,
-            closed_captions: 0,
-            film_grain: 0,
-            has_b_frames: 2,
-            sample_aspect_ratio: '1:1',
-            display_aspect_ratio: '16:9',
-            pix_fmt: 'yuv420p10le',
-            level: 150,
-            color_range: 'tv',
-            chroma_location: 'left',
-            refs: 1,
-            r_frame_rate: '24000/1001',
-            avg_frame_rate: '24000/1001',
-            time_base: '1/1000',
-            start_pts: 0,
-            start_time: '0.000000',
-            extradata_size: 1092,
-            disposition: [Object],
-            tags: [Object],
+            index?: number
+            codec_name?: string
+            codec_long_name?: string
+            profile?: string
+            codec_type?: string
+            codec_tag_string?: string
+            codec_tag?: string
+            width?: number
+            height?: number
+            coded_width?: number
+            coded_height?: number
+            closed_captions?: number
+            film_grain?: number
+            has_b_frames?: number
+            sample_aspect_ratio?: string
+            display_aspect_ratio?: string
+            pix_fmt?: string
+            level?: number
+            color_range?: string
+            chroma_location?: string
+            refs?: number
+            r_frame_rate?: string
+            avg_frame_rate?: string
+            time_base?: string
+            start_pts?: number
+            start_time?: string
+            extradata_size?: number
+            color_space?: string
+            disposition: Array<object>
+            tags: Array<object>
         },
-    ],
+    ]
     format: {
-        filename: '',
-        nb_streams: 3,
-        nb_programs: 0,
-        format_name: 'matroska,webm',
-        format_long_name: 'Matroska / WebM',
-        start_time: '0.000000',
-        duration: '1412.955000',
-        size: '1110888879',
-        bit_rate: '6289733',
-        probe_score: 100,
+        filename?: ''
+        nb_streams?: number
+        nb_programs?: number
+        format_name?: string
+        format_long_name?: string
+        start_time?: string
+        duration?: string
+        size?: string
+        bit_rate?: string
+        probe_score?: number
         tags: {
-            encoder: 'libebml v1.3.1 + libmatroska v1.4.2',
-            creation_time: '2015-12-05T02:02:35.000000Z',
-        },
-    },
+            encoder?: string
+            creation_time?: string
+        }
+    }
 }

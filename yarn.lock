@@ -3402,6 +3402,13 @@ media-typer@0.3.0:
   resolved "https://registry.yarnpkg.com/media-typer/-/media-typer-0.3.0.tgz#8710d7af0aa626f8fffa1ce00168545263255748"
   integrity sha512-dq+qelQ9akHpcOl/gUVRTxVIOkAJ1wR3QAvb4RsVjS8oVoFjDGTc679wJYmUmknUF5HwMLOgb5O+a3KxfWapPQ==
 
+mediainfo.js@^0.1.9:
+  version "0.1.9"
+  resolved "https://registry.yarnpkg.com/mediainfo.js/-/mediainfo.js-0.1.9.tgz#10e3204db4d51244b08593c554884ff0f0b8739e"
+  integrity sha512-RxTWC5cvfl+TMDM4cG+G7VFIdYfg1X/FLNLujqRERtKMr48Hbmno94fS0A8VP3zANDRXJn88DPWAUFDbcgzIrQ==
+  dependencies:
+    yargs "^17.6.2"
+
 memoize-one@^6.0.0:
   version "6.0.0"
   resolved "https://registry.yarnpkg.com/memoize-one/-/memoize-one-6.0.0.tgz#b2591b871ed82948aee4727dc6abceeeac8c1045"
@@ -3558,6 +3565,11 @@ moo@^0.5.1:
   version "0.5.2"
   resolved "https://registry.yarnpkg.com/moo/-/moo-0.5.2.tgz#f9fe82473bc7c184b0d32e2215d3f6e67278733c"
   integrity sha512-iSAJLHYKnX41mKcJKjqvnAN9sf0LMDTXDEvFv+ffuRR9a1MIuXLjMNL6EsnDHSkKLTWNqQQ5uo61P4EbU4NU+Q==
+
+mp4box@^0.5.2:
+  version "0.5.2"
+  resolved "https://registry.yarnpkg.com/mp4box/-/mp4box-0.5.2.tgz#6a2d36fdd0e2d3f2f2bee446d2067edf0b3871bc"
+  integrity sha512-zRmGlvxy+YdW3Dmt+TR4xPHynbxwXtAQDTN/Fo9N3LMxaUlB2C5KmZpzYyGKy4c7k4Jf3RCR0A2pm9SZELOLXw==
 
 ms@2.0.0:
   version "2.0.0"
@@ -5098,7 +5110,7 @@ yargs@^13.1.1:
     y18n "^4.0.0"
     yargs-parser "^13.1.2"
 
-yargs@^17.5.1:
+yargs@^17.5.1, yargs@^17.6.2:
   version "17.6.2"
   resolved "https://registry.yarnpkg.com/yargs/-/yargs-17.6.2.tgz#2e23f2944e976339a1ee00f18c77fedee8332541"
   integrity sha512-1/9UrdHjDZc0eOU0HxOHoS78C69UD3JRMvzlJ7S79S2nTaWRA/whGCTV8o9e/N/1Va9YIV7Q4sOxD8VV4pCWOw==

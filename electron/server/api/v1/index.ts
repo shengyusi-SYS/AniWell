@@ -33,6 +33,7 @@ router.use('/', async (req, res, next) => {
             //     })
             // }
             if (auth.isAdmin({ UID: user.UID }) === true) {
+                req.user = user
                 next()
             } else {
                 res.status(401).json({ error: '权限错误' })

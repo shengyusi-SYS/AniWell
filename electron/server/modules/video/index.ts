@@ -54,3 +54,5 @@ class VideoTaskCenter {
         await targetTask.handleRequest(req, res)
     }
 }
+
+export default new VideoTaskCenter()
