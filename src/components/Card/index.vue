@@ -6,6 +6,7 @@ import { storeToRefs } from 'pinia'
 import { reqLibraryItem } from '@v/api'
 import { ComputedRef } from 'vue'
 import { el } from 'element-plus/es/locale'
+
 const globalStore = useGlobalStore()
 const { theme } = storeToRefs(globalStore)
 const props = defineProps<{
@@ -19,8 +20,8 @@ const props = defineProps<{
 const router = useRouter()
 
 const go = async () => {
-    if (props.data.result === 'episodedetails') {
-        const src = await reqLibraryItem({ path: props.data.path })
+    if (props.data.result === 'episodedetails' && props.data.path) {
+        const src = await reqLibraryItem({ filePath: props.data.path, method: 'direct' })
         if (props.playSrc) {
             props.playSrc(src)
         }

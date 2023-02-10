@@ -1,10 +1,11 @@
 import express from 'express'
-import hlsRequestHandler from '@s/modules/handleVideoRequest/hlsRequestHandler'
-import directPlayHandler from '@s/modules/handleVideoRequest/directPlayHandler'
+import VideoTaskCenter from '@s/modules/video'
 const router = express.Router()
 
-router.use('/output', hlsRequestHandler.output)
-router.use('/clearVideoTemp', hlsRequestHandler.clearVideoTemp)
-router.use('/directPlay', directPlayHandler.directPlay)
+// router.use('/hls', VideoTaskCenter.handleRequest)
+router.use('/', (req, res) => {
+    return VideoTaskCenter.handleRequest(req, res)
+})
+// router.use('/clearVideoTemp', hlsRequestHandler.clearVideoTemp)
 
 export default router

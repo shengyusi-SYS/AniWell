@@ -1,48 +1,81 @@
-import getVideoInfo from './getVideoInfo'
+import { logger } from '@s/utils/logger'
+import getVideoInfo, { VideoInfo } from './getVideoInfo'
+import handleSubtitles from './handleSubtitles'
+import selectMethod from './selectMethod'
+import { ClientParams } from '@s/api/v1/library/handler/video'
+import handleFonts from './handleFonts'
+import DirectPlayHandler from './directPlayHandler'
+import { v4 as uuidv4 } from 'uuid'
+import { signAccessToken } from '@s/utils/jwt'
+import HlsHandler from './hlsHandler/a'
 
 export interface IVideoTask {
-    taskId: number
-    init: () => Promise<void>
+    taskId: string
+    init: (params: ClientParams) => Promise<void>
     stop: () => Promise<void>
 }
-export default class VideoTask implements VideoTask {
-    private videoInfo
+
+export interface VideoHandler {
+    contentType: string
+    init: (params: ClientParams) => Promise<void>
+    handle: (req, res) => Promise<void>
+    stop: () => Promise<void>
+}
+
+export default class VideoTask implements IVideoTask {
+    private videoInfo: VideoInfo
     private subtitleList
-    private handler
+    private handler: VideoHandler
     private process
     public contentType
     public method
-    public taskId
+    public taskId: string
+    public src: {
+        url: string
+        type: string
+        sub?: Buffer
+        fontsList?: Array<string>
+    }
     constructor() {}
     /**
      * init
      */
-    public async init(params) {
-        const { filePath, bitrate, autoBitrate, resolution, SID, method } = params //测试，待删
+    public async init(params: ClientParams) {
+        const { filePath, bitrate, autoBitrate, resolution, user, method } = params //测试，待删
+        this.taskId = uuidv4()
         this.videoInfo = await getVideoInfo(filePath)
-        console.log(this.videoInfo)
-
-        // this.subtitleList = await handleSubtitles(filePath, this.videoInfo)
-        // this.videoInfo = selectMethod(this.videoInfo, params)
-        // if (method === 'direct') this.videoInfo.method = 'direct' //测试，待删
-
-        // if (this.videoInfo.method == 'direct') {
-        // } else if (this.videoInfo.method == 'transcode') {
-        //     await handleFonts(filePath)
-        // }
-        // this.contentType = 'application/x-mpegURL'
-
-        // this.method = this.videoInfo.method
-        // this.taskId = path.basename(filePath)
+        this.videoInfo.taskId = this.taskId
+        this.subtitleList = await handleSubtitles(filePath, this.videoInfo)
+        await handleFonts(filePath)
+        selectMethod(this.videoInfo, params)
+        console.log('VideoTask videoInfo', this.videoInfo)
+        if (this.videoInfo.method == 'direct') {
+            logger.info('handleVideoRequest', 'start direct')
+            this.handler = new DirectPlayHandler()
+            await this.handler.init(this.videoInfo)
+            this.src = {
+                url: `/api/v1/video/${this.taskId}.mp4?token=${signAccessToken(user)}`,
+                type: this.handler.contentType,
+            }
+        } else if (this.videoInfo.method == 'transcode') {
+            this.handler = new HlsHandler(this.videoInfo)
+            await this.handler.init(this.videoInfo)
+            this.src = {
+                url: `/api/v1/video/${this.taskId}.m3u8`,
+                type: this.handler.contentType,
+            }
+        }
     }
     /**
      * stop
      */
     public async stop() {
-        return Promise.resolve()
+        return this.handler.stop()
     }
     /**
      * handleRequest
      */
-    public handleRequest(req, res) {}
+    public handleRequest(req, res) {
+        return this.handler.handle(req, res)
+    }
 }

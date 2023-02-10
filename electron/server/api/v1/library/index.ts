@@ -5,7 +5,10 @@ import init from '@s/utils/init'
 import { getFileType, searchLeaf } from '@s/utils'
 import { encode, decode } from 'js-base64'
 import { access } from 'fs/promises'
+import videoHandler from './handler/video'
+
 const router = express.Router()
+
 router.use('/', async (req, res, next) => {
     // console.log(req.path, req.query)
     next()
@@ -84,8 +87,8 @@ router.use('/poster', async (req, res, next) => {
 
 interface itemQuery {
     itemId?: string
-    path?: string
-    UID: string
+    filePath?: string
+    '    UID: string'
 }
 
 router.post('/item', async (req, res, next) => {
@@ -96,17 +99,23 @@ router.post('/item', async (req, res, next) => {
         target = getItemInfo(itemId)
     }
 
-    const itemPath = resolve(req.body.path)
+    const itemPath = resolve(req.body.filePath)
     const itemType = await getFileType(itemPath)
 
     if (typeof itemType === 'string') {
         try {
-            const handler = (await import(`./handler/video`)).default
-            console.log('1', handler)
-
-            await handler(req, res, next)
-            console.log('2')
-            return
+            // let handler
+            // if (vi) {
+            //     handler = vi
+            // } else {
+            //     handler = (await import(`./handler/video`)).default
+            // }
+            // console.log('1')
+            if (itemType === 'video') {
+                await videoHandler(req, res, next)
+                console.log('2')
+                return
+            } else return res.status(500).json({ message: '无对应处理程序' })
         } catch (error) {
             console.log(error)
             res.status(500).json({ message: '无对应处理程序' })

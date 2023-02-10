@@ -75,6 +75,9 @@ async function createWindow() {
     } else {
         win.loadFile(indexHtml)
     }
+    if (import.meta.env.DEV === true) {
+        win.blur()
+    }
 
     // Test actively push message to the Electron-Renderer
     win.webContents.on('did-finish-load', () => {

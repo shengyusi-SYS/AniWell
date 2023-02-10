@@ -4,7 +4,7 @@ import { homedir } from 'os'
 import { resolve } from 'path'
 
 export default async function devtools() {
-    if (import.meta.env.DEV === true) {
+    if (import.meta.env.DEV === true && !/https/.test(process.env.VITE_DEV_SERVER_URL)) {
         try {
             const devtoolsPath = resolve(
                 homedir(),

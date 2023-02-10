@@ -27,7 +27,7 @@ export const signRefreshToken = ({ username, UID, alias, administrator, access }
     })
 export const signAccessToken = ({ username, UID, alias, administrator, access }: UserData) =>
     jwt.sign({ username, UID, alias, administrator, access }, secretOrPrivateKey, {
-        expiresIn: '30m',
+        expiresIn: '3h',
         algorithm: 'RS256',
         issuer,
         audience: UID,

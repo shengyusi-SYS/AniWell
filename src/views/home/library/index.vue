@@ -129,10 +129,10 @@ onBeforeUpdate(() => {})
 onUnmounted(() => {})
 
 const show = ref(false)
-const videoSrc = reactive({ src: '', type: '' })
+const videoSrc = reactive({ url: '', type: '', sub: '', fontsList: '' })
 const playSrc = (src) => {
     show.value = true
-    videoSrc.src = src.src
+    videoSrc.url = src.url
     videoSrc.type = src.type
 }
 const test = () => {

@@ -249,6 +249,33 @@ async function copyFile(oldPath, newPath) {
     })
 }
 
+export function toNumber<T>(val): T | number {
+    const reg = /^(-?\d*\.?\d*)$/g
+    if (typeof val === 'string' && reg.test(val)) {
+        return Number(val)
+    } else return val
+}
+
+export function toNumberDeep(obj) {
+    if (obj instanceof Array) {
+        obj.forEach((v, i, a) => {
+            if (typeof v === 'object') {
+                a[i] = toNumberDeep(v)
+            } else a[i] = toNumber(v)
+        })
+    } else if (obj instanceof Object) {
+        for (const key in obj) {
+            if (Object.hasOwnProperty.call(obj, key)) {
+                const element = obj[key]
+                if (typeof element === 'object') {
+                    obj[key] = toNumberDeep(element)
+                } else obj[key] = toNumber(element)
+            }
+        }
+    }
+    return obj
+}
+
 export {
     cleanNull,
     generatePictureUrl,

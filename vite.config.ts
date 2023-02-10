@@ -1,5 +1,5 @@
 import { readFileSync, rmSync, writeFileSync } from 'fs'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import electron from 'vite-plugin-electron'
 import pkg from './package.json'
@@ -139,6 +139,7 @@ export const config = {
               }
           })()
         : {
+              host: 'localhost',
               port: 5566,
               proxy: {
                   '/api': {
@@ -150,7 +151,18 @@ export const config = {
                       //   changeOrigin: true,
                   },
               },
+              https: {
+                  cert: readFileSync('./dev/Data/ssl/domain.pem'),
+                  key: readFileSync('./dev/Data/ssl/domain.key'),
+              },
           },
     clearScreen: false,
 }
-export default defineConfig(config)
+export default defineConfig(({ command, mode }) => {
+    // 根据当前工作目录中的 `mode` 加载 .env 文件
+    // 设置第三个参数为 '' 来加载所有环境变量，而不管是否有 `VITE_` 前缀。
+    const env = loadEnv(mode, process.cwd(), '')
+    env.DEVHOST ? (config.server.host = env.DEVHOST) : null
+
+    return config
+})

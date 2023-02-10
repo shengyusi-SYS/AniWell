@@ -64,7 +64,22 @@ export const reqLibrary = async (
 ): Promise<CardData> =>
     requests.get(`/library/${catagory}?itemId=${itemId}&range=${params.start},${params.end}`)
 
-export const reqLibraryItem = async (data): Promise<{}> => requests.post(`/library/item`, data)
+export interface VideoQueryParams {
+    filePath?: string
+    resourceId?: string
+    bitrate?: number
+    autoBitrate?: boolean
+    resolution?: string
+    method?: string
+}
+export interface VideoSrc {
+    url: string
+    type: string
+    sub?: Buffer
+    fontsList?: Array<string>
+}
+export const reqLibraryItem = async (data: VideoQueryParams): Promise<VideoSrc> =>
+    requests.post(`/library/item`, data)
 
 export const reqStopTranscode = async (): Promise<{}> => requests.post(`/video/clearVideoTemp`)
 

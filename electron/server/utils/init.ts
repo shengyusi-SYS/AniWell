@@ -10,6 +10,7 @@ import { librarySettings, librarySettingsTransformer } from '@s/store/librarySet
 import { users } from '@s/store/users'
 import pkg from '../../../package.json'
 import { Options } from 'http-proxy-middleware'
+import { createCertificate } from '@s/utils/certificate'
 // users.store.clear()
 // users.modify({
 //     admin: {
@@ -70,11 +71,19 @@ class Init {
      */
     public init(): this {
         this.inited = true
-        // try {
-        //     accessSync(path.resolve(paths.data, 'user.json'))
-        // } catch (error) {
-        //     this.signUp = true
-        // }
+        try {
+            fs.accessSync(settings.get('cert'))
+            fs.accessSync(settings.get('key'))
+        } catch (error) {
+            try {
+                const cert = createCertificate()
+                fs.writeFileSync(settings.get('key'), cert.key)
+                fs.writeFileSync(settings.get('cert'), cert.cert)
+                logger.info('init 已创建自签名证书')
+            } catch (error) {
+                logger.info('init 写入自签名证书失败')
+            }
+        }
         //建立临时文件夹，用于复制外挂字幕
         try {
             fs.mkdirSync('./temp')
