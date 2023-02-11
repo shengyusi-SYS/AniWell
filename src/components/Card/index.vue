@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { encode } from 'js-base64'
 import { CardData } from '@v/stores/library'
+import { useVideoPlayerStore } from '@v/stores/videoPlayer'
 import { useGlobalStore } from '@v/stores/global'
 import { storeToRefs } from 'pinia'
 import { reqLibraryItem } from '@v/api'
@@ -8,12 +9,12 @@ import { ComputedRef } from 'vue'
 import { el } from 'element-plus/es/locale'
 
 const globalStore = useGlobalStore()
+const videoPlayerStore = useVideoPlayerStore()
 const { theme } = storeToRefs(globalStore)
 const props = defineProps<{
     data: CardData
     fontSize?: ComputedRef<string>
     replace?: () => boolean
-    playSrc?: (src: object) => void
 }>()
 // const { title, poster, path, itemId, result } = props.data
 
@@ -22,8 +23,8 @@ const router = useRouter()
 const go = async () => {
     if (props.data.result === 'episodedetails' && props.data.path) {
         const src = await reqLibraryItem({ filePath: props.data.path, method: 'direct' })
-        if (props.playSrc) {
-            props.playSrc(src)
+        if (src) {
+            videoPlayerStore.playSrc(src)
         }
     } else {
         if (props.data.path) {

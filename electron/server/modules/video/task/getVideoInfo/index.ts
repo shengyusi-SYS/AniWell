@@ -1,10 +1,11 @@
 import { logger } from '@s/utils/logger'
-import { getScreenedMediaInfo, ScreenedMediaInfo } from '@s/utils/getMediaInfo'
+import { getScreenedMediaInfo, ScreenedMediaInfo } from '@s/utils/media/getMediaInfo'
 import settings from '@s/store/settings'
 import { access } from 'fs/promises'
 import path from 'path'
 
 export interface VideoInfo {
+    filePath: string
     index: ScreenedMediaInfo['vidoeStream']['index']
     codec: ScreenedMediaInfo['vidoeStream']['codec_name']
     audioCodec: string
@@ -25,7 +26,6 @@ export interface VideoInfo {
         codec: string
     }>
     taskId?: string
-    filePath?: string
     method?: string
     targetBitrate?: number
     targetResolution?: string
@@ -36,10 +36,12 @@ export default async function getVideoInfo(filePath): Promise<VideoInfo> {
     try {
         logger.debug('getVideoInfo', 'start')
         const metadata = await getScreenedMediaInfo(filePath)
+
         const { format, vidoeStream, audioStreams, subtitleStreams } = metadata
         const { bit_rate, duration } = format
         const { codec_name, width, height, pix_fmt, r_frame_rate, color_space, index } = vidoeStream
         const videoInfo = {
+            filePath: format.filename,
             index,
             codec: codec_name,
             audioCodec: audioStreams[0]?.codec_name,

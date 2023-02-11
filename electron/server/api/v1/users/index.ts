@@ -38,7 +38,7 @@ router.post('/login', upload.none(), async (req, res, next) => {
                 res.cookie('refreshToken', signRefreshToken(user), {
                     maxAge: 1000 * 3600 * 24 * 30,
                     httpOnly: true,
-                    secure: true,
+                    secure: import.meta.env.DEV ? false : true,
                 })
                     // .cookie('accessToken', signAccessToken(user), {
                     //     maxAge: 1000 * 60,

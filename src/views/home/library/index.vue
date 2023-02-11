@@ -7,10 +7,12 @@ import { storeToRefs } from 'pinia'
 // import VideoPlayer from '@v/components/VideoPlayer/index.vue'
 // import { useElementSize } from '@v/hooks/useElementSize'
 // import isDesktop from '@h/useIsDesktop'
+import { useVideoPlayerStore } from '@v/stores/videoPlayer'
 
 const router = useRouter()
 const props = defineProps(['catagory'])
 const globalStore = useGlobalStore()
+const videoPlayerStore = useVideoPlayerStore()
 const { theme } = storeToRefs(globalStore)
 
 const library = ref()
@@ -74,6 +76,7 @@ const query = async (options = defaultOptions) => {
         if (b.children) {
             return 1
         }
+        return 0
     })
 }
 const onSizeChange = (size: number) => {
@@ -128,13 +131,6 @@ onBeforeUpdate(() => {})
 
 onUnmounted(() => {})
 
-const show = ref(false)
-const videoSrc = reactive({ url: '', type: '', sub: '', fontsList: '' })
-const playSrc = (src) => {
-    show.value = true
-    videoSrc.url = src.url
-    videoSrc.type = src.type
-}
 const test = () => {
     console.log('test')
 
@@ -166,16 +162,15 @@ export default {
                             class="library-item"
                             :replace="replace"
                             :root="cardData.path"
-                            :play-src="playSrc"
                             :font-size="fontSize"
                         />
                     </LazyComponent>
                 </VanGridItem>
             </VanGrid>
         </div>
-        <VanOverlay :show="show" @click="show = false">
-            <div v-if="show" class="wrapper" @click.stop>
-                <VideoPlayer :src="videoSrc"></VideoPlayer>
+        <VanOverlay :show="videoPlayerStore.show" @click="videoPlayerStore.show = false">
+            <div v-if="videoPlayerStore.show" class="wrapper" @click.stop>
+                <VideoPlayer></VideoPlayer>
             </div>
         </VanOverlay>
         <ElPagination

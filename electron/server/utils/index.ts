@@ -292,3 +292,4 @@ export {
     TaskPool,
 }
 export { readDirTree, readDirTreeSync, appedDirTree, searchLeaf, Tree } from './tree'
+export * from './media/getMediaInfo'

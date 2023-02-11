@@ -54,7 +54,8 @@ class VideoTaskCenter {
         const taskId = req.path.match(reg)?.groups?.uuid
         const targetTask = this.taskQueue.find((v) => v.taskId === taskId)
         if (targetTask) {
-            return targetTask.handleRequest(req, res)
+            await targetTask.handleRequest(req, res)
+            return
         }
         res.status(500).json({ message: '任务不存在' })
     }

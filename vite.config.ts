@@ -151,10 +151,10 @@ export const config = {
                       //   changeOrigin: true,
                   },
               },
-              https: {
-                  cert: readFileSync('./dev/Data/ssl/domain.pem'),
-                  key: readFileSync('./dev/Data/ssl/domain.key'),
-              },
+              //   https: {
+              //       cert: readFileSync('./dev/Data/ssl/domain.pem'),
+              //       key: readFileSync('./dev/Data/ssl/domain.key'),
+              //   },
           },
     clearScreen: false,
 }

@@ -77,7 +77,17 @@ export interface VideoSrc {
     type: string
     sub?: Buffer
     fontsList?: Array<string>
+    subtitleList: Array<subInfo>
 }
+export interface subInfo {
+    source: string
+    codec: string
+    url: string
+    details?: object
+    subStreamIndex?: number
+    type?: string
+}
+
 export const reqLibraryItem = async (data: VideoQueryParams): Promise<VideoSrc> =>
     requests.post(`/library/item`, data)
 

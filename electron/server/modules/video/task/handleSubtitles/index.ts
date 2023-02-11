@@ -3,17 +3,27 @@ import path from 'path'
 import fs from 'fs'
 import { readdir } from 'fs/promises'
 import { VideoInfo } from '@s/modules/video/task/getVideoInfo'
+import { v4 as uuidv4 } from 'uuid'
 
+export interface subInfo {
+    path: string
+    source: string
+    codec: string
+    id: string
+    details?: object
+    subStreamIndex?: number
+    type?: string
+}
 //处理字幕
-export default async function handleSubtitles(filePath, videoInfo: VideoInfo) {
+export default async function handleSubtitles(videoInfo: VideoInfo) {
     try {
         logger.debug('handleSubtitles start')
         const videoSub = ['pgs']
         const textSub = ['ass', 'ssa', 'srt', 'vtt', 'mks', 'sub', 'sup', 'subrip']
         const specialCharacter = [':', `'`, '"', '`', '?', '(', ')', '*', '^', '{', '$', '|']
-        const videoName = path.parse(filePath).name
+        const videoName = path.parse(videoInfo.filePath).name
         const subtitleList = []
-        const fileRootPath = path.dirname(filePath)
+        const fileRootPath = path.dirname(videoInfo.filePath)
         let dir
         try {
             dir = await readdir(fileRootPath)
@@ -25,7 +35,8 @@ export default async function handleSubtitles(filePath, videoInfo: VideoInfo) {
                     (value.includes(videoName) || videoName.includes(path.parse(value).name)) &&
                     [...videoSub, ...textSub].includes(suffix)
                 ) {
-                    const sub = {
+                    const sub: subInfo = {
+                        id: uuidv4(),
                         path: path.join(fileRootPath, value),
                         source: 'out',
                         codec: suffix,
@@ -62,8 +73,9 @@ export default async function handleSubtitles(filePath, videoInfo: VideoInfo) {
             //处理内封字幕
             if (videoInfo.subtitleStreams[0]) {
                 videoInfo.subtitleStreams.forEach((v, i) => {
-                    const sub = {
-                        path: filePath,
+                    const sub: subInfo = {
+                        id: uuidv4(),
+                        path: videoInfo.filePath,
                         source: 'in',
                         codec: v.codec_name,
                         details: v,
