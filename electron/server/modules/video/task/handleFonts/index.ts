@@ -1,12 +1,29 @@
 import { readdir, access, mkdir, copyFile } from 'fs/promises'
 import path from 'path'
-import { extractFonts } from '@s/utils'
+import { extractAndList, extractFonts } from '@s/utils'
 import settings from '@s/store/settings'
 import { logger } from '@s/utils/logger'
+import { VideoInfo } from '../getVideoInfo'
+import paths from '@s/utils/envPath'
+import { mkdirSync } from 'fs'
+import fontsStore from '@s/store/fonts'
+
+const tempFontsDir = path.resolve(paths.temp, 'fonts')
+try {
+    mkdirSync(tempFontsDir)
+} catch (error) {}
+
+export interface fontInfo {
+    url: string
+    name: string
+}
 
 let fonts
-async function handleFonts(filePath) {
+async function handleFonts(videoInfo: VideoInfo) {
+    const filePath = videoInfo.filePath
     const dirContent = await readdir(path.dirname(filePath))
+    const fontsList: Array<fontInfo> = []
+    videoInfo.fontsList = fontsList
     let fontsPath
     for (let index = 0; index < dirContent.length; index++) {
         const name = dirContent[index]
@@ -23,32 +40,38 @@ async function handleFonts(filePath) {
     }
     if (type == 'dir') {
         try {
-            try {
-                await mkdir(path.resolve(settings.get('tempPath'), 'fonts'))
-            } catch (error) {}
             for (let index = 0; index < fileList.length; index++) {
                 const file = path.resolve(fontsPath, fileList[index])
                 try {
-                    await copyFile(
-                        file,
-                        path.resolve(settings.get('tempPath'), 'fonts', fileList[index]),
-                    )
+                    await copyFile(file, path.resolve(tempFontsDir, fileList[index]))
+                    const font: fontInfo = {
+                        name: path.basename(file),
+                        url: `/api/v1/video/font/${path.basename(file)}`,
+                    }
+                    fontsList.push(font)
                 } catch (error) {}
             }
-            fonts = fontsPath
         } catch (error) {
             logger.error('handleFonts copyFile', error)
         }
     } else if ((type = 'file')) {
         if (fonts === fontsPath && fontsPath) {
-            try {
-                await access(path.resolve(settings.get('tempPath'), 'fonts'))
-            } catch (error) {
-                return await extractFonts(fontsPath)
-            }
+            return Promise.resolve()
         } else {
             fonts = fontsPath
-            return await extractFonts(fontsPath)
+            const fontsPathList = await extractAndList(fontsPath, tempFontsDir)
+            for (let index = 0; index < fontsPathList.length; index++) {
+                const fontPath = fontsPathList[index]
+                try {
+                    await copyFile(fontPath, path.resolve(tempFontsDir, path.basename(fontPath)))
+                    const font: fontInfo = {
+                        name: path.basename(fontPath),
+                        url: `/api/v1/video/font/${path.basename(fontPath)}`,
+                    }
+                    fontsList.push(font)
+                } catch (error) {}
+            }
+            return
         }
     }
     return Promise.resolve()

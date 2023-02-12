@@ -4,6 +4,7 @@ import fs from 'fs'
 import { readdir } from 'fs/promises'
 import { VideoInfo } from '@s/modules/video/task/getVideoInfo'
 import { v4 as uuidv4 } from 'uuid'
+import subtitles from '@s/store/subtitles'
 
 export interface subInfo {
     path: string
@@ -13,6 +14,7 @@ export interface subInfo {
     details?: object
     subStreamIndex?: number
     type?: string
+    url?: string
 }
 //处理字幕
 export default async function handleSubtitles(videoInfo: VideoInfo) {
@@ -68,6 +70,7 @@ export default async function handleSubtitles(videoInfo: VideoInfo) {
                         logger.error('handleSubtitles', error)
                     }
                     subtitleList.push(sub)
+                    subtitles.add(sub)
                 }
             })
             //处理内封字幕
@@ -86,6 +89,7 @@ export default async function handleSubtitles(videoInfo: VideoInfo) {
                         sub.type = 'text'
                     } else sub.type = 'video'
                     subtitleList.push(sub)
+                    subtitles.add(sub)
                 })
             }
             logger.debug('handleSubtitles end')

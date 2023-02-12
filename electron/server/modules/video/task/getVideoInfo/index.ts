@@ -3,6 +3,8 @@ import { getScreenedMediaInfo, ScreenedMediaInfo } from '@s/utils/media/getMedia
 import settings from '@s/store/settings'
 import { access } from 'fs/promises'
 import path from 'path'
+import { subInfo } from '../handleSubtitles'
+import { fontInfo } from '../handleFonts'
 
 export interface VideoInfo {
     filePath: string
@@ -20,11 +22,8 @@ export interface VideoInfo {
     // cleared,
     platform: string
     encode: string
-    subtitleList?: Array<{
-        path: string
-        source: string
-        codec: string
-    }>
+    subtitleList?: Array<subInfo>
+    fontsList?: Array<fontInfo>
     taskId?: string
     method?: string
     targetBitrate?: number

@@ -10,6 +10,8 @@ const requests = axios.create({
 
 //请求拦截器
 requests.interceptors.request.use((config) => {
+    // console.log(config.url)
+
     return config
 })
 //响应拦截器

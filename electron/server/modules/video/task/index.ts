@@ -3,13 +3,12 @@ import getVideoInfo, { VideoInfo } from './getVideoInfo'
 import handleSubtitles, { subInfo } from './handleSubtitles'
 import selectMethod from './selectMethod'
 import { ClientParams } from '@s/api/v1/library/handler/video'
-import handleFonts from './handleFonts'
+import handleFonts, { fontInfo } from './handleFonts'
 import DirectPlayHandler from './directPlayHandler'
 import { v4 as uuidv4 } from 'uuid'
 import { signAccessToken } from '@s/utils/jwt'
 import HlsHandler from './hlsHandler/a'
 import { readFileSync } from 'fs'
-import { toWebvtt } from '@s/utils/media/subConverter'
 import { Request, Response } from 'express'
 
 export interface IVideoTask {
@@ -36,7 +35,7 @@ export default class VideoTask implements IVideoTask {
     public src: {
         url: string
         type: string
-        fontsList?: Array<string>
+        fontsList: Array<fontInfo>
         subtitleList: Array<subInfo>
     }
     constructor() {}
@@ -50,14 +49,16 @@ export default class VideoTask implements IVideoTask {
         this.videoInfo.taskId = this.taskId
 
         this.subtitleList = await handleSubtitles(this.videoInfo)
-        await handleFonts(filePath)
+        await handleFonts(this.videoInfo)
         selectMethod(this.videoInfo, params)
 
         console.log('VideoTask videoInfo', this.videoInfo)
-        const subList = JSON.parse(JSON.stringify(this.subtitleList)) as Array<subInfo>
+        const subList: Array<subInfo> = JSON.parse(
+            JSON.stringify(this.subtitleList),
+        ) as Array<subInfo>
         subList.forEach((v) => {
             delete v.path
-            v.url = `/api/v1/video/src/${this.taskId}.mp4?subId=${v.id}`
+            v.url = `/api/v1/video/sub?id=${v.id}&codec=${v.codec}`
         })
 
         if (this.videoInfo.method == 'direct') {
@@ -70,6 +71,7 @@ export default class VideoTask implements IVideoTask {
                 url: `/api/v1/video/src/${this.taskId}.mp4?token=${signAccessToken(user)}`,
                 type: this.handler.contentType,
                 subtitleList: subList,
+                fontsList: this.videoInfo.fontsList,
             }
         } else if (this.videoInfo.method == 'transcode') {
             this.handler = new HlsHandler()
@@ -91,26 +93,7 @@ export default class VideoTask implements IVideoTask {
      * handleRequest
      */
     public async handleRequest(req, res) {
-        if (req.query.subId) {
-            await this.handleSubRequest(req, res)
-        } else await this.handler.handle(req, res)
+        await this.handler.handle(req, res)
         return
-    }
-    /**
-     * handleSubRequest
-     */
-    public async handleSubRequest(req: Request, res: Response) {
-        const { subId, subCodec } = req.query
-        const sub = this.subtitleList.find((v) => v.id === subId)
-        const subPath = sub.path
-        const codec = sub.codec
-        if (codec === subCodec) {
-            res.sendFile(subPath)
-        } else if (!subCodec || subCodec === 'webvtt') {
-            const src = await toWebvtt(subPath)
-            res.send(src)
-        } else {
-            res.json({ src: readFileSync(subPath), codec })
-        }
     }
 }
