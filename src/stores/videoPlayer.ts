@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { reqLibrary } from '@v/api'
 import { Ref } from 'vue'
+import router from '@v/router'
+
 export interface videoSrc {
     url: string
     type: string
@@ -25,8 +27,9 @@ export const useVideoPlayerStore = defineStore('videoPlayer', () => {
     const show = ref(false)
     const src: Ref<videoSrc> = ref({})
     const playSrc = (videoSrc: videoSrc) => {
-        console.log(videoSrc)
-        show.value = true
+        console.log('router', router)
+        router.push('/videoPlayer')
+        // show.value = true
         src.value = videoSrc
     }
     return { show, playSrc, src }

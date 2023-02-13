@@ -113,6 +113,9 @@ navigator.mediaCapabilities.decodingInfo(mediaConfig).then((result) => {
     overflow: hidden;
     text-align: center;
 }
+:root {
+    --van-overlay-z-index: 9 !important;
+}
 html {
     margin: 0;
     padding: 0;

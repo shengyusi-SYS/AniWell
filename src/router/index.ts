@@ -2,6 +2,7 @@ import Welcome from '@v/views/welcome/index.vue'
 import Login from '@v/views/login/index.vue'
 import Home from '@v/views/home/index.vue'
 import Library from '@v/views/home/library/index.vue'
+import VideoPlayer from '@v/views/videoPlayer/index.vue'
 import * as VueRouter from 'vue-router'
 import { reqIsFirst } from '@v/api'
 
@@ -56,6 +57,10 @@ const routes = [
                 // children: [{ path: '', redirect: '' }]
             },
         ],
+    },
+    {
+        path: '/videoPlayer',
+        component: VideoPlayer,
     },
 ]
 

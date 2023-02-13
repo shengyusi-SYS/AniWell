@@ -168,10 +168,8 @@ export default {
                 </VanGridItem>
             </VanGrid>
         </div>
-        <VanOverlay :show="videoPlayerStore.show" @click="videoPlayerStore.show = false">
-            <div v-if="videoPlayerStore.show" class="wrapper" @click.stop>
-                <VideoPlayer></VideoPlayer>
-            </div>
+        <VanOverlay :show="videoPlayerStore.show">
+            <VideoPlayer v-if="videoPlayerStore.show"></VideoPlayer>
         </VanOverlay>
         <ElPagination
             v-model:current-page="currentPage"

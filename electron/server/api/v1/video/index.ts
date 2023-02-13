@@ -14,8 +14,6 @@ router.use('/sub', async (req, res) => {
     if (id) {
         try {
             const sub = await subtitles.get(id, codec ? codec : 'webvtt')
-            console.log(sub)
-
             res.header('Content-Type', 'text/plain').send(sub.toString())
         } catch (error) {
             res.status(404).json({ message: '字幕错误' })
