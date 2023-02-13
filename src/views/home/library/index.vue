@@ -36,7 +36,9 @@ const gutter = computed(() => {
 })
 
 let cardData: CardData = reactive({ title: '', poster: '', children: [] })
-const currentPage = ref(1)
+const currentPage = ref(
+    router.currentRoute.value.query.page ? Number(router.currentRoute.value.query.page) : 1,
+)
 const pageSize = ref(20)
 const total = ref(20)
 const defaultOptions: { catagory?: string; itemId?: string; start?: number } = {
@@ -47,8 +49,8 @@ const defaultOptions: { catagory?: string; itemId?: string; start?: number } = {
 const query = async (options = defaultOptions) => {
     const { catagory, itemId, start } = { ...defaultOptions, ...options }
     const newData = await reqLibrary(catagory, itemId, {
-        start: (currentPage.value - 1) * pageSize.value,
-        end: currentPage.value * pageSize.value,
+        start,
+        end: start + pageSize.value,
     })
     total.value = newData.total
     for (const key in newData) {
@@ -79,13 +81,21 @@ const query = async (options = defaultOptions) => {
         return 0
     })
 }
+
 const onSizeChange = (size: number) => {
     query({ itemId: router.currentRoute.value.query.path })
 }
-const onPageChange = (page: number) => {
-    currentPage.value = page
-    // console.log('4', page)
-    query({ itemId: router.currentRoute.value.query.path })
+
+const onPageChange = async (page: number) => {
+    // console.log('onPageChange', lastPath, toPath)
+
+    if (router.currentRoute.value.query.path === toPath) {
+        router.push({
+            name: 'library',
+            query: { path: router.currentRoute.value.query.path, page },
+            params: router.currentRoute.value.params,
+        })
+    }
 }
 
 let clean = false
@@ -97,32 +107,53 @@ let replace = () => {
         return false
     }
 }
+let lastPath = router.currentRoute.value.query.path
+let toPath = router.currentRoute.value.query.path
 onBeforeRouteUpdate(async (to, from, next) => {
+    // console.log('1 onBeforeRouteUpdate', from.query.path, '~~~~~~~', to.query.path)
+    toPath = to.query.path
+    //准确跳转
     if (typeof to.params.catagory === 'string' && typeof to.query.path === 'string') {
         try {
+            await query({
+                catagory: to.params.catagory,
+                itemId: to.query.path,
+                start: to.query.page ? (Number(to.query.page) - 1) * pageSize.value : 0,
+            })
             // console.log('1')
-            await query({ catagory: to.params.catagory, itemId: to.query.path })
+            currentPage.value = to.query.page ? Number(to.query.page) : 1
         } catch (error) {
+            toPath = from.query.path
             clean = true
             next()
             return
         }
     } else {
-        // console.log('2', to.query)
+        //默认跳转
         try {
             await query()
+            // console.log('2')
+            currentPage.value = to.query.page ? Number(to.query.page) : 1
         } catch (error) {
+            toPath = from.query.path
             clean = true
             next()
             return
         }
     }
+    lastPath = from.query.path
     next()
 })
 
 onMounted(() => {
     // console.log('3')
-    query({ itemId: router.currentRoute.value.query.path })
+    query({
+        catagory: router.currentRoute.value.params.catagory,
+        itemId: router.currentRoute.value.query.path,
+        start: router.currentRoute.value.query.page
+            ? (Number(router.currentRoute.value.query.page) - 1) * pageSize.value
+            : 0,
+    })
 })
 
 onBeforeMount(() => {})

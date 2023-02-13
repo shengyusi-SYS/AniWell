@@ -30,7 +30,7 @@ const go = async () => {
         if (props.data.path) {
             console.log(router.currentRoute.value.params)
             router.push({
-                name: router.currentRoute.value.name ? router.currentRoute.value.name : 'library',
+                name: router.currentRoute.value.name || 'library',
                 query: { path: encode(props.data.path) },
                 params: router.currentRoute.value.params,
                 replace: props.replace ? props.replace() : false,

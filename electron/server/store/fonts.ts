@@ -1,9 +1,6 @@
 import Store from 'electron-store'
 import paths from '@s/utils/envPath'
-import { resolve } from 'path'
 import { readFile } from 'fs/promises'
-import { test } from '@s/test'
-import { toWebvtt } from '@s/utils/media/subConverter'
 
 const store = new Store({
     name: 'fonts',

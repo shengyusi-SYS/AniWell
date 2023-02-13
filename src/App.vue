@@ -64,12 +64,20 @@ navigator.mediaCapabilities.decodingInfo(mediaConfig).then((result) => {
         console.log("Video can't play!")
     }
 })
+
+const float = ref(true)
 </script>
 
 <template>
     <div class="app">
         <RouterView></RouterView>
-        <div ref="el" :style="style" style="position: fixed; font-size: 1rem; z-index: 10">
+        <div
+            v-if="float"
+            ref="el"
+            :style="style"
+            style="position: fixed; font-size: 1rem; z-index: 10"
+        >
+            <div @click="float = false">close</div>
             <div style="font-size: 16px; border: 1px solid black">16PX大小</div>
             <div style="border: 1px solid black">1REM大小</div>
             <div style="font-size: 24px; border: 1px solid black">24PX大小</div>

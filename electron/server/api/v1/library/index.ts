@@ -6,6 +6,7 @@ import { getFileType, searchLeaf } from '@s/utils'
 import { encode, decode } from 'js-base64'
 import { access } from 'fs/promises'
 import videoHandler from './handler/video'
+import library from '@s/store/library'
 
 const router = express.Router()
 
@@ -44,6 +45,22 @@ router.get('/:catagory', (req, res, next) => {
             }
             const search = searchLeaf(library, resolve(decode(reqPath)))
             if (search) {
+                search.children.sort((a, b) => {
+                    const n = a.episode - b.episode
+                    if (n) {
+                        return n
+                    }
+                    if (a.children && b.children) {
+                        return 0
+                    }
+                    if (a.children) {
+                        return -1
+                    }
+                    if (b.children) {
+                        return 1
+                    }
+                    return 0
+                })
                 search.total = search.children.length
                 const result = []
                 for (; start < end && start < search.children.length; start++) {
