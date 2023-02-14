@@ -5,6 +5,14 @@ import { storeToRefs } from 'pinia'
 
 const store = useGlobalStore()
 const { theme } = storeToRefs(store)
+const userConfig = localStorage.getItem('global')
+if (userConfig) {
+    store.$patch(JSON.parse(userConfig))
+}
+store.$subscribe((mutation, state) => {
+    // 每当状态发生变化时，将整个 state 持久化到本地存储。
+    localStorage.setItem('global', JSON.stringify(state))
+})
 
 const el = ref()
 const { x, y, style } = useDraggable(el, {

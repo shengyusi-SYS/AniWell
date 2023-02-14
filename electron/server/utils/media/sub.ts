@@ -38,3 +38,46 @@ export async function toWebvtt(input: string | ReadStream): Promise<Buffer> {
         subIn.pipe(pro.stdin)
     })
 }
+
+export async function extractSub({
+    targetCodec = 'ass',
+    subPath,
+    subIndex = 0,
+}: {
+    targetCodec: string
+    subPath: string
+    subIndex?: number
+}): Promise<Buffer> {
+    const ffmpegPath = settings.get('ffmpegPath')
+        ? `"${path.resolve(settings.get('ffmpegPath'), `ffmpeg${init.ffmpegSuffix}`)}"`
+        : 'ffmpeg'
+    const result = []
+    const subIn = createReadStream(subPath)
+    return new Promise((resolve, reject) => {
+        const pro = spawn(
+            ffmpegPath,
+            ['-i -', '-hide_banner', `-map 0:s:${subIndex}`, `-f ${targetCodec}`, '-'],
+            {
+                shell: true,
+            },
+        )
+        pro.stdout.on('data', (data) => {
+            result.push(data)
+        })
+        pro.stderr.on('data', (data) => {
+            // console.log('info----------------', data.toString())
+        })
+        pro.on('error', (err) => {
+            // console.log(err)
+        })
+        pro.on('exit', (code, sig, c) => {
+            if (code === 0) {
+                subIn.unpipe(pro.stdin)
+                resolve(Buffer.concat(result))
+            } else {
+                reject({ code, sig, c })
+            }
+        })
+        subIn.pipe(pro.stdin)
+    })
+}

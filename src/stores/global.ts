@@ -33,7 +33,10 @@ export const useGlobalStore = defineStore('counter', () => {
         libraryColumnNum: isDesktop ? 5 : 2,
         libraryGutterPercent: 2,
         libraryItemAspectRatio: 0.75,
+        libraryPageSize: 20,
     })
+
+    const libraryConfig = reactive({})
 
     return { theme, clientState, isDesktop }
 })

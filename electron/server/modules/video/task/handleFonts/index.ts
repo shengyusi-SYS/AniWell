@@ -1,6 +1,6 @@
 import { readdir, access, mkdir, copyFile } from 'fs/promises'
 import path from 'path'
-import { extractAndList, extractFonts } from '@s/utils'
+import { extractAndList, extractFonts, listPack } from '@s/utils'
 import settings from '@s/store/settings'
 import { logger } from '@s/utils/logger'
 import { VideoInfo } from '../getVideoInfo'
@@ -18,7 +18,7 @@ export interface fontInfo {
     name: string
 }
 
-let fonts
+let cache
 async function handleFonts(videoInfo: VideoInfo) {
     const filePath = videoInfo.filePath
     const dirContent = await readdir(path.dirname(filePath))
@@ -49,29 +49,38 @@ async function handleFonts(videoInfo: VideoInfo) {
                         url: `/api/v1/video/font/${path.basename(file)}`,
                     }
                     fontsList.push(font)
-                } catch (error) {}
+                } catch (error) {
+                    console.log(error)
+                }
             }
         } catch (error) {
             logger.error('handleFonts copyFile', error)
         }
     } else if ((type = 'file')) {
-        if (fonts === fontsPath && fontsPath) {
+        if (cache === fontsPath && fontsPath) {
+            const fontsPathList = await listPack(fontsPath)
+            console.log('~~~~~~~~~~~~~~', fontsPathList, '~~~~~~~~~~~~~~')
+
             return Promise.resolve()
         } else {
-            fonts = fontsPath
             const fontsPathList = await extractAndList(fontsPath, tempFontsDir)
             for (let index = 0; index < fontsPathList.length; index++) {
                 const fontPath = fontsPathList[index]
                 try {
-                    await copyFile(fontPath, path.resolve(tempFontsDir, path.basename(fontPath)))
+                    await copyFile(
+                        path.resolve(tempFontsDir, fontPath),
+                        path.resolve(tempFontsDir, path.basename(fontPath)),
+                    )
                     const font: fontInfo = {
                         name: path.basename(fontPath),
                         url: `/api/v1/video/font/${path.basename(fontPath)}`,
                     }
                     fontsList.push(font)
-                } catch (error) {}
+                } catch (error) {
+                    console.log(error)
+                }
             }
-            return
+            cache = fontsPath
         }
     }
     return Promise.resolve()

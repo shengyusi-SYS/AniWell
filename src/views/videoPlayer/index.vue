@@ -37,13 +37,21 @@ onMounted(() => {
             const assSub = videoPlayerStore.src.subtitleList.find((v) => v.codec === 'ass')
             //ass字幕
             if (assSub) {
+                const fontsList = videoPlayerStore.src.fontsList
+                const fontsUrl = []
+                const fontsName = []
+                for (let index = 0; index < fontsList.length; index++) {
+                    const font = fontsList[index]
+                    fontsUrl.push(font.url)
+                    fontsName.push(font.name)
+                }
                 dpOptins.video.type = 'customDirect'
                 dpOptins.video.customType = {
                     customDirect: function (video: HTMLMediaElement, player) {
                         let options = {
                             video: video, // HTML5 video element
                             subUrl: assSub ? assSub.url : '', // Link to subtitles
-                            fonts: ['/方正准圆.TTF', '/微软简标宋.TTF'], // Links to fonts (not required, default font already included in build)
+                            fonts: fontsUrl[0] ? fontsUrl : ['/方正准圆.TTF', '/微软简标宋.TTF'], // Links to fonts (not required, default font already included in build)
                             workerUrl: '/libassjs-worker.js?type=classic&worker_file', // Link to WebAssembly-based file "libassjs-worker.js"
                             legacyWorkerUrl: '/libassjs-worker-legacy.js?type=classic&worker_file', // Link to non-WebAssembly worker
                             fallbackFonts: '/方正准圆.TTF',

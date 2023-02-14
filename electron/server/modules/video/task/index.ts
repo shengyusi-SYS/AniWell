@@ -58,7 +58,7 @@ export default class VideoTask implements IVideoTask {
         ) as Array<subInfo>
         subList.forEach((v) => {
             delete v.path
-            v.url = `/api/v1/video/sub?id=${v.id}&codec=${v.codec}`
+            v.url = `/api/v1/video/sub?id=${v.id}&codec=${v.codec}&index=${v.subStreamIndex || ''}`
         })
 
         if (this.videoInfo.method == 'direct') {

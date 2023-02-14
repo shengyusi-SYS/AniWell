@@ -3,7 +3,7 @@ import paths from '@s/utils/envPath'
 import { resolve } from 'path'
 import { readFile } from 'fs/promises'
 import { test } from '@s/test'
-import { toWebvtt } from '@s/utils/media/subConverter'
+import { toWebvtt, extractSub } from '@s/utils/media/sub'
 
 const store = new Store({
     name: 'subtitles',
@@ -24,7 +24,7 @@ class Subtitles {
     /**
      * get
      */
-    public async get(id, targetCodec) {
+    public async get({ id, targetCodec, index }) {
         const sub = this.store.get(id)
         const subCodec = sub.codec
         const subPath = resolve(sub.path)
@@ -38,9 +38,7 @@ class Subtitles {
                 return { src: readFile(subPath), codec: subCodec }
             }
         } else {
-            return ({ targetCodec, subPath }) => {
-                //按指定格式提取内封字幕
-            }
+            return await extractSub({ targetCodec, subPath })
         }
     }
     /**

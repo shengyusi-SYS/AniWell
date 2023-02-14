@@ -14,6 +14,7 @@ const props = defineProps(['catagory'])
 const globalStore = useGlobalStore()
 const videoPlayerStore = useVideoPlayerStore()
 const { theme } = storeToRefs(globalStore)
+const pageSize = toRef(theme.value, 'libraryPageSize')
 
 const library = ref()
 const librarySize = useElementSize(library)
@@ -39,8 +40,9 @@ let cardData: CardData = reactive({ title: '', poster: '', children: [] })
 const currentPage = ref(
     router.currentRoute.value.query.page ? Number(router.currentRoute.value.query.page) : 1,
 )
-const pageSize = ref(20)
+
 const total = ref(20)
+
 const defaultOptions: { catagory?: string; itemId?: string; start?: number } = {
     catagory: props.catagory,
     itemId: '',
@@ -82,21 +84,21 @@ const query = async (options = defaultOptions) => {
     })
 }
 
-const onSizeChange = (size: number) => {
-    query({ itemId: router.currentRoute.value.query.path })
-}
-
-const onPageChange = async (page: number) => {
-    // console.log('onPageChange', lastPath, toPath)
-
+const sizeChange = watch(pageSize, (newSize, oldSize) => {
+    query({
+        itemId: router.currentRoute.value.query.path,
+        start: oldSize * (currentPage.value - 1),
+    })
+})
+const pageChange = watch(currentPage, (newPage, oldPage) => {
     if (router.currentRoute.value.query.path === toPath) {
         router.push({
             name: 'library',
-            query: { path: router.currentRoute.value.query.path, page },
+            query: { path: router.currentRoute.value.query.path, page: newPage },
             params: router.currentRoute.value.params,
         })
     }
-}
+})
 
 let clean = false
 let replace = () => {
@@ -161,12 +163,6 @@ onBeforeMount(() => {})
 onBeforeUpdate(() => {})
 
 onUnmounted(() => {})
-
-const test = () => {
-    console.log('test')
-
-    show.value = true
-}
 </script>
 
 <script lang="ts">
@@ -179,8 +175,6 @@ export default {
     <div ref="library" class="library-base col">
         <div>Library</div>
         <ElSlider v-model="theme.libraryColumnNum" :max="10" :min="1" style="width: 80%" />
-        <ElButton @click="test"></ElButton>
-        <div>gutter:<input v-model="theme.libraryGutterPercent" /></div>
         <div>{{ fontSize }}</div>
         <div>{{ gutter }}</div>
         <div>
@@ -209,8 +203,6 @@ export default {
             :background="true"
             layout="total, sizes, prev, pager, next, jumper"
             :total="total"
-            @size-change="onSizeChange"
-            @current-change="onPageChange"
         />
     </div>
 </template>

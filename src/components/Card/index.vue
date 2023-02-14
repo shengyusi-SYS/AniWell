@@ -69,7 +69,7 @@ export default {
         <div class="overlay" @click="go">
             <div class="info">
                 <div class="title van-multi-ellipsis--l2">{{ data.title }}</div>
-                <div class="note van-multi-ellipsis--l2">{{ data.path }}</div>
+                <div class="note van-multi-ellipsis--l2">{{ data.label }}</div>
             </div>
         </div>
     </div>
