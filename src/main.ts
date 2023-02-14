@@ -6,6 +6,7 @@ import { ConfigProvider } from 'vant'
 import router from './router'
 import { Lazyload } from 'vant'
 import { createPinia } from 'pinia'
+import 'element-plus/theme-chalk/dark/css-vars.css'
 
 const app = createApp(App)
 app.config.errorHandler = (err, instance, info) => {

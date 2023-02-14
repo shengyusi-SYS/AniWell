@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { useWindowSize, useMediaQuery } from '@vueuse/core'
+import { useCssVar, UseCssVarOptions } from '@vueuse/core'
 
-export const useGlobalStore = defineStore('counter', () => {
+export const useGlobalStore = defineStore('global', () => {
     const windowsSize = useWindowSize()
 
     const clientState = reactive({
@@ -11,6 +12,14 @@ export const useGlobalStore = defineStore('counter', () => {
     })
 
     const isDesktop = computed(() => clientState.minHeightCheck && clientState.minWidthCheck)
+
+    const rootEl = ref()
+
+    const useCss = (key: string, init: string) => {
+        const css = useCssVar(key, rootEl)
+        css.value = init
+        return css
+    }
 
     const theme = reactive({
         windowsWidth: windowsSize.width,
@@ -36,7 +45,31 @@ export const useGlobalStore = defineStore('counter', () => {
         libraryPageSize: 20,
     })
 
+    const themeMap: { [themeName: string]: string } = {
+        backgroundColor: '--el-bg-color',
+        backgroundColorD1: '--el-bg-color-overlay',
+        backgroundColorL1: '--el-bg-color-page',
+    }
+
+    const initTheme = () => {
+        let global = localStorage.getItem('global')
+        global = global ? JSON.parse(global) : null
+        if (typeof global === 'object' && global.theme) {
+            const userTheme = global.theme as object
+            for (const themeName in userTheme) {
+                const userThemeVlaue = userTheme[themeName]
+                if (themeMap[themeName]) {
+                    const varName = themeMap[themeName]
+                    const userValue = userTheme[themeName]
+                    theme[themeName] = useCss(varName, userValue)
+                } else {
+                    theme[themeName] = userThemeVlaue
+                }
+            }
+        } else return
+    }
+
     const libraryConfig = reactive({})
 
-    return { theme, clientState, isDesktop }
+    return { rootEl, theme, initTheme, clientState, isDesktop }
 })

@@ -2,16 +2,23 @@
 import { useDraggable } from '@vueuse/core'
 import { useGlobalStore } from '@v/stores/global'
 import { storeToRefs } from 'pinia'
+import { useDark, useToggle } from '@vueuse/core'
 
+const isDark = useDark()
+const toggleDark = useToggle(isDark)
+
+const app = ref()
 const store = useGlobalStore()
 const { theme } = storeToRefs(store)
-const userConfig = localStorage.getItem('global')
-if (userConfig) {
-    store.$patch(JSON.parse(userConfig))
-}
+
 store.$subscribe((mutation, state) => {
     // 每当状态发生变化时，将整个 state 持久化到本地存储。
     localStorage.setItem('global', JSON.stringify(state))
+})
+
+onMounted(() => {
+    store.rootEl = app.value
+    store.initTheme()
 })
 
 const el = ref()
@@ -74,10 +81,13 @@ navigator.mediaCapabilities.decodingInfo(mediaConfig).then((result) => {
 })
 
 const float = ref(true)
+const test = () => {
+    toggleDark()
+}
 </script>
 
 <template>
-    <div class="app">
+    <div ref="app" class="app">
         <RouterView></RouterView>
         <div
             v-if="float"
@@ -90,7 +100,8 @@ const float = ref(true)
             <div style="border: 1px solid black">1REM大小</div>
             <div style="font-size: 24px; border: 1px solid black">24PX大小</div>
             <div style="font-size: 2rem; border: 1px solid black">2REM大小</div>
-            <div style="font-size: 2rem; border: 1px solid black" @click="">test</div>
+            <div style="font-size: 2rem; border: 1px solid black">{{ isDark }}</div>
+            <div style="font-size: 2rem; border: 1px solid black" @click="test">test</div>
             <div
                 :style="`background: #ffffffaa;
                     width: 12em;
@@ -110,18 +121,12 @@ const float = ref(true)
 
 <style lang="less">
 .app {
-    --background-color: v-bind('theme.backgroundColor');
-    --background-color-l1: v-bind('theme.backgroundColorL1');
-    --background-color-d1: v-bind('theme.backgroundColorD1');
     --font-size: v-bind('theme.fontSize');
-    --font-color: v-bind('theme.fontColor');
-    --font-color-title: v-bind('theme.fontColorTitle');
-    --font-color-secondary: v-bind('theme.fontColorSecondary');
     --card-shadow: v-bind('theme.cardShadow');
     --card-shadow-hover: v-bind('theme.cardShadowHover');
     --card-aspect-ratio: v-bind('theme.cardAspectRatio');
     --library-item-aspect-ratio: v-bind('theme.libraryItemAspectRatio');
-    background-color: var(--background-color);
+    background-color: var(--el-bg-color);
     font-size: var(--font-size);
     color: var(--font-color);
     height: 100vh;

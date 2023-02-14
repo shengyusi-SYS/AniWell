@@ -85,12 +85,15 @@ const query = async (options = defaultOptions) => {
 }
 
 const sizeChange = watch(pageSize, (newSize, oldSize) => {
+    //to fix
     query({
         itemId: router.currentRoute.value.query.path,
         start: oldSize * (currentPage.value - 1),
     })
 })
-const pageChange = watch(currentPage, (newPage, oldPage) => {
+let oldPage = 0
+const pageChange = watch(currentPage, (newPage, old) => {
+    oldPage = old
     if (router.currentRoute.value.query.path === toPath) {
         router.push({
             name: 'library',
@@ -177,7 +180,8 @@ export default {
         <ElSlider v-model="theme.libraryColumnNum" :max="10" :min="1" style="width: 80%" />
         <div>{{ fontSize }}</div>
         <div>{{ gutter }}</div>
-        <div>
+
+        <div class="library-cards">
             <VanGrid :column-num="theme.libraryColumnNum" :gutter="gutter" :border="false">
                 <VanGridItem v-for="data in cardData.children">
                     <LazyComponent class="library-lazy">
@@ -196,14 +200,27 @@ export default {
         <VanOverlay :show="videoPlayerStore.show">
             <VideoPlayer v-if="videoPlayerStore.show"></VideoPlayer>
         </VanOverlay>
-        <ElPagination
-            v-model:current-page="currentPage"
-            v-model:page-size="pageSize"
-            :page-sizes="[20, 24, 30, 60]"
-            :background="true"
-            layout="total, sizes, prev, pager, next, jumper"
-            :total="total"
-        />
+        <div class="library-pagination">
+            <ElPagination
+                v-model:current-page="currentPage"
+                v-model:page-size="pageSize"
+                :pager-count="5"
+                :page-sizes="[20, 24, 30, 60]"
+                :background="true"
+                layout=" prev, pager, next"
+                :total="total"
+                class="pagination"
+            />
+            <ElPagination
+                v-model:current-page="currentPage"
+                v-model:page-size="pageSize"
+                :page-sizes="[20, 24, 30, 60]"
+                :background="true"
+                layout=" total, sizes, jumper"
+                :total="total"
+                class="pagination"
+            />
+        </div>
     </div>
 </template>
 
@@ -212,6 +229,25 @@ export default {
     min-height: 100%;
     width: 100%;
     font-size: v-bind('fontSize');
+    display: flex;
+    flex-direction: column;
+    // align-items: center;
+    .library-cards {
+        height: 100%;
+        flex-grow: 1;
+        padding-bottom: 4em;
+    }
+    .library-pagination {
+        position: fixed;
+        bottom: 2em;
+        display: flex;
+        flex-wrap: wrap;
+        width: 100%;
+        justify-content: center;
+        --el-pagination-font-size: v-bind('theme.fontSize');
+        --el-pagination-button-width: 3em;
+        --el-pagination-button-height: 3em;
+    }
     .library-lazy {
         display: flex;
         align-items: center;
@@ -219,7 +255,6 @@ export default {
     }
     :deep(.van-grid-item__content) {
         display: block;
-
         max-width: 100%;
         padding: 0;
         --van-grid-item-content-background: none;

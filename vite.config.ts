@@ -109,27 +109,27 @@ export const config = {
         },
     },
     base: './',
-    css: {
-        // 预处理器配置项
-        preprocessorOptions: {
-            less: {
-                math: 'always',
-            },
-        },
-        postcss: {
-            plugins: [
-                postcsspxtoviewport({
-                    viewportWidth: (file) => {
-                        return file.indexOf('vant') !== -1 ? 375 : 750
-                    },
-                    selectorBlackList: [/^body$/],
-                    // exclude: [/^node_modules$/],
-                    mediaQuery: false,
-                    minPixelValue: 1,
-                }),
-            ],
-        },
-    },
+    // css: {
+    //     // 预处理器配置项
+    //     preprocessorOptions: {
+    //         less: {
+    //             math: 'always',
+    //         },
+    //     },
+    //     postcss: {
+    //         plugins: [
+    //             postcsspxtoviewport({
+    //                 viewportWidth: (file) => {
+    //                     return file.indexOf('vant') !== -1 ? 375 : 750
+    //                 },
+    //                 selectorBlackList: [/^body$/],
+    //                 // exclude: [/^node_modules$/],
+    //                 mediaQuery: false,
+    //                 minPixelValue: 1,
+    //             }),
+    //         ],
+    //     },
+    // },
     server: process.env.VSCODE_DEBUG
         ? (() => {
               const url = new URL(pkg.debug.env.VITE_DEV_SERVER_URL)

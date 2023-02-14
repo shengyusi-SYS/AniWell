@@ -85,7 +85,7 @@ export default {
         .el-aside {
             // color: var(--el-text-color-primary);
             // position: absolute;
-            background: var(--background-color-d1);
+            background: var(--el-bg-color-page);
             width: auto;
             // height: calc(100vh - 2em);
             // z-index: 99;
@@ -129,7 +129,7 @@ export default {
     }
     .el-header {
         position: relative;
-        background-color: var(--background-color-l1);
+        background-color: var(--el-bg-color-overlay);
         // color: var(--el-text-color-primary);
         height: 4rem;
         max-height: 15vh;
