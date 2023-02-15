@@ -65,6 +65,10 @@ async function createWindow() {
         },
         width: 1920,
         height: 1080,
+        // frame: false,
+        titleBarStyle: 'hidden',
+        // titleBarOverlay: false,
+        // autoHideMenuBar: true,
     })
 
     if (process.env.VITE_DEV_SERVER_URL) {

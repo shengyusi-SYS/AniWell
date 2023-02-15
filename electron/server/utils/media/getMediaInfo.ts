@@ -35,6 +35,7 @@ export async function getMediaInfo(filePath: string): Promise<MediaInfo> {
                 `-i "${path.resolve(filePath)}"`,
                 '-show_streams',
                 '-show_format',
+                '-show_chapters',
                 '-print_format json',
                 '-hide_banner',
             ],
@@ -66,11 +67,18 @@ export async function getScreenedMediaInfo(filePath: string): Promise<ScreenedMe
     const subtitleStreams = metadata.streams.filter((v) => {
         return v.codec_type == 'subtitle'
     })
+    const chapters = metadata.chapters.map((v) => {
+        return {
+            title: v.tags.title,
+            start: v.start_time,
+        }
+    })
     return {
         format: metadata.format,
         vidoeStream,
         audioStreams,
         subtitleStreams,
+        chapters,
     }
 }
 
@@ -158,6 +166,16 @@ export interface StreamInfo {
     }>
 }
 
+export interface Chapter {
+    id: number
+    time_base: string
+    start: number
+    start_time: number
+    end: number
+    end_time: number
+    tags: { title: string }
+}
+
 export interface MediaInfo {
     streams: Array<StreamInfo>
     format: {
@@ -179,6 +197,7 @@ export interface MediaInfo {
             compatible_brands?: string
         }
     }
+    chapters: Array<Chapter>
 }
 
 export interface ScreenedMediaInfo {
@@ -186,4 +205,8 @@ export interface ScreenedMediaInfo {
     vidoeStream: StreamInfo
     audioStreams: Array<StreamInfo>
     subtitleStreams: Array<StreamInfo>
+    chapters: Array<{
+        title: string
+        start: number
+    }>
 }

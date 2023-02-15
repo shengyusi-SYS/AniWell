@@ -28,15 +28,13 @@ export default class VideoTask implements IVideoTask {
     public videoInfo: VideoInfo
     public subtitleList: Array<subInfo>
     public handler: VideoHandler
-    // public process
-    // public contentType
-    // public method
     public taskId: string
     public src: {
         url: string
         type: string
         fontsList: Array<fontInfo>
         subtitleList: Array<subInfo>
+        chapters: VideoInfo['chapters']
     }
     constructor() {}
     /**
@@ -72,6 +70,7 @@ export default class VideoTask implements IVideoTask {
                 type: this.handler.contentType,
                 subtitleList: subList,
                 fontsList: this.videoInfo.fontsList,
+                chapters: this.videoInfo.chapters,
             }
         } else if (this.videoInfo.method == 'transcode') {
             this.handler = new HlsHandler()

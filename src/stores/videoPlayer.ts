@@ -8,6 +8,7 @@ export interface videoSrc {
     type: string
     fontsList: Array<fontInfo>
     subtitleList: Array<subInfo>
+    chapters: Array<chaptersInfo>
 }
 export interface subInfo {
     path: string
@@ -23,6 +24,12 @@ export interface fontInfo {
     url: string
     name: string
 }
+
+export interface chaptersInfo {
+    title: string
+    start: number
+}
+
 export const useVideoPlayerStore = defineStore('videoPlayer', () => {
     const show = ref(false)
     const src: Ref<videoSrc> = ref({})

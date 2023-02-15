@@ -25,12 +25,9 @@ onMounted(() => {
                 autoplay: true,
             },
             preventClickToggle: true,
-            highlight: [
-                {
-                    time: 0,
-                    text: '',
-                },
-            ],
+            highlight: videoPlayerStore.src.chapters.map((v) => {
+                return { time: v.start, text: v.title }
+            }),
         }
         //有字幕
         if (videoPlayerStore.src.subtitleList[0]) {

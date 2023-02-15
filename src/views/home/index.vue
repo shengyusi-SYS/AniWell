@@ -135,6 +135,7 @@ export default {
         max-height: 15vh;
         min-height: 2em;
         padding: 0;
+        -webkit-app-region: drag;
     }
 
     .el-footer {

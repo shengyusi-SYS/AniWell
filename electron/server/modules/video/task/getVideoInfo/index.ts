@@ -19,6 +19,7 @@ export interface VideoInfo {
     pix_fmt: string
     colorSpace: string
     subtitleStreams: ScreenedMediaInfo['subtitleStreams']
+    chapters: ScreenedMediaInfo['chapters']
     // cleared,
     platform: string
     encode: string
@@ -52,6 +53,7 @@ export default async function getVideoInfo(filePath): Promise<VideoInfo> {
             pix_fmt,
             colorSpace: color_space,
             subtitleStreams,
+            chapters: metadata.chapters,
             // cleared,
             platform: settings.get('platform'),
             encode: settings.get('encode'),
