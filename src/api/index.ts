@@ -1,30 +1,48 @@
 import requests from './request'
 import bcrypt from 'bcryptjs'
 import { CardData } from '@v/stores/library'
+import { globalCache, proxyGlobalData } from '@v/stores/global'
 // export const req = async () => requests.post('')
 let tried = false
 
 export const reqSalt = (username: string): Promise<{ salt: string } | Error> =>
     requests.get('/users/salt?username=' + username)
 
-export const reqLogin = async (username: string, password: string): Promise<boolean> => {
+export const reqLogin = async (username?: string, password?: string): Promise<boolean> => {
     try {
-        let salt = localStorage.getItem('salt')
+        //检查是否已获得refreshToken或是自动登录
+        document.cookie = 'refreshToken=refreshToken;path=/;'
+        if (!/refreshToken=refreshToken/.test(document.cookie) || (!username && !password)) {
+            //尝试仅通过cookie验证,失败则走常规流程
+            try {
+                await requests.post('/users/login')
+                globalCache.loggedIn = true
+                return true
+            } catch (error) {
+                if (!username && !password) {
+                    return false
+                }
+            }
+        }
+        //请求用户名对应的salt,如果本地存储有salt则尝试以本地salt登录
+        let salt = proxyGlobalData.salt
         if (!salt) {
             const data = await reqSalt(username)
             if (!(data instanceof Error)) {
                 salt = data.salt
-                localStorage.setItem('salt', salt)
+                proxyGlobalData.salt = salt
             } else return false
         }
+        //根据现有用户名及密码尝试登录
         const passwordHash = bcrypt.hashSync(password, salt)
         try {
             await requests.post('/users/login', { username, password: passwordHash })
-            sessionStorage.setItem('loggedIn', 'true')
+            globalCache.loggedIn = true
             tried = false
             return true
         } catch (error) {
-            localStorage.removeItem('salt')
+            //登录失败则尝试移除本地salt后重新登录
+            proxyGlobalData.salt = ''
             if (tried === true) {
                 return false
             } else {
@@ -33,7 +51,9 @@ export const reqLogin = async (username: string, password: string): Promise<bool
             }
         }
     } catch (error) {
-        sessionStorage.setItem('loggedIn', 'false')
+        //用户名对应的salt不存在
+        console.log('reqLogin', error)
+        globalCache.loggedIn = false
         return false
     }
 }
@@ -47,10 +67,10 @@ export const reqModify = async (
 export const reqIsFirst = async (): Promise<boolean> => {
     try {
         await requests.get('/users/first')
-        localStorage.setItem('first', 'true')
+        proxyGlobalData.first = true
         return true
     } catch (error) {
-        localStorage.setItem('first', 'false')
+        proxyGlobalData.first = false
         return false
     }
 }

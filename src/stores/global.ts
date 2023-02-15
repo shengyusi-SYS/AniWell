@@ -73,3 +73,45 @@ export const useGlobalStore = defineStore('global', () => {
 
     return { rootEl, theme, initTheme, clientState, isDesktop }
 })
+
+export const globalCache = {
+    loggedIn: false,
+}
+
+const globalData = {
+    first: false,
+    salt: '',
+    username: '',
+}
+
+export const proxyGlobalData = new Proxy(globalData, {
+    get(target, prop) {
+        const local = localStorage.getItem('globalData')
+        if (local) {
+            target = JSON.parse(local)
+        }
+        return target[prop]
+    },
+    set(target, prop, value) {
+        switch (prop) {
+            case 'first':
+                if (typeof value !== 'boolean') {
+                    throw new Error('TypeError:need boolean')
+                }
+                break
+            case 'salt':
+                if (typeof value !== 'string') {
+                    throw new Error('TypeError:need string')
+                }
+                break
+            case 'username':
+                if (typeof value !== 'string') {
+                    throw new Error('TypeError:need string')
+                }
+                break
+        }
+        target[prop] = value
+        localStorage.setItem('globalData', JSON.stringify(target))
+        return true
+    },
+})

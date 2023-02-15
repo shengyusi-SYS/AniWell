@@ -1,25 +1,41 @@
 <script setup lang="ts">
-import { reqLogin } from '@v/api'
+import { reqLogin, reqIsFirst } from '@v/api'
+import { proxyGlobalData } from '@v/stores/global'
 const router = useRouter()
 
-const loginUser = reactive({ username: 'admins', password: 'adminUsers' })
+const loginUser = reactive({ username: '', password: '' })
 const login = async (qb = false) => {
     const res = await reqLogin(loginUser.username, loginUser.password)
-    console.log(localStorage.getItem('first'), res)
+    console.log('login', proxyGlobalData.first, res)
 
     if (res) {
-        if (localStorage.getItem('first') === 'false') {
-            if (qb === true) {
-                // router.push('/old/home')
-                window.location.replace('/old/index.html')
+        try {
+            const first = await reqIsFirst()
+            console.log('first', first)
+
+            if (first) {
+                router.push('/welcome')
             } else {
-                router.push('/home')
+                if (qb === true) {
+                    // router.push('/old/home')
+                    window.location.replace('/old/index.html')
+                } else {
+                    router.push('/home')
+                }
             }
-        } else {
-            router.push('/welcome')
+        } catch (error) {
+            console.log(error)
         }
     }
 }
+
+onMounted(() => {
+    reqLogin() //尝试自动登录
+        .then((result) => {
+            if (result) router.push('/home')
+        })
+        .catch((err) => {})
+})
 </script>
 
 <script lang="ts">

@@ -5,6 +5,7 @@ import Library from '@v/views/home/library/index.vue'
 import VideoPlayer from '@v/views/videoPlayer/index.vue'
 import * as VueRouter from 'vue-router'
 import { reqIsFirst } from '@v/api'
+import { proxyGlobalData, globalCache } from '@v/stores/global'
 
 import { useSessionStorage } from '@vueuse/core'
 
@@ -15,7 +16,7 @@ const routes = [
         component: Welcome,
         beforeEnter: async (to, from) => {
             console.log('welcome!', to, from)
-            const first = localStorage.getItem('first')
+            const first = proxyGlobalData.first
             if (first === 'true') {
                 return true
             } else if (first === 'false') {
@@ -71,7 +72,7 @@ const router = VueRouter.createRouter({
 
 router.beforeEach(async (to, from) => {
     console.log('from', from.path, '>>>>>', 'to', to.path)
-    if (sessionStorage.getItem('loggedIn') === 'true') {
+    if (globalCache.loggedIn) {
         return true
     } else {
         if (to.path === '/login') {

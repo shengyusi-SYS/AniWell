@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { reqModify } from '@v/api'
 import bcrypt from 'bcryptjs'
+import { globalCache, proxyGlobalData } from '@v/stores/global'
 const router = useRouter()
 const defaultUser = reactive({ username: 'admin', password: 'adminUser', passwordAgain: '' })
 const confirmModify = async () => {
@@ -8,8 +9,8 @@ const confirmModify = async () => {
     const passwordHash = await bcrypt.hash(defaultUser.password, salt)
     try {
         await reqModify(defaultUser.username, passwordHash, salt)
-        localStorage.setItem('salt', salt)
-        localStorage.setItem('first', 'false')
+        proxyGlobalData.salt = salt
+        proxyGlobalData.first = false
         router.push('/login')
     } catch (error) {
         console.log(error)

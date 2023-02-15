@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { useDraggable } from '@vueuse/core'
-import { useGlobalStore } from '@v/stores/global'
+import { useGlobalStore, globalCache } from '@v/stores/global'
 import { storeToRefs } from 'pinia'
 import { useDark, useToggle } from '@vueuse/core'
+import { proxyGlobalData } from '@v/stores/global'
 
 const isDark = useDark()
 const toggleDark = useToggle(isDark)
@@ -82,7 +83,10 @@ navigator.mediaCapabilities.decodingInfo(mediaConfig).then((result) => {
 
 const float = ref(true)
 const test = () => {
-    toggleDark()
+    // toggleDark()
+    proxyGlobalData.first = false
+    proxyGlobalData.salt = ''
+    localStorage.removeItem('globalData')
 }
 </script>
 
