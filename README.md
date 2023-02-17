@@ -1,3 +1,5 @@
+[v0.5](https://github.com/blytzxdl/FileServer-for-qBittorrent/tree/v0.5)起，基于Typescript+Vite+Vue3+Nodejs+Express+Electron+Prettier重写中，旧版功能将逐步移入
+
 # FileServer-for-qBittorrent v0.4.2
 
 [说明](#说明)
