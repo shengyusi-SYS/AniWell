@@ -3,6 +3,8 @@ import VideoTaskCenter from '@s/modules/video'
 import subtitles from '@s/store/subtitles'
 import paths from '@s/utils/envPath'
 import path from 'path'
+import zlib from 'zlib'
+import { createReadStream } from 'fs'
 const router = express.Router()
 
 // router.use('/hls', VideoTaskCenter.handleRequest)
@@ -20,7 +22,12 @@ router.use('/sub', async (req, res) => {
                 index: index || null,
             })
 
-            res.header('Content-Type', 'text/plain').send(sub.toString())
+            res.header('Content-Type', 'text/plain')
+                // .header('Content-Encoding', 'br')
+                .send(
+                    // zlib.brotliCompressSync(sub)
+                    sub,
+                )
         } catch (error) {
             res.status(404).json({ message: '字幕错误' })
         }

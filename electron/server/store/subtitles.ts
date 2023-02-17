@@ -35,7 +35,7 @@ class Subtitles {
                 const src = await toWebvtt(subPath)
                 return src
             } else {
-                return { src: readFile(subPath), codec: subCodec }
+                return readFile(subPath)
             }
         } else {
             return await extractSub({ targetCodec, subPath })

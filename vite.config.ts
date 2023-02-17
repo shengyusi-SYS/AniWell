@@ -150,6 +150,10 @@ export const config = {
                       target: 'http://localhost:' + proxyPort,
                       //   changeOrigin: true,
                   },
+                  '/socket.io': {
+                      target: 'ws://localhost:' + proxyPort,
+                      ws: true,
+                  },
               },
               //   https: {
               //       cert: readFileSync('./dev/Data/ssl/domain.pem'),

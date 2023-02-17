@@ -11,10 +11,11 @@ import cookieParser from 'cookie-parser'
 import express from 'express'
 const app = express()
 import https from 'https'
+import http from 'http'
 import history from 'connect-history-api-fallback'
 import proxyMw from 'http-proxy-middleware'
 const proxy = proxyMw.createProxyMiddleware
-// import moduleName from 'socket.io';
+import { Server } from 'socket.io'
 import router from '@s/api'
 
 app.use((req, res, next) => {
@@ -67,15 +68,17 @@ try {
         )
     } else {
         const httpsServer = https.createServer(proxySettings.ssl, app)
-        // const io = require('socket.io')(httpsServer)
-        if (import.meta.env.DEV === true)
-            app.listen(+settings.get('serverPort') + 1, () => {
+        if (import.meta.env.DEV === true) {
+            const httpServer = http.createServer(proxySettings.ssl, app)
+            httpServer.listen(+settings.get('serverPort') + 1, () => {
                 logger.info(
                     `dev http server is running on: http://localhost:${
                         +settings.get('serverPort') + 1
                     }`,
                 )
             })
+            var io = new Server(httpServer)
+        }
         httpsServer.listen(settings.get('serverPort'), () => {
             logger.info(
                 'server start',
@@ -86,6 +89,10 @@ try {
 } catch (error) {
     console.log(error)
 }
+
+io.on('connection', (socket) => {
+    console.log('a user connected')
+})
 
 app.use(history())
 

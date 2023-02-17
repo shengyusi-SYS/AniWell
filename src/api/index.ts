@@ -2,6 +2,9 @@ import requests from './request'
 import bcrypt from 'bcryptjs'
 import { CardData } from '@v/stores/library'
 import { globalCache, proxyGlobalData } from '@v/stores/global'
+import { io } from 'socket.io-client'
+
+export const socket = io()
 // export const req = async () => requests.post('')
 let tried = false
 
