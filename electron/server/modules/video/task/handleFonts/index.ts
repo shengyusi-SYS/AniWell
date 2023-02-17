@@ -45,7 +45,7 @@ async function handleFonts(videoInfo: VideoInfo) {
                 try {
                     await copyFile(file, path.resolve(tempFontsDir, fileList[index]))
                     const font: fontInfo = {
-                        name: path.basename(file),
+                        name: path.basename(file, path.extname(file)),
                         url: `/api/v1/video/font/${path.basename(file)}`,
                     }
                     fontsList.push(font)
@@ -72,7 +72,7 @@ async function handleFonts(videoInfo: VideoInfo) {
                         path.resolve(tempFontsDir, path.basename(fontPath)),
                     )
                     const font: fontInfo = {
-                        name: path.basename(fontPath),
+                        name: path.basename(fontPath, path.extname(fontPath)),
                         url: `/api/v1/video/font/${path.basename(fontPath)}`,
                     }
                     fontsList.push(font)

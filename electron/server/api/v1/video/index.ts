@@ -5,6 +5,8 @@ import paths from '@s/utils/envPath'
 import path from 'path'
 import zlib from 'zlib'
 import { createReadStream } from 'fs'
+import compression from 'compression'
+
 const router = express.Router()
 
 // router.use('/hls', VideoTaskCenter.handleRequest)
@@ -35,6 +37,6 @@ router.use('/sub', async (req, res) => {
 })
 // router.use('/clearVideoTemp', hlsRequestHandler.clearVideoTemp)
 
-router.use('/font', express.static(path.resolve(paths.temp, 'fonts')))
+router.use('/font', compression(), express.static(path.resolve(paths.temp, 'fonts')))
 
 export default router

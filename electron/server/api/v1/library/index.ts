@@ -7,6 +7,7 @@ import { encode, decode } from 'js-base64'
 import { access } from 'fs/promises'
 import videoHandler from './handler/video'
 import library from '@s/store/library'
+import compression from 'compression'
 
 const router = express.Router()
 
@@ -17,7 +18,7 @@ router.use('/', async (req, res, next) => {
 
 router.get('/old', (req, res, next) => {})
 
-router.get('/:catagory', (req, res, next) => {
+router.get('/:catagory', compression(), (req, res, next) => {
     try {
         const catagory = req.params?.catagory
         const reqPath = req.query.itemId

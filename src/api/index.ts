@@ -84,8 +84,17 @@ export const reqLibrary = async (
     catagory: string,
     itemId = '',
     params = { start: 0, end: 20 },
-): Promise<CardData> =>
-    requests.get(`/library/${catagory}?itemId=${itemId}&range=${params.start},${params.end}`)
+): Promise<CardData> => {
+    const res = await requests.get(
+        `/library/${catagory}?itemId=${itemId}&range=${params.start},${params.end}`,
+        {
+            // responseType: 'json',
+            decompress: true,
+        },
+    )
+    console.log(res)
+    return res
+}
 
 export interface VideoQueryParams {
     filePath?: string
