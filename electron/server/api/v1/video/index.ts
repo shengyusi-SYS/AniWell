@@ -37,6 +37,14 @@ router.use('/sub', async (req, res) => {
 })
 // router.use('/clearVideoTemp', hlsRequestHandler.clearVideoTemp)
 
-router.use('/font', compression(), express.static(path.resolve(paths.temp, 'fonts')))
+router.use(
+    '/font',
+    compression(),
+    (req, res, next) => {
+        res.header('Cache-Control', `max-age=${3600 * 24 * 30},public`)
+        next()
+    },
+    express.static(path.resolve(paths.temp, 'fonts')),
+)
 
 export default router

@@ -4,7 +4,7 @@ import path, { resolve } from 'path'
 import init from '@s/utils/init'
 import { getFileType, searchLeaf } from '@s/utils'
 import { encode, decode } from 'js-base64'
-import { access } from 'fs/promises'
+import { access, stat } from 'fs/promises'
 import videoHandler from './handler/video'
 import library from '@s/store/library'
 import compression from 'compression'
@@ -94,7 +94,15 @@ router.use('/poster', async (req, res, next) => {
     }
     if ((await getFileType(filePath)) === 'image') {
         try {
-            res.sendFile(path.resolve(filePath))
+            const ifModifiedSince = req.headers['if-modified-since']
+            const mtime = (await stat(filePath)).mtime.toUTCString()
+            if (mtime === ifModifiedSince) {
+                res.status(304).end()
+            } else {
+                res.header('Cache-Control', `no-cache`)
+                    .header('Last-Modified', mtime)
+                    .sendFile(path.resolve(filePath))
+            }
             return
         } catch (error) {
             res.status(404).json({})
