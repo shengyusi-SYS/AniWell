@@ -20,6 +20,7 @@ export interface subInfo {
 export default async function handleSubtitles(videoInfo: VideoInfo) {
     try {
         logger.debug('handleSubtitles start')
+        subtitles.clear()
         const videoSub = ['pgs']
         const textSub = ['ass', 'ssa', 'srt', 'vtt', 'mks', 'sub', 'sup', 'subrip']
         const specialCharacter = [':', `'`, '"', '`', '?', '(', ')', '*', '^', '{', '$', '|']

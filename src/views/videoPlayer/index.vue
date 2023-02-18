@@ -5,6 +5,11 @@ import { reqStopTranscode, VideoSrc } from '@v/api'
 import { useVideoPlayerStore } from '@v/stores/videoPlayer'
 import SubtitlesOctopus from '@v/lib/ass/subtitles-octopus'
 import { useElementSize } from '@vueuse/core'
+const libassWorkerUrl = new URL('../../lib/ass/libassjs-worker.js', import.meta.url).href
+const libassLegacyWorkerUrl = new URL('../../lib/ass/libassjs-worker-legacy.js', import.meta.url)
+    .href
+const libassWASMUrl = new URL('../../lib/ass/subtitles-octopus-worker.wasm', import.meta.url).href
+console.log(libassWASMUrl)
 
 const videoPlayerStore = useVideoPlayerStore()
 
@@ -50,13 +55,11 @@ onMounted(() => {
                             subUrl: assSub ? assSub.url : '', // Link to subtitles
                             fonts: ['/方正准圆.TTF', '/微软简标宋.TTF', ...fontsUrl], // Links to fonts (not required, default font already included in build)
                             availableFonts: availableFonts,
-                            workerUrl: '/libassjs-worker.js?type=classic&worker_file', // Link to WebAssembly-based file "libassjs-worker.js"
-                            legacyWorkerUrl: '/libassjs-worker-legacy.js?type=classic&worker_file', // Link to non-WebAssembly worker
-                            fallbackFonts: '/SmileySans-Oblique.otf.woff2',
+                            workerUrl: libassWorkerUrl, // Link to WebAssembly-based file "libassjs-worker.js"
+                            legacyWorkerUrl: libassLegacyWorkerUrl, // Link to non-WebAssembly worker
+                            fallbackFonts: '/方正准圆.TTF',
                         }
                         console.log('asssssssssssssssssssss', options, video, player)
-                        // video.play()
-                        // video.fastSeek(312)
                         assInstance = new SubtitlesOctopus(options)
                     },
                 }

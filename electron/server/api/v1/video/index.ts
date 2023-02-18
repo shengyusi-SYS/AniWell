@@ -6,6 +6,7 @@ import path from 'path'
 import zlib from 'zlib'
 import { createReadStream } from 'fs'
 import compression from 'compression'
+const compressionMw = compression()
 
 const router = express.Router()
 
@@ -14,7 +15,7 @@ router.use('/src', (req, res) => {
     return VideoTaskCenter.handleRequest(req, res)
 })
 
-router.use('/sub', async (req, res) => {
+router.use('/sub', compressionMw, async (req, res) => {
     const { id, codec, index } = req.query
     if (id) {
         try {
@@ -39,7 +40,7 @@ router.use('/sub', async (req, res) => {
 
 router.use(
     '/font',
-    compression(),
+    compressionMw,
     (req, res, next) => {
         res.header('Cache-Control', `max-age=${3600 * 24 * 30},public`)
         next()

@@ -4,7 +4,7 @@
     "directories": {
         "output": "release/${version}"
     },
-    "files": ["dist-electron", "dist"],
+    "files": ["dist-electron"],
     "mac": {
         "artifactName": "${productName}_${version}.${ext}",
         "target": ["dmg"]
@@ -23,12 +23,12 @@
                 "to": "thirdParty"
             },
             {
-                "from": "./public",
-                "to": "public"
+                "from": "./dist",
+                "to": "dist"
             },
             {
-                "from": "./webui",
-                "to": "dist"
+                "from": "./public",
+                "to": "public"
             }
         ],
         "icon": "public/favicon.ico"

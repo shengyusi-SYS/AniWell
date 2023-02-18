@@ -25,6 +25,9 @@ try {
 } catch (error) {}
 
 export const config = {
+    build: {
+        target: 'esnext',
+    },
     plugins: [
         vue(),
         AutoImport({

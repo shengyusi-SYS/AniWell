@@ -4,7 +4,10 @@ import { CardData } from '@v/stores/library'
 import { globalCache, proxyGlobalData } from '@v/stores/global'
 import { io } from 'socket.io-client'
 
-export const socket = io()
+export const socket =
+    globalCache.electronEnv && !import.meta.env.DEV
+        ? io(`https://localhost:${globalCache.serverPort}`)
+        : io()
 // export const req = async () => requests.post('')
 let tried = false
 

@@ -94,15 +94,16 @@ router.use('/poster', async (req, res, next) => {
     }
     if ((await getFileType(filePath)) === 'image') {
         try {
-            const ifModifiedSince = req.headers['if-modified-since']
-            const mtime = (await stat(filePath)).mtime.toUTCString()
-            if (mtime === ifModifiedSince) {
-                res.status(304).end()
-            } else {
-                res.header('Cache-Control', `no-cache`)
-                    .header('Last-Modified', mtime)
-                    .sendFile(path.resolve(filePath))
-            }
+            // const ifModifiedSince = req.headers['if-modified-since']
+            // const mtime = (await stat(filePath)).mtime.toUTCString()
+            // if (mtime === ifModifiedSince) {
+            //     res.status(304).end()
+            // } else {
+            res
+                // .header('Cache-Control', `no-cache`)
+                // .header('Last-Modified', mtime)
+                .sendFile(path.resolve(filePath))
+            // }
             return
         } catch (error) {
             res.status(404).json({})

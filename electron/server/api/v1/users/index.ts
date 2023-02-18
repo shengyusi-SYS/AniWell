@@ -7,6 +7,7 @@ import { UserData, users } from '@s/store/users'
 import { v4 as uuidv4 } from 'uuid'
 import { signAccessToken, signRefreshToken, verify, verifyToken } from '@s/utils/jwt'
 import bannedToken from '@s/store/bannedToken'
+// import { session } from 'electron'
 
 router.get('/salt', async (req, res, next) => {
     const username = req.query?.username
@@ -29,24 +30,34 @@ router.post('/login', upload.none(), async (req, res, next) => {
         res.status(200).end()
         return
     }
+    const electronReq = req.headers.electron
     const { username, password } = req.body
     if (typeof username === 'string' && typeof password === 'string') {
         try {
             const verify = await users.verify(username, password)
             const user = users.getUser({ username })
             if (verify === true && user) {
+                // electronReq
+                //     ? await session.defaultSession.cookies.set({
+                //           url: req.hostname,
+                //           name: 'refreshToken',
+                //           value: signRefreshToken(user),
+                //           httpOnly: true,
+                //           secure: true,
+                //       })
+                //     :
                 res.cookie('refreshToken', signRefreshToken(user), {
                     maxAge: 1000 * 3600 * 24 * 30,
                     httpOnly: true,
                     secure: import.meta.env.DEV ? false : true,
+                    sameSite: electronReq ? 'none' : 'strict',
                 })
-                    // .cookie('accessToken', signAccessToken(user), {
-                    //     maxAge: 1000 * 60,
-                    //     httpOnly: true,
-                    //     secure: true,
-                    // })
-                    .status(200)
-                    .end()
+                // .cookie('accessToken', signAccessToken(user), {
+                //     maxAge: 1000 * 60,
+                //     httpOnly: true,
+                //     secure: true,
+                // })
+                res.status(200).end()
                 return
             } else {
                 res.status(401).json({ error: '用户名或密码错误' })

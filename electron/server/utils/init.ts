@@ -76,12 +76,15 @@ class Init {
             fs.accessSync(settings.get('key'))
         } catch (error) {
             try {
+                fs.mkdirSync(path.resolve(paths.data, 'ssl'))
+            } catch (error) {}
+            try {
                 const cert = createCertificate()
                 fs.writeFileSync(settings.get('key'), cert.key)
                 fs.writeFileSync(settings.get('cert'), cert.cert)
                 logger.info('init 已创建自签名证书')
             } catch (error) {
-                logger.info('init 写入自签名证书失败')
+                logger.info('init 写入自签名证书失败', error)
             }
         }
         //建立临时文件夹，用于复制外挂字幕

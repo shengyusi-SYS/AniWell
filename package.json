@@ -8,7 +8,6 @@
     "private": true,
     "scripts": {
         "dev": "vite",
-        "devB": "vite build -c ./devB.vite.config.ts && vite",
         "build": "vue-tsc --noEmit && vite build && electron-builder",
         "skipCheck": "vite build && electron-builder",
         "test": "node ./test.mjs"
@@ -33,6 +32,7 @@
         "element-plus": "^2.2.26",
         "env-paths": "^3.0.0",
         "express": "^4.18.2",
+        "express-serve-asar": "^1.0.2",
         "file-type": "^16.5.4",
         "fluent-ffmpeg": "^2.1.2",
         "got": "^11",

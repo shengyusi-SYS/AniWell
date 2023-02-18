@@ -76,6 +76,8 @@ export const useGlobalStore = defineStore('global', () => {
 
 export const globalCache = {
     loggedIn: false,
+    electronEnv: Boolean(window.electronAPI),
+    serverPort: window.electronAPI ? await window.electronAPI.getServerPort() : 0,
 }
 
 const globalData = {

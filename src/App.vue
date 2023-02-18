@@ -7,6 +7,7 @@ import { proxyGlobalData } from '@v/stores/global'
 
 const isDark = useDark()
 const toggleDark = useToggle(isDark)
+toggleDark(true)
 
 const app = ref()
 const store = useGlobalStore()

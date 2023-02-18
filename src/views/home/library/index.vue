@@ -49,7 +49,6 @@ const defaultOptions: { catagory?: string; itemId?: string; start?: number } = {
     start: 0,
 }
 const query = async (options = defaultOptions) => {
-    library.value.scrollIntoView({ behavior: 'smooth', block: 'start' })
     const { catagory, itemId, start } = { ...defaultOptions, ...options }
     const newData = await reqLibrary(catagory, itemId, {
         start,
@@ -82,6 +81,10 @@ const query = async (options = defaultOptions) => {
             return 1
         }
         return 0
+    })
+    library.value.scrollIntoView({
+        // behavior: 'smooth',
+        block: 'start',
     })
 }
 

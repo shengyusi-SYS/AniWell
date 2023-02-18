@@ -13,18 +13,25 @@ process.env.DIST = join(process.env.DIST_ELECTRON, '../dist')
 process.env.PUBLIC = app.isPackaged
     ? process.env.DIST
     : join(process.env.DIST_ELECTRON, '../public')
-process.env.APPROOT = app.isPackaged ? process.env.DIST : join(process.env.DIST_ELECTRON, '../')
-import { app, BrowserWindow, shell, ipcMain, Menu, Tray as EleTray, session } from 'electron'
-import Tray from './modules/tray'
-import vueDevtools from './modules/vueDevtools'
-import { readdir } from 'fs/promises'
-import { release, type, homedir } from 'os'
-import { join, resolve } from 'path'
+process.env.APPROOT = join(process.env.DIST_ELECTRON, '..')
 import '../server'
 import { logger } from '@s/utils/logger'
-import init from '@s/utils/init'
-import { fstat, readFileSync } from 'fs'
-import { users } from '@s/store/users'
+import settings from '@s/store/settings'
+import {
+    app,
+    BrowserWindow,
+    shell,
+    ipcMain,
+    Menu,
+    Tray as EleTray,
+    session,
+    protocol,
+} from 'electron'
+import Tray from './modules/tray'
+import vueDevtools from './modules/vueDevtools'
+import { release } from 'os'
+import { join, resolve } from 'path'
+
 // Disable GPU Acceleration for Windows 7
 if (release().startsWith('6.1')) app.disableHardwareAcceleration()
 
@@ -35,6 +42,8 @@ if (!app.requestSingleInstanceLock()) {
     app.quit()
     process.exit(0)
 }
+
+app.commandLine.appendSwitch('ignore-certificate-errors')
 
 // Remove electron security warnings
 // This warning only shows in development mode
@@ -95,30 +104,63 @@ async function createWindow() {
     })
 }
 let theTray: EleTray | null = null
-app.whenReady().then(async () => {
-    //加载vue.js.devtools
-    await vueDevtools()
+app.whenReady()
+    .then(async () => {
+        if (import.meta.env.DEV === true) {
+            //加载vue.js.devtools
+            await vueDevtools()
+        }
 
-    createWindow()
+        createWindow()
 
-    theTray = Tray({ app, createWindow })
+        theTray = Tray({ app, createWindow })
 
-    //验证是否已注册
-    ipcMain.handle('signUp', () => users.first)
+        //electron环境下获取服务器端口号
+        ipcMain.handle('getServerPort', () => settings.get('serverPort'))
 
-    ipcMain.on('test', async (event, data) => {
-        console.log(data)
-        // const { test } = await import('@s/test')
-        // test()
+        ipcMain.on('test', async (event, data) => {
+            console.log(data)
+            // const { test } = await import('@s/test')
+            // test()
+        })
+        ipcMain.handle('test1', () => 'test1')
+        setTimeout(() => {
+            win.webContents.send('test2', 'test2')
+        }, 2000)
+        ipcMain.on('test2', (_event, value) => {
+            console.log(value)
+        })
+
+        const filePathReg = new RegExp(
+            `file:///${join(__dirname, '../../dist').replace(/\\/g, '/')}`,
+            'gi',
+        )
+        const serverBasePath = `https://localhost:${settings.get('serverPort')}`
+        logger.info('interceptHttpProtocol', filePathReg, serverBasePath)
+
+        protocol.interceptHttpProtocol('file', (request, callback) => {
+            logger.info('rrrrrrrrrrrrrrrrr', request.url, filePathReg.test(request.url))
+
+            try {
+                const url = request.url
+                    .replace(filePathReg, serverBasePath)
+                    .replace('file://', serverBasePath)
+                // if (fileReg.test(request.url)) {
+                //     logger.info('fffffffffff', url)
+                //     callback({ url })
+                // } else {
+                //     const url = request.url
+                //     logger.info('aaaaaaaaaa', url)
+                callback({ url })
+                // }
+            } catch (error) {
+                logger.error('interceptHttpProtocol', error)
+            }
+        })
     })
-    ipcMain.handle('test1', () => 'test1')
-    setTimeout(() => {
-        win.webContents.send('test2', 'test2')
-    }, 2000)
-    ipcMain.on('test2', (_event, value) => {
-        console.log(value)
+    .catch((err) => {
+        logger.error('whenReady', err)
     })
-})
 
 app.on('window-all-closed', () => {
     logger.debug('window-all-closed')
