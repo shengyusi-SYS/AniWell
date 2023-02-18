@@ -3944,10 +3944,10 @@ plist@^3.0.1, plist@^3.0.4:
     base64-js "^1.5.1"
     xmlbuilder "^15.1.1"
 
-postcss-px-to-viewport-8-plugin@^1.1.5:
-  version "1.1.5"
-  resolved "https://registry.yarnpkg.com/postcss-px-to-viewport-8-plugin/-/postcss-px-to-viewport-8-plugin-1.1.5.tgz#e9aa4579781bdf6d1b6810c3bacb3b9cc16b9837"
-  integrity sha512-qM6x2NyGbRj8R15o/LCbw5hacU+XK1s80zTvWgLjHsOP8B9P1KbDZbNS11BG6/WPut8LR8DvEU5iKw8JnQn9MQ==
+postcss-px-to-viewport-8-plugin@^1.2.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/postcss-px-to-viewport-8-plugin/-/postcss-px-to-viewport-8-plugin-1.2.0.tgz#debb211a790c5967c14cc4be8413d7c34343003f"
+  integrity sha512-3mbLHcJSb8LymP3zIsvwBkumkyfau5IMEGcn83dzELIRi83yKbIuJCKv3sDZW5XaJs3CntdncYugHWffbubCsg==
   dependencies:
     object-assign "^4.1.1"
 
