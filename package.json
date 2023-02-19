@@ -79,7 +79,7 @@
         "@vue/runtime-dom": "^3.2.45",
         "electron": "^22.0.0",
         "electron-builder": "^23.3.3",
-        "esbuild": "^0.16.8",
+        "esbuild": "^0.17.8",
         "eslint": "^8.29.0",
         "eslint-define-config": "^1.12.0",
         "eslint-plugin-vue": "^9.8.0",
