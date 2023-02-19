@@ -2244,14 +2244,28 @@ function isDataURI(filename) {
 function isFileURI(filename) {
     return filename.startsWith('file://')
 }
-let wasmBinaryFile
-wasmBinaryFile = 'subtitles-octopus-worker.wasm'
-if (!isDataURI(wasmBinaryFile)) {
-    wasmBinaryFile = locateFile(wasmBinaryFile)
+
+let wasmBinaryFileCache
+let wasmBinaryFileUrl = async () => {
+    if (wasmBinaryFileCache) {
+        return wasmBinaryFileCache
+    }
+    return await new Promise((resolve, reject) => {
+        const checkTime = setInterval(() => {
+            if (wasmBinaryFileCache) {
+                clearInterval(checkTime)
+                resolve(wasmBinaryFileCache)
+            }
+        }, 100)
+    })
 }
+// new URL('subtitles-octopus-worker.wasm', import.meta.url).pathname.split('/').pop()
+// 'subtitles-octopus-worker.62892886.wasm' //打包后没法用import.meta，wasm的hash不变就用这固定值
+
 function getBinary(file) {
+    console.log('getBinary', self.wasmUrl)
     try {
-        if (file == wasmBinaryFile && wasmBinary) {
+        if (file == 'subtitles-octopus-worker.wasm' && wasmBinary) {
             return new Uint8Array(wasmBinary)
         }
         if (readBinary) {
@@ -2263,7 +2277,8 @@ function getBinary(file) {
         abort(err)
     }
 }
-function getBinaryPromise() {
+async function getBinaryPromise() {
+    const wasmBinaryFile = await wasmBinaryFileUrl()
     if (!wasmBinary && (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER)) {
         if (typeof fetch == 'function' && !isFileURI(wasmBinaryFile)) {
             return fetch(wasmBinaryFile, { credentials: 'same-origin' })
@@ -2322,7 +2337,9 @@ function createWasm() {
                 abort(reason)
             })
     }
-    function instantiateAsync() {
+    async function instantiateAsync() {
+        const wasmBinaryFile = await wasmBinaryFileUrl()
+
         if (
             !wasmBinary &&
             typeof WebAssembly.instantiateStreaming == 'function' &&
@@ -10125,6 +10142,7 @@ function onMessageFromMainEmscriptenThread(message) {
         case 'worker-init': {
             screen.width = self.width = message.data.width
             screen.height = self.height = message.data.height
+            wasmBinaryFileCache = message.data.wasmUrl
             self.subUrl = message.data.subUrl
             self.subContent = message.data.subContent
             self.fontFiles = message.data.fonts
@@ -10277,8 +10295,11 @@ function onMessageFromMainEmscriptenThread(message) {
             if (Module['setImmediates']) Module['setImmediates'].shift()()
             break
         }
+        case undefined: {
+            break
+        }
         default:
-            throw 'wha? ' + message.data.target
+            console.warn('libass: wha? ' + message.data.target)
     }
 }
 onmessage = onMessageFromMainEmscriptenThread

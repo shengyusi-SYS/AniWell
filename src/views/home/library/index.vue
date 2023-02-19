@@ -7,12 +7,10 @@ import { storeToRefs } from 'pinia'
 // import VideoPlayer from '@v/components/VideoPlayer/index.vue'
 // import { useElementSize } from '@v/hooks/useElementSize'
 // import isDesktop from '@h/useIsDesktop'
-import { useVideoPlayerStore } from '@v/stores/videoPlayer'
 
 const router = useRouter()
 const props = defineProps(['catagory'])
 const globalStore = useGlobalStore()
-const videoPlayerStore = useVideoPlayerStore()
 const { theme } = storeToRefs(globalStore)
 const pageSize = toRef(theme.value, 'libraryPageSize')
 
@@ -201,9 +199,6 @@ export default {
                 </VanGridItem>
             </VanGrid>
         </div>
-        <VanOverlay :show="videoPlayerStore.show">
-            <VideoPlayer v-if="videoPlayerStore.show"></VideoPlayer>
-        </VanOverlay>
         <div class="library-pagination">
             <ElPagination
                 v-model:current-page="currentPage"

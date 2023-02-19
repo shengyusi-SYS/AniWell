@@ -17,9 +17,9 @@ const pinia = createPinia()
     //验证是否已注册
     // const res = await window.electronAPI.signUp()
     // app.config.globalProperties.signUp = res
-    try {
-        app.provide('signUp', await window.electronAPI.signUp())
-    } catch (error) {}
+    // try {
+    // app.provide('signUp', await window.electronAPI.signUp())
+    // } catch (error) {}
     app.use(pinia)
         .use(ElementPlus, { size: 'small', zIndex: 3000 })
         .use(ConfigProvider)

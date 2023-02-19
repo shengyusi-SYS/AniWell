@@ -5,11 +5,11 @@ import { reqStopTranscode, VideoSrc } from '@v/api'
 import { useVideoPlayerStore } from '@v/stores/videoPlayer'
 import SubtitlesOctopus from '@v/lib/ass/subtitles-octopus'
 import { useElementSize } from '@vueuse/core'
+
 const libassWorkerUrl = new URL('../../lib/ass/libassjs-worker.js', import.meta.url).href
 const libassLegacyWorkerUrl = new URL('../../lib/ass/libassjs-worker-legacy.js', import.meta.url)
     .href
 const libassWASMUrl = new URL('../../lib/ass/subtitles-octopus-worker.wasm', import.meta.url).href
-console.log(libassWASMUrl)
 
 const videoPlayerStore = useVideoPlayerStore()
 
@@ -52,14 +52,15 @@ onMounted(() => {
                     customDirect: function (video: HTMLMediaElement, player) {
                         let options = {
                             video: video, // HTML5 video element
-                            subUrl: assSub ? assSub.url : '', // Link to subtitles
+                            subUrl: assSub.url, // Link to subtitles
                             fonts: ['/方正准圆.TTF', '/微软简标宋.TTF', ...fontsUrl], // Links to fonts (not required, default font already included in build)
                             availableFonts: availableFonts,
                             workerUrl: libassWorkerUrl, // Link to WebAssembly-based file "libassjs-worker.js"
                             legacyWorkerUrl: libassLegacyWorkerUrl, // Link to non-WebAssembly worker
-                            fallbackFonts: '/方正准圆.TTF',
+                            fallbackFont: '/方正准圆.TTF',
+                            wasmUrl: libassWASMUrl,
                         }
-                        console.log('asssssssssssssssssssss', options, video, player)
+                        console.log('asssssssssssssssssssss', options)
                         assInstance = new SubtitlesOctopus(options)
                     },
                 }

@@ -29,7 +29,5 @@ declare module '@vue/runtime-core' {
     VanGrid: typeof import('vant/es')['Grid']
     VanGridItem: typeof import('vant/es')['GridItem']
     VanNumberKeyboard: typeof import('vant/es')['NumberKeyboard']
-    VanOverlay: typeof import('vant/es')['Overlay']
-    VideoPlayer: typeof import('./components/VideoPlayer/index.vue')['default']
   }
 }

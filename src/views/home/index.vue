@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import isDesktop from '@h/useIsDesktop'
-
+// import isDesktop from '@h/useIsDesktop'
+import { useGlobalStore } from '@v/stores/global'
+import { storeToRefs } from 'pinia'
+const globalStore = useGlobalStore()
+const { isDesktop } = storeToRefs(globalStore)
 const menuOpenned = ref(false)
 
 const router = useRouter()

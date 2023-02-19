@@ -30,7 +30,7 @@ import {
 import Tray from './modules/tray'
 import vueDevtools from './modules/vueDevtools'
 import { release } from 'os'
-import { join, resolve } from 'path'
+import { join, parse, resolve, sep } from 'path'
 
 // Disable GPU Acceleration for Windows 7
 if (release().startsWith('6.1')) app.disableHardwareAcceleration()
@@ -136,23 +136,18 @@ app.whenReady()
             'gi',
         )
         const serverBasePath = `https://localhost:${settings.get('serverPort')}`
-        logger.info('interceptHttpProtocol', filePathReg, serverBasePath)
+        const diskRootPath = parse(resolve('.')).root.replace('\\', '/')
+        logger.info('interceptHttpProtocol', filePathReg, serverBasePath, diskRootPath)
 
         protocol.interceptHttpProtocol('file', (request, callback) => {
-            logger.info('rrrrrrrrrrrrrrrrr', request.url, filePathReg.test(request.url))
-
             try {
                 const url = request.url
                     .replace(filePathReg, serverBasePath)
+                    .replace(diskRootPath, '')
                     .replace('file://', serverBasePath)
-                // if (fileReg.test(request.url)) {
-                //     logger.info('fffffffffff', url)
-                //     callback({ url })
-                // } else {
-                //     const url = request.url
-                //     logger.info('aaaaaaaaaa', url)
+                logger.info('rrrrrrrrrrrrrrrrr\n', request.url, '\n', url)
+
                 callback({ url })
-                // }
             } catch (error) {
                 logger.error('interceptHttpProtocol', error)
             }

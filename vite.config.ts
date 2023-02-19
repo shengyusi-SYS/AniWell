@@ -13,6 +13,8 @@ import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import { VantResolver } from 'unplugin-vue-components/resolvers'
 import IconsResolver from 'unplugin-icons/resolver'
 import Icons from 'unplugin-icons/vite'
+import wasm from 'vite-plugin-wasm'
+import topLevelAwait from 'vite-plugin-top-level-await'
 
 rmSync('dist-electron', { recursive: true, force: true })
 const sourcemap = !!process.env.VSCODE_DEBUG
@@ -29,6 +31,8 @@ export const config = {
         target: 'esnext',
     },
     plugins: [
+        wasm(),
+        topLevelAwait(),
         vue(),
         AutoImport({
             imports: ['vue', 'vue-router'],
