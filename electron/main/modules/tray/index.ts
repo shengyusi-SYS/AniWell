@@ -1,4 +1,4 @@
-import { Menu, Tray as EleTray, shell } from 'electron'
+import { Menu, Tray as EleTray, shell, nativeImage } from 'electron'
 import { join, resolve } from 'path'
 import paths from '@s/utils/envPath'
 import { v4 as uuidv4 } from 'uuid'
@@ -6,12 +6,8 @@ import { logger } from '@s/utils/logger'
 
 export default function tray({ app, createWindow }) {
     try {
-        console.log('tray on')
-        const iconPath: string = import.meta.env.DEV
-            ? join(__dirname, '../../public/favicon.ico')
-            : join(__dirname, '../../../public/favicon.ico')
-        logger.info('tray', iconPath)
-        const tray = new EleTray(iconPath, uuidv4())
+        logger.info('tray on')
+        const tray = new EleTray(icon, uuidv4())
         const contextMenu = Menu.buildFromTemplate([
             {
                 label: '主界面',
@@ -55,6 +51,10 @@ export default function tray({ app, createWindow }) {
         tray.on('double-click', createWindow)
         return tray
     } catch (error) {
-        console.log('tray off', error)
+        logger.error('tray off', error)
     }
 }
+
+export const icon = nativeImage.createFromDataURL(
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAADAFBMVEVMaXFZqNokjs9Lotcljc4jjc9FntYbiMwgis0zlNEXh8wMgMo9mtQ+mtQRhMoDdMMXhswOgcgVhcoIfMYAeMQBc8IAbsH////v9fmz1esoi8wZiMvW5vEAY7zj7vY5ltFsr9rH3u5InNMihcmiy+YAUrR+tt6XwOFfpdYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADjP74aAAAAEXRSTlMAHIgigqqB48WDyuUkJM/6uLxa7GoAAAAJcEhZcwAADsQAAA7EAZUrDhsAAACvSURBVBiVNc9BdsMgDEDBLwkKxslrev8TdtFFXAfiGFAXeZ0bjACYBEf68gsIsGTeng0U4kVBiqitEYSPz5FBnlpsW75fJrdrRMQ9dCdrVZFKMuthartMcsjOmeaBTcpRp6tMcU2FVEYfhivAeDDu+5ePElBTFxl7hkdMzc3OoqF29+usL4QtuKfTYca2qunmxrDTYal99V1/hkC8DQBX4X5iMD0A4N6O9/a/n3fgD7LVVzWGdTfPAAAAAElFTkSuQmCC',
+)

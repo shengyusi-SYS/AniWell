@@ -3,18 +3,21 @@ import { reqModify } from '@v/api'
 import bcrypt from 'bcryptjs'
 import { globalCache, proxyGlobalData } from '@v/stores/global'
 const router = useRouter()
-const defaultUser = reactive({ username: 'admin', password: 'adminUser', passwordAgain: '' })
+const defaultUser = reactive({ username: '', password: '', passwordAgain: '' })
 const confirmModify = async () => {
-    const salt = await bcrypt.genSalt()
-    const passwordHash = await bcrypt.hash(defaultUser.password, salt)
-    try {
-        await reqModify(defaultUser.username, passwordHash, salt)
-        proxyGlobalData.salt = salt
-        proxyGlobalData.first = false
-        router.push('/login')
-    } catch (error) {
-        console.log(error)
-    }
+    if (defaultUser.password === defaultUser.passwordAgain) {
+        const salt = await bcrypt.genSalt()
+        const passwordHash = await bcrypt.hash(defaultUser.password, salt)
+        try {
+            await reqModify(defaultUser.username, passwordHash, salt)
+            proxyGlobalData.salt = salt
+            proxyGlobalData.first = false
+            router.push('/login')
+            // ElMessage.info('初始化成功，请重新登录')
+        } catch (error) {
+            console.log(error)
+        }
+    } else ElMessage.error('密码不一致')
 }
 </script>
 
@@ -26,36 +29,35 @@ export default {
 
 <template>
     <div class="welcome-base col">
-        <div>welcome</div>
-        <!-- <OInput v-model="test" title="vrfdsff" justify="center" radius="6px" mode="multiRow" />
-            <OInput v-model="test" title="gtrbrwf" justify="center" radius="6px" mode="singleRow"
-            ><template #left><IEpFold /></template><template #right>ferggrteswf</template></OInput
-            > -->
-        <div>
-            <OInput
+        <div style="font-size: 2em">Welcome</div>
+        <div class="col">
+            <ElInput
                 v-model="defaultUser.username"
-                title="用户名"
-                justify="center"
-                radius="6px"
-                mode="stacked"
+                class="welcome-input"
+                size="large"
+                placeholder="新用户名"
+                autofocus
+                :formatter="(value:string) => value.replace(/\W/,'')"
             />
-            <OInput
+            <ElInput
                 v-model="defaultUser.password"
-                title="新密码"
-                justify="center"
-                radius="6px"
-                mode="stacked"
+                class="welcome-input"
+                size="large"
+                placeholder="新密码"
+                show-password
+                :formatter="(value:string) => value.replace(/\W/,'')"
             />
-            <OInput
+            <ElInput
                 v-model="defaultUser.passwordAgain"
-                title="确认密码"
-                justify="center"
-                radius="6px"
-                mode="stacked"
+                class="welcome-input"
+                size="large"
+                placeholder="确认密码"
+                show-password
+                :formatter="(value:string) => value.replace(/\W/,'')"
             />
         </div>
         <div>
-            <ElButton @click="confirmModify">确认修改</ElButton>
+            <ElButton size="large" @click="confirmModify">登录</ElButton>
         </div>
     </div>
 </template>
@@ -64,6 +66,12 @@ export default {
 .welcome-base {
     width: 100%;
     height: 100%;
-    // background-color: #f7f8fa;
+    justify-content: center;
+    align-items: center;
+    .welcome-input {
+        width: 20em;
+        height: 3em;
+        margin: 0.5em;
+    }
 }
 </style>

@@ -46,27 +46,27 @@ export default {
 
 <template>
     <div class="login-base col">
-        <div>login</div>
-        <div>
-            <OInput
+        <div style="font-size: 2em">Login</div>
+        <div class="col">
+            <ElInput
                 v-model="loginUser.username"
-                title="用户名"
-                justify="center"
-                radius="6px"
-                mode="stacked"
+                class="login-input"
+                size="large"
+                placeholder="用户名"
+                autofocus
+                :formatter="(value:string) => value.replace(/\W/,'')"
             />
-            <OInput
+            <ElInput
                 v-model="loginUser.password"
-                title="密码"
-                justify="center"
-                radius="6px"
-                mode="stacked"
+                class="login-input"
+                size="large"
+                placeholder="密码"
+                show-password
+                :formatter="(value:string) => value.replace(/\W/,'')"
             />
         </div>
         <div>
-            <ElButton @click="login(true)">qbit</ElButton>
-            <ElButton @click="login(false)">登录</ElButton>
-            <ElButton @click="router.push('/welcome')">wel</ElButton>
+            <ElButton size="large" @click="login(false)">确认</ElButton>
         </div>
     </div>
 </template>
@@ -75,6 +75,12 @@ export default {
 .login-base {
     width: 100%;
     height: 100%;
-    // background-color: #f7f8fa;
+    justify-content: center;
+    align-items: center;
+    .login-input {
+        width: 20em;
+        height: 3em;
+        margin: 0.5em;
+    }
 }
 </style>

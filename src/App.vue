@@ -82,7 +82,7 @@ navigator.mediaCapabilities.decodingInfo(mediaConfig).then((result) => {
     }
 })
 
-const float = ref(true)
+const float = import.meta.env.DEV ? ref(true) : false
 const test = () => {
     // toggleDark()
     proxyGlobalData.first = false

@@ -14,6 +14,7 @@ const globalStore = useGlobalStore()
 const { theme } = storeToRefs(globalStore)
 const pageSize = toRef(theme.value, 'libraryPageSize')
 
+//字体计算
 const library = ref()
 const librarySize = useElementSize(library)
 theme.value.libraryWidth = librarySize.width
@@ -30,6 +31,7 @@ const fontSize = computed(() => {
             : 16
     return newSize * theme.value.libraryFontSizePercent + 'px'
 })
+//间距计算
 const gutter = computed(() => {
     return parseInt(fontSize.value) * 2 * theme.value.libraryGutterPercent + 'px'
 })
@@ -39,8 +41,8 @@ const currentPage = ref(
     router.currentRoute.value.query.page ? Number(router.currentRoute.value.query.page) : 1,
 )
 
+//数据查询
 const total = ref(20)
-
 const defaultOptions: { catagory?: string; itemId?: string; start?: number } = {
     catagory: props.catagory,
     itemId: '',
@@ -64,28 +66,13 @@ const query = async (options = defaultOptions) => {
             v.path = cardData.path + '\\' + v.label
         }
     })
-    cardData.children?.sort((a, b) => {
-        let result = a.episode - b.episode
-        if (result) {
-            return result
-        }
-        if (a.children && b.children) {
-            return 0
-        }
-        if (a.children) {
-            return -1
-        }
-        if (b.children) {
-            return 1
-        }
-        return 0
-    })
     library.value.scrollIntoView({
         // behavior: 'smooth',
         block: 'start',
     })
 }
 
+//页面切换
 const sizeChange = watch(pageSize, (newSize, oldSize) => {
     //to fix
     query({
@@ -105,6 +92,7 @@ const pageChange = watch(currentPage, (newPage, old) => {
     }
 })
 
+//处理错误导航
 let clean = false
 let replace = () => {
     if (clean) {
@@ -114,6 +102,7 @@ let replace = () => {
         return false
     }
 }
+
 let lastPath = router.currentRoute.value.query.path
 let toPath = router.currentRoute.value.query.path
 onBeforeRouteUpdate(async (to, from, next) => {
@@ -181,7 +170,6 @@ export default {
         <div>Library</div>
         <ElSlider v-model="theme.libraryColumnNum" :max="10" :min="1" style="width: 80%" />
         <div>{{ fontSize }}</div>
-        <div>{{ gutter }}</div>
 
         <div class="library-cards">
             <VanGrid :column-num="theme.libraryColumnNum" :gutter="gutter" :border="false">
@@ -243,9 +231,9 @@ export default {
         flex-wrap: wrap;
         width: 100%;
         justify-content: center;
-        --el-pagination-font-size: v-bind('theme.fontSize');
-        --el-pagination-button-width: 3em;
-        --el-pagination-button-height: 3em;
+        :deep(.el-input__wrapper) {
+            background-color: var(--el-pagination-button-bg-color);
+        }
     }
     .library-lazy {
         display: flex;
