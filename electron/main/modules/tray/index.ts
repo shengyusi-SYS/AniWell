@@ -19,6 +19,13 @@ export default function tray({ app, createWindow }) {
                 click: createWindow,
             },
             {
+                label: '配置目录',
+                type: 'normal',
+                click() {
+                    shell.openPath(paths.config)
+                },
+            },
+            {
                 label: '数据目录',
                 type: 'normal',
                 click() {

@@ -1,6 +1,6 @@
 import express from 'express'
 import fs from 'fs'
-import path, { resolve } from 'path'
+import path, { join, resolve } from 'path'
 import init from '@s/utils/init'
 import { getFileType, searchLeaf } from '@s/utils'
 import { encode, decode } from 'js-base64'
@@ -8,6 +8,8 @@ import { access, stat } from 'fs/promises'
 import videoHandler from './handler/video'
 import library from '@s/store/library'
 import compression from 'compression'
+import { logger } from '@s/utils/logger'
+import paths from '@s/utils/envPath'
 
 const router = express.Router()
 
@@ -94,6 +96,7 @@ router.use('/poster', async (req, res, next) => {
     }
     if ((await getFileType(filePath)) === 'image') {
         try {
+            //貌似是static自带了etag缓存
             // const ifModifiedSince = req.headers['if-modified-since']
             // const mtime = (await stat(filePath)).mtime.toUTCString()
             // if (mtime === ifModifiedSince) {
@@ -115,10 +118,10 @@ router.use('/poster', async (req, res, next) => {
 interface itemQuery {
     itemId?: string
     filePath?: string
-    '    UID: string'
+    UID: string
 }
-
 router.post('/item', async (req, res, next) => {
+    logger.info('/item', req.body)
     const itemId = req.body.itemId
     let target
     const getItemInfo = (itemId: string) => {}

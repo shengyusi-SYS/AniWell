@@ -86,7 +86,8 @@ async function createWindow() {
         // Open devTool if the app is not packaged
         win.webContents.openDevTools()
     } else {
-        win.loadFile(indexHtml)
+        // win.loadFile(indexHtml)
+        win.loadURL('https://localhost:' + settings.get('serverPort'))
     }
     if (import.meta.env.DEV === true) {
         win.blur()
@@ -137,17 +138,37 @@ app.whenReady()
         )
         const serverBasePath = `https://localhost:${settings.get('serverPort')}`
         const diskRootPath = parse(resolve('.')).root.replace('\\', '/')
-        logger.info('interceptHttpProtocol', filePathReg, serverBasePath, diskRootPath)
+        // logger.info('interceptHttpProtocol', filePathReg, serverBasePath, diskRootPath)
 
         protocol.interceptHttpProtocol('file', (request, callback) => {
+            //应该用不到了，但先留着
             try {
                 const url = request.url
                     .replace(filePathReg, serverBasePath)
                     .replace(diskRootPath, '')
                     .replace('file://', serverBasePath)
-                logger.info('rrrrrrrrrrrrrrrrr\n', request.url, '\n', url)
-
-                callback({ url })
+                const { method, referrer, headers, uploadData } = request
+                // if (uploadData) {
+                //     if (uploadData instanceof Array) {
+                //         logger.info('rrrrrrrrrrrrrrrrr\n', request.url, '\n', url, '\n', uploadData)
+                //         const postData = {
+                //             contentType: 'application/json',
+                //             data: uploadData[0].bytes,
+                //         }
+                //         logger.info(
+                //             'postData\n',
+                //             url,
+                //             method,
+                //             referrer,
+                //             headers,
+                //             postData.data.toString(),
+                //         )
+                //         callback({ url, method: 'POST', referrer, headers, uploadData: postData })
+                //     } else {
+                //         callback({ url, method: 'POST', referrer, headers, uploadData })
+                //     }
+                // } else
+                callback({ url, method, referrer, headers })
             } catch (error) {
                 logger.error('interceptHttpProtocol', error)
             }

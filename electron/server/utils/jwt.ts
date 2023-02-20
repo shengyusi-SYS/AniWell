@@ -2,6 +2,8 @@ import jwt from 'jsonwebtoken'
 import init from '@s/utils/init'
 import { UserData } from '@s/store/users'
 import bannedToken from '@s/store/bannedToken'
+import { logger } from '@s/utils/logger'
+
 const issuer = init.appName + ' ' + init.version
 const secretOrPrivateKey = init.proxySettings.ssl.key
 export interface userInfoPayload {
@@ -48,7 +50,7 @@ export const verifyToken = (token: string): userInfoPayload | false => {
             return false
         }
     } catch (error) {
-        console.log(error)
+        logger.info(token, error)
 
         return false
     }

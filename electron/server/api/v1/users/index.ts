@@ -7,7 +7,8 @@ import { UserData, users } from '@s/store/users'
 import { v4 as uuidv4 } from 'uuid'
 import { signAccessToken, signRefreshToken, verify, verifyToken } from '@s/utils/jwt'
 import bannedToken from '@s/store/bannedToken'
-// import { session } from 'electron'
+import { session } from 'electron'
+import settings from '@s/store/settings'
 
 router.get('/salt', async (req, res, next) => {
     const username = req.query?.username
@@ -37,26 +38,20 @@ router.post('/login', upload.none(), async (req, res, next) => {
             const verify = await users.verify(username, password)
             const user = users.getUser({ username })
             if (verify === true && user) {
-                // electronReq
-                //     ? await session.defaultSession.cookies.set({
-                //           url: req.hostname,
-                //           name: 'refreshToken',
-                //           value: signRefreshToken(user),
-                //           httpOnly: true,
-                //           secure: true,
-                //       })
-                //     :
+                logger.info('user login', user)
+
                 res.cookie('refreshToken', signRefreshToken(user), {
                     maxAge: 1000 * 3600 * 24 * 30,
                     httpOnly: true,
                     secure: import.meta.env.DEV ? false : true,
-                    sameSite: electronReq ? 'none' : 'strict',
                 })
                 // .cookie('accessToken', signAccessToken(user), {
                 //     maxAge: 1000 * 60,
                 //     httpOnly: true,
                 //     secure: true,
                 // })
+                const allCookie = await session.defaultSession.cookies.get({})
+                logger.info('allCookie', allCookie)
                 res.status(200).end()
                 return
             } else {

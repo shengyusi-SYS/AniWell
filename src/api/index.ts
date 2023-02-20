@@ -5,20 +5,24 @@ import { globalCache, proxyGlobalData } from '@v/stores/global'
 import { io } from 'socket.io-client'
 
 export const socket =
-    globalCache.electronEnv && !import.meta.env.DEV
-        ? io(`https://localhost:${globalCache.serverPort}`)
-        : io()
+    // globalCache.electronEnv && !import.meta.env.DEV
+    //     ? io(`https://localhost:${globalCache.serverPort}`)
+    //     :
+    io()
 // export const req = async () => requests.post('')
 let tried = false
 
 export const reqSalt = (username: string): Promise<{ salt: string } | Error> =>
     requests.get('/users/salt?username=' + username)
 
+const checkToken = () => {
+    document.cookie = 'refreshToken=refreshToken;path=/;'
+    return !/refreshToken=refreshToken/.test(document.cookie)
+}
 export const reqLogin = async (username?: string, password?: string): Promise<boolean> => {
     try {
         //检查是否已获得refreshToken或是自动登录
-        document.cookie = 'refreshToken=refreshToken;path=/;'
-        if (!/refreshToken=refreshToken/.test(document.cookie) || (!username && !password)) {
+        if (checkToken() || (!username && !password)) {
             //尝试仅通过cookie验证,失败则走常规流程
             try {
                 await requests.post('/users/login')
@@ -43,9 +47,11 @@ export const reqLogin = async (username?: string, password?: string): Promise<bo
         const passwordHash = bcrypt.hashSync(password, salt)
         try {
             await requests.post('/users/login', { username, password: passwordHash })
-            globalCache.loggedIn = true
-            tried = false
-            return true
+            if (checkToken()) {
+                globalCache.loggedIn = true
+                tried = false
+                return true
+            } else return false
         } catch (error) {
             //登录失败则尝试移除本地salt后重新登录
             proxyGlobalData.salt = ''

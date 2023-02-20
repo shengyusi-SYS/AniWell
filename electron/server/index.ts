@@ -22,16 +22,33 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
 app.use(cookieParser())
 // app.use('/api/old/v2', proxy(proxySettings))
+
 app.use('/api', router)
-app.use(history())
 
 // if (import.meta.env.DEV !== true) {
 try {
     const wwwroot = join(__dirname, import.meta.env.DEV ? '../../dist' : '../../../dist')
-    logger.info('~~~~~~~~~~~~~', wwwroot)
-    fs.accessSync(wwwroot)
+    logger.info('wwwroot', wwwroot)
+
+    const rootFileList = [
+        ...fs.readdirSync(wwwroot).map((v) => '/' + v),
+        ...fs.readdirSync(join(wwwroot, 'assets')).map((v) => '/assets/' + v),
+    ].join('|')
+    const assetsReg = new RegExp(`(${rootFileList})$`)
+    // logger.info('assetsReg', assetsReg)
+
     app.use(
-        // serveAsar(wwwroot),
+        history({
+            // logger: console.log.bind(logger.info),
+            rewrites: [
+                {
+                    from: assetsReg,
+                    to: (ctx) => {
+                        return ctx.match[0]
+                    },
+                },
+            ],
+        }),
         express.static(wwwroot),
     )
 } catch (error) {
@@ -55,6 +72,7 @@ try {
             )
         })
         if (import.meta.env.DEV === true) {
+            //vite+https proxy时，vue devtool会出问题，所以另开一个开发用
             const httpServer = http.createServer(proxySettings.ssl, app)
             httpServer.listen(+settings.get('serverPort') + 1, () => {
                 logger.info(
