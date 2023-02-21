@@ -57,7 +57,7 @@ async function initMediaLibrary(libraryPath = '', libraryName = '', update = fal
 async function cleanLibrary() {
     logger.info('cleanLibrary start')
     await writeFile(
-        path.resolve(settings.get('tempPath'), 'libraryIndex_backup.json'),
+        path.resolve(settings.server.tempPath, 'libraryIndex_backup.json'),
         JSON.stringify(libraryIndex, null, '\t'),
     )
     async function clean(dirTree) {

@@ -13,13 +13,13 @@ const routes = [
     { path: '/', redirect: '/login' },
     {
         path: '/welcome',
-        component: Welcome,
+        component: () => import('@v/views/welcome/index.vue'),
         beforeEnter: async (to, from) => {
             console.log('welcome!', to, from)
             const first = proxyGlobalData.first
-            if (first === 'true') {
+            if (first === true) {
                 return true
-            } else if (first === 'false') {
+            } else if (first === false) {
                 return false
             } else {
                 return await reqIsFirst()
@@ -28,7 +28,7 @@ const routes = [
     },
     {
         path: '/login',
-        component: Login,
+        component: () => import('@v/views/login/index.vue'),
         beforeEnter: (to, from) => {
             console.log('login!', to, from)
             if (from.path === '/welcome') {
@@ -47,7 +47,7 @@ const routes = [
     },
     {
         path: '/home',
-        component: Home,
+        component: () => import('@v/views/home/index.vue'),
         children: [
             { path: '', redirect: '/home/library/video' },
             {
@@ -61,7 +61,7 @@ const routes = [
     },
     {
         path: '/videoPlayer',
-        component: VideoPlayer,
+        component: () => import('@v/views/videoPlayer/index.vue'),
     },
 ]
 

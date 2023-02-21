@@ -38,7 +38,7 @@ function mediaContentType(name) {
 //解压同路径下的fonts压缩包到fontsDir
 async function extractFonts(packPath, fontsDir?: string) {
     if (!fontsDir) {
-        fontsDir = path.resolve(settings.get('tempPath'), 'fonts')
+        fontsDir = path.resolve(settings.server.tempPath, 'fonts')
     }
     logger.debug('utils extractFonts start', fontsDir)
     try {

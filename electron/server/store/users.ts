@@ -243,3 +243,4 @@ class Users {
 }
 
 export const users = new Users()
+export default users

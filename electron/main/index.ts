@@ -87,7 +87,7 @@ async function createWindow() {
         win.webContents.openDevTools()
     } else {
         // win.loadFile(indexHtml)
-        win.loadURL('https://localhost:' + settings.get('serverPort'))
+        win.loadURL('https://localhost:' + settings.server.serverPort)
     }
     if (import.meta.env.DEV === true) {
         win.blur()
@@ -117,7 +117,7 @@ app.whenReady()
         theTray = Tray({ app, createWindow })
 
         //electron环境下获取服务器端口号
-        ipcMain.handle('getServerPort', () => settings.get('serverPort'))
+        ipcMain.handle('getServerPort', () => settings.server.serverPort)
 
         ipcMain.on('test', async (event, data) => {
             console.log(data)
@@ -136,7 +136,7 @@ app.whenReady()
             `file:///${join(__dirname, '../../dist').replace(/\\/g, '/')}`,
             'gi',
         )
-        const serverBasePath = `https://localhost:${settings.get('serverPort')}`
+        const serverBasePath = `https://localhost:${settings.server.serverPort}`
         const diskRootPath = parse(resolve('.')).root.replace('\\', '/')
         // logger.info('interceptHttpProtocol', filePathReg, serverBasePath, diskRootPath)
 

@@ -3,7 +3,7 @@ import { access } from 'fs/promises'
 import path from 'path'
 import init from '@s/utils/init'
 const { ffmpegSuffix } = init
-import  settings  from '@s/store/settings'
+import settings from '@s/store/settings'
 import kill from 'tree-kill'
 import { spawn } from 'child_process'
 import { debounce } from 'lodash'
@@ -38,11 +38,11 @@ class hlsProcessController {
                 'hlsProcessController',
                 'generateHlsProcess 2',
                 'ffmpegPath',
-                path.resolve(settings.get('ffmpegPath'), `ffmpeg${ffmpegSuffix}`),
+                path.resolve(settings.server.ffmpegPath, `ffmpeg${ffmpegSuffix}`),
             )
             const ffmpeg = spawn(
-                settings.get('ffmpegPath')
-                    ? `"${path.resolve(settings.get('ffmpegPath'), `ffmpeg${ffmpegSuffix}`)}"`
+                settings.server.ffmpegPath
+                    ? `"${path.resolve(settings.server.ffmpegPath, `ffmpeg${ffmpegSuffix}`)}"`
                     : 'ffmpeg',
                 params,
                 { shell: true },
@@ -81,7 +81,7 @@ class hlsProcessController {
                             try {
                                 fs.accessSync(
                                     path.resolve(
-                                        settings.get('tempPath'),
+                                        settings.server.tempPath,
                                         'output',
                                         `${lastWriteSegment}.ts`,
                                     ),

@@ -55,8 +55,8 @@ export default async function getVideoInfo(filePath): Promise<VideoInfo> {
             subtitleStreams,
             chapters: metadata.chapters,
             // cleared,
-            platform: settings.get('platform'),
-            encode: settings.get('encode'),
+            platform: settings.transcode.platform,
+            encode: settings.transcode.encode,
         }
         logger.debug('getVideoInfo', 'end')
         return videoInfo

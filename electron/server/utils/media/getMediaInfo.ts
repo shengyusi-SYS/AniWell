@@ -6,8 +6,8 @@ import MP4Box from 'mp4box'
 import { readChunkSync, toNumberDeep } from '@s/utils'
 
 export function getMediaInfoSync(filePath: string): Promise<MediaInfo> {
-    const ffprobePath = settings.get('ffmpegPath')
-        ? `"${path.resolve(settings.get('ffmpegPath'), `ffprobe${init.ffmpegSuffix}`)}"`
+    const ffprobePath = settings.server.ffmpegPath
+        ? `"${path.resolve(settings.server.ffmpegPath, `ffprobe${init.ffmpegSuffix}`)}"`
         : 'ffprobe'
     const process = spawnSync(
         ffprobePath,
@@ -25,8 +25,8 @@ export function getMediaInfoSync(filePath: string): Promise<MediaInfo> {
 }
 
 export async function getMediaInfo(filePath: string): Promise<MediaInfo> {
-    const ffprobePath = settings.get('ffmpegPath')
-        ? `"${path.resolve(settings.get('ffmpegPath'), `ffprobe${init.ffmpegSuffix}`)}"`
+    const ffprobePath = settings.server.ffmpegPath
+        ? `"${path.resolve(settings.server.ffmpegPath, `ffprobe${init.ffmpegSuffix}`)}"`
         : 'ffprobe'
     return new Promise((resolve, reject) => {
         const process = spawn(

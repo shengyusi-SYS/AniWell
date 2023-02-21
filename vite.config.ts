@@ -113,6 +113,7 @@ export const config = {
         alias: {
             '@v': path.resolve(__dirname, 'src'),
             '@h': path.resolve(__dirname, 'src/hooks'),
+            '@s': path.resolve(__dirname, './electron/server'),
         },
     },
     base: './',

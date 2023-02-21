@@ -37,8 +37,6 @@
             -   通过 child_process 调用 ffmpeg，由**stdout**生成串流文件，根据**stderr**的日志信息监听工作进度
             -   根据客户端的串流片段请求和服务端的串流进度情况来应对用户的**视频跳转行为**，并进行防抖处理，防止子进程管理出错
     -   媒体库模块：（待迁移）
-    -   其它问题：
-        -   electron 会将页面中的相对路径转化为 file 协议+绝对路径来读取本地文件，所以为 electron 设置了协议拦截，通过 interceptHttpProtocol 将 file 协议的请求转化为 http 请求，避免相对路径出错，方便后续开发
 
 -   前端部分
     -   技术栈：Vue Router + Pinia + Element Plus + Vant + Less + Axios + VueUse + bcrypt + 响应式布局 + 自动导入 + ...

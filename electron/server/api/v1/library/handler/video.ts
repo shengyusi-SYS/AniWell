@@ -23,9 +23,10 @@ export default async function videoHandler(req, res, next) {
         user,
         bitrate:
             typeof bitrate === 'undefined'
-                ? Number(settings.get('bitrate')) * 1000000
+                ? Number(settings.transcode.bitrate) * 1000000
                 : Number(bitrate) * 1000000,
-        autoBitrate: typeof autoBitrate === 'undefined' ? settings.get('autoBitrate') : autoBitrate,
+        autoBitrate:
+            typeof autoBitrate === 'undefined' ? settings.transcode.autoBitrate : autoBitrate,
         resolution: resolution ? resolution : '1080p',
         method: method ? method : 'transcode',
     }

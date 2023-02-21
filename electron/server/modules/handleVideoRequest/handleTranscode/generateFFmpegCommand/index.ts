@@ -2,7 +2,7 @@ import { logger } from '@s/utils/logger'
 import path from 'path'
 import init from '@s/utils/init'
 const { osPlatform, gpus } = init
-import  settings  from '@s/store/settings'
+import settings from '@s/store/settings'
 import { cleanNull } from '@s/utils'
 
 //转码串流的精髓，ffmpeg指令生成系统，自己看着都头大...
@@ -129,7 +129,7 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
     try {
         logger.debug('generateFfmpegCommand', 'start')
         const videoIndex = videoInfo.videoIndex
-        // settings.get('advAccel') = false
+        // settings.transcode.advAccel = false
         let inputParams = []
         let outputParams = []
 
@@ -142,16 +142,16 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
         ]
 
         let bitrate = [
-            `-b:v ${settings.get('bitrate')}M`,
-            `-bufsize ${settings.get('bitrate') * 2}M`,
-            `-maxrate ${settings.get('bitrate')}M`,
+            `-b:v ${settings.transcode.bitrate}M`,
+            `-bufsize ${settings.transcode.bitrate * 2}M`,
+            `-maxrate ${settings.transcode.bitrate}M`,
         ]
         const bitrateVal = videoInfo.targetBitrate
-        // if (settings.get('autoBitrate')) {
-        //     if (videoInfo.bitrate * 1.5 <= settings.get('bitrate') * 1000000) {
-        //         bitrateVal = settings.get('bitrate') * 1000000
-        //     } else if (videoInfo.bitrate >= settings.get('bitrate') * 1000000 * 1.5) {
-        //         bitrateVal = settings.get('bitrate') * 1000000 * 1.5
+        // if (settings.transcode.autoBitrate) {
+        //     if (videoInfo.bitrate * 1.5 <= settings.transcode.bitrate * 1000000) {
+        //         bitrateVal = settings.transcode.bitrate * 1000000
+        //     } else if (videoInfo.bitrate >= settings.transcode.bitrate * 1000000 * 1.5) {
+        //         bitrateVal = settings.transcode.bitrate * 1000000 * 1.5
         //     } else {
         //         bitrateVal = videoInfo.bitrate * 1.2
         //     }
@@ -159,7 +159,7 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
         // }
 
         let decoder = ''
-        const advAccel = settings.get('advAccel')
+        const advAccel = settings.transcode.advAccel
         let hwaccelParams = []
         let hwDeviceId = ''
 
@@ -218,14 +218,14 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
         }
 
         const threads = '-threads 0'
-        const encoder = `-c:v ${encoders[settings.get('encode')][settings.get('platform')]}`
+        const encoder = `-c:v ${encoders[settings.transcode.encode][settings.get('platform')]}`
         // let copyVideo = false
-        // if ((settings.get('encode') == 'h264'&& videoInfo.codec=='h264')&&(videoInfo.bitrate<=bitrateVal)&&!videoInfo.subtitleStream[0]) {
+        // if ((settings.transcode.encode == 'h264'&& videoInfo.codec=='h264')&&(videoInfo.bitrate<=bitrateVal)&&!videoInfo.subtitleStream[0]) {
         //     encoder = '-c:v copy'
         //     copyVideo = true
         // }
         let pix_fmt = ''
-        // if (settings.get('encode') == 'h264') {
+        // if (settings.transcode.encode == 'h264') {
         //     pix_fmt = `yuv420p`
         // }
         // if (hwaccels[settings.get('platform')] == 'd3d11va') {
@@ -233,7 +233,7 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
         // }
 
         let tag = ''
-        if (settings.get('encode') == 'h265') {
+        if (settings.transcode.encode == 'h265') {
             tag = '-tag:v hvc1'
         }
         const copyts = '-copyts'
@@ -454,8 +454,8 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
 
         let customInputCommand = []
         let customOutputCommand = []
-        customInputCommand = settings.get('customInputCommand').split('\n')
-        customOutputCommand = settings.get('customOutputCommand').split('\n')
+        customInputCommand = settings.transcode.customInputCommand.split('\n')
+        customOutputCommand = settings.transcode.customOutputCommand.split('\n')
 
         if (customInputCommand[0].length > 0) {
             inTest = []

@@ -262,8 +262,8 @@ router.use('/localFile/getFile', async (req, res, next) => {
                     filePath,
                     suffix,
                     SID,
-                    bitrate: settings.get('bitrate') * 1000000,
-                    autoBitrate: settings.get('autoBitrate'),
+                    bitrate: settings.transcode.bitrate * 1000000,
+                    autoBitrate: settings.transcode.autoBitrate,
                     resolution: '1080p',
                     method: '', //测试，待删
                 }, //测试，待删

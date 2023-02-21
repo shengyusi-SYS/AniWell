@@ -4,8 +4,8 @@ import { UserData } from '@s/store/users'
 import bannedToken from '@s/store/bannedToken'
 import { logger } from '@s/utils/logger'
 
-const issuer = init.appName + ' ' + init.version
-const secretOrPrivateKey = init.proxySettings.ssl.key
+const issuer = init.APPNAME + ' ' + init.VERSION
+const secretOrPrivateKey = init.ssl.key
 export interface userInfoPayload {
     username: string
     UID: string

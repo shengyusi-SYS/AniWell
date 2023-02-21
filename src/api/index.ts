@@ -4,13 +4,7 @@ import { CardData } from '@v/stores/library'
 import { globalCache, proxyGlobalData } from '@v/stores/global'
 import { io } from 'socket.io-client'
 
-export const socket =
-    // globalCache.electronEnv && !import.meta.env.DEV
-    //     ? io(`https://localhost:${globalCache.serverPort}`)
-    //     :
-    io()
-// export const req = async () => requests.post('')
-let tried = false
+export const socket = io()
 
 export const reqSalt = (username: string): Promise<{ salt: string } | Error> =>
     requests.get('/users/salt?username=' + username)
@@ -19,6 +13,7 @@ const checkToken = () => {
     document.cookie = 'refreshToken=refreshToken;path=/;'
     return !/refreshToken=refreshToken/.test(document.cookie)
 }
+let tried = false
 export const reqLogin = async (username?: string, password?: string): Promise<boolean> => {
     try {
         //检查是否已获得refreshToken或是自动登录

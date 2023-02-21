@@ -1,12 +1,10 @@
 import express from 'express'
 import fs from 'fs'
 import path, { join, resolve } from 'path'
-import init from '@s/utils/init'
 import { getFileType, searchLeaf } from '@s/utils'
 import { encode, decode } from 'js-base64'
 import { access, stat } from 'fs/promises'
 import videoHandler from './handler/video'
-import library from '@s/store/library'
 import compression from 'compression'
 import { logger } from '@s/utils/logger'
 import paths from '@s/utils/envPath'
@@ -30,7 +28,9 @@ router.get('/:catagory', compression(), (req, res, next) => {
             var end = Number(range.split(',')[1])
         }
 
-        const library = JSON.parse(fs.readFileSync(path.resolve(init.libraryIndexPath)).toString())
+        const library = JSON.parse(
+            fs.readFileSync(path.resolve(paths.data, 'libraryIndex.json')).toString(),
+        )
         // console.log(catagory, resolve(decode(reqPath)))
         if (typeof catagory === 'string') {
             if (catagory === 'video' && !reqPath) {

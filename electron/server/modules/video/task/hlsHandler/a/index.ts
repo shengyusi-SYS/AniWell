@@ -32,7 +32,7 @@ export default class HlsRequestHandler implements VideoHandler {
             res.header('Access-Control-Allow-Origin', '*')
             if (req.path == '/index.m3u8') {
                 res.header('Content-Type', 'application/x-mpegURL')
-                res.sendFile(path.resolve(settings.get('tempPath'), 'output', 'index.m3u8'))
+                res.sendFile(path.resolve(settings.server.tempPath, 'output', 'index.m3u8'))
                 return
             }
             let tryTimes = 0
@@ -58,7 +58,7 @@ export default class HlsRequestHandler implements VideoHandler {
                         )
                         tryTimes = 0
                         res.sendFile(
-                            path.resolve(settings.get('tempPath'), 'output', targetSegment + '.ts'),
+                            path.resolve(settings.server.tempPath, 'output', targetSegment + '.ts'),
                         )
                         return
                     } else {
@@ -176,13 +176,13 @@ export default class HlsRequestHandler implements VideoHandler {
             logger.debug('hlsRequestHandler /api/localFile/clearVideoTemp', 'start')
             await _this.HlsProcessController.killCurrentProcess()
             await new Promise((resolve, reject) => {
-                rimraf(path.resolve(settings.get('tempPath'), 'output'), async (err) => {
+                rimraf(path.resolve(settings.server.tempPath, 'output'), async (err) => {
                     if (err) {
                         reject()
                     } else resolve(null)
                 })
             })
-            await mkdir(path.resolve(settings.get('tempPath'), 'output'))
+            await mkdir(path.resolve(settings.server.tempPath, 'output'))
             logger.info('hlsRequestHandler /api/localFile/clearVideoTemp', 'clear')
             res.send('Ok.')
         } catch (error) {

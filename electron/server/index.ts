@@ -1,12 +1,13 @@
-import { log4js, httpLogger, logger, changeLevel } from './utils/logger'
+import { log4js, httpLogger, logger } from './utils/logger'
 process.on('uncaughtException', function (err) {
-    logger.error('Caught exception ', err)
+    logger.error('Caught exception !!!', err)
 })
 import fs from 'fs'
-import path, { join } from 'path'
-import init from './utils/init'
-const { proxySettings } = init
+import { join } from 'path'
 import settings from '@s/store/settings'
+logger.info('settings', settings)
+import init from './utils/init'
+const { ssl } = init
 import cookieParser from 'cookie-parser'
 import express from 'express'
 const app = express()
@@ -15,17 +16,12 @@ import http from 'http'
 import history from 'connect-history-api-fallback'
 import { Server } from 'socket.io'
 import router from '@s/api'
-// import serveAsar from 'express-serve-asar'
-
 app.use(log4js.connectLogger(httpLogger, { level: 'trace' }))
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
 app.use(cookieParser())
-// app.use('/api/old/v2', proxy(proxySettings))
-
 app.use('/api', router)
 
-// if (import.meta.env.DEV !== true) {
 try {
     const wwwroot = join(__dirname, import.meta.env.DEV ? '../../dist' : '../../../dist')
     logger.info('wwwroot', wwwroot)
@@ -35,8 +31,6 @@ try {
         ...fs.readdirSync(join(wwwroot, 'assets')).map((v) => '/assets/' + v),
     ].join('|')
     const assetsReg = new RegExp(`(${rootFileList})$`)
-    // logger.info('assetsReg', assetsReg)
-
     app.use(
         history({
             // logger: console.log.bind(logger.info),
@@ -54,30 +48,29 @@ try {
 } catch (error) {
     logger.error('wwwroot', error)
 }
-// }
 
 try {
-    if (!(proxySettings.ssl.cert && proxySettings.ssl.key)) {
-        app.listen(settings.get('serverPort'))
+    if (!(ssl.cert && ssl.key)) {
+        app.listen(settings.server.serverPort)
         logger.info(
             'server start',
-            `HTTP Server is running on: http://localhost:${settings.get('serverPort')}`,
+            `HTTP Server is running on: http://localhost:${settings.server.serverPort}`,
         )
     } else {
-        const httpsServer = https.createServer(proxySettings.ssl, app)
-        httpsServer.listen(settings.get('serverPort'), () => {
+        const httpsServer = https.createServer(ssl, app)
+        httpsServer.listen(settings.server.serverPort, () => {
             logger.info(
                 'server start',
-                `HTTPS Server is running on: https://localhost:${settings.get('serverPort')}`,
+                `HTTPS Server is running on: https://localhost:${settings.server.serverPort}`,
             )
         })
         if (import.meta.env.DEV === true) {
             //vite+https proxy时，vue devtool会出问题，所以另开一个开发用
-            const httpServer = http.createServer(proxySettings.ssl, app)
-            httpServer.listen(+settings.get('serverPort') + 1, () => {
+            const httpServer = http.createServer(app)
+            httpServer.listen(+settings.server.serverPort + 1, () => {
                 logger.info(
                     `dev http server is running on: http://localhost:${
-                        +settings.get('serverPort') + 1
+                        +settings.server.serverPort + 1
                     }`,
                 )
             })

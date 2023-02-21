@@ -48,7 +48,7 @@ export default async function handleSubtitles(videoInfo: VideoInfo) {
                         sub.type = 'text'
                     } else sub.type = 'video'
                     try {
-                        // let tempSubPath = path.resolve(settings.get('tempPath'),'output',`in.${suffix}`)
+                        // let tempSubPath = path.resolve(settings.server.tempPath,'output',`in.${suffix}`)
                         //特殊字符易造成ffmpeg指令生成困难，因此就复制一份
                         //放到系统临时路径会出现读写问题，就放到应用根目录了
                         const tempSubPath = path.resolve('temp', `in${index}.${suffix}`)

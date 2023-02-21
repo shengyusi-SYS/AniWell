@@ -49,16 +49,16 @@ async function generateM3U8(videoInfo) {
             }
         }
         await new Promise((r, j) => {
-            rimraf(path.resolve(settings.get('tempPath'), 'output'), (err) => {
+            rimraf(path.resolve(settings.server.tempPath, 'output'), (err) => {
                 if (err) {
                     logger.error('error rimraf', err)
                 }
                 r(null)
             })
         })
-        await mkdir(path.resolve(settings.get('tempPath'), 'output'))
+        await mkdir(path.resolve(settings.server.tempPath, 'output'))
         logger.info('debug', 'clear')
-        await writeFile(path.resolve(settings.get('tempPath'), 'output', 'index.m3u8'), M3U8)
+        await writeFile(path.resolve(settings.server.tempPath, 'output', 'index.m3u8'), M3U8)
     } catch (error) {
         logger.error('generateM3U8', error)
     }

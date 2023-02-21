@@ -51,7 +51,7 @@ async function getVideoInfo(filePath) {
                     subtitleStream,
                     cleared,
                     platform: settings.get('platform'),
-                    encode: settings.get('encode'),
+                    encode: settings.transcode.encode,
                 }
                 logger.debug('getVideoInfo', 'end')
                 r(videoInfo)
