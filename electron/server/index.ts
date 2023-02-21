@@ -1,4 +1,4 @@
-import { log4js, httpLogger, logger } from './utils/logger'
+import { log4js, httpLogger, logger, syncLogger, clientLogger } from './utils/logger'
 process.on('uncaughtException', function (err) {
     logger.error('Caught exception !!!', err)
 })
@@ -16,6 +16,9 @@ import http from 'http'
 import history from 'connect-history-api-fallback'
 import { Server } from 'socket.io'
 import router from '@s/api'
+import users from '@s/store/users'
+import { verifyToken } from '@s/utils/jwt'
+
 app.use(log4js.connectLogger(httpLogger, { level: 'trace' }))
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
@@ -50,39 +53,55 @@ try {
 }
 
 try {
-    if (!(ssl.cert && ssl.key)) {
-        app.listen(settings.server.serverPort)
+    const httpsServer = https.createServer(ssl, app)
+    httpsServer.listen(settings.server.serverPort, () => {
         logger.info(
             'server start',
-            `HTTP Server is running on: http://localhost:${settings.server.serverPort}`,
+            `HTTPS Server is running on: https://localhost:${settings.server.serverPort}`,
         )
-    } else {
-        const httpsServer = https.createServer(ssl, app)
-        httpsServer.listen(settings.server.serverPort, () => {
+    })
+    if (import.meta.env.DEV === true) {
+        //vite+https proxy时，vue devtool会出问题，所以另开一个开发用
+        const httpServer = http.createServer(app)
+        httpServer.listen(+settings.server.serverPort + 1, () => {
             logger.info(
-                'server start',
-                `HTTPS Server is running on: https://localhost:${settings.server.serverPort}`,
+                `dev http server is running on: http://localhost:${
+                    +settings.server.serverPort + 1
+                }`,
             )
         })
-        if (import.meta.env.DEV === true) {
-            //vite+https proxy时，vue devtool会出问题，所以另开一个开发用
-            const httpServer = http.createServer(app)
-            httpServer.listen(+settings.server.serverPort + 1, () => {
-                logger.info(
-                    `dev http server is running on: http://localhost:${
-                        +settings.server.serverPort + 1
-                    }`,
-                )
-            })
-            var io = new Server(httpServer)
-        } else io = new Server(httpsServer)
-    }
+        var io = new Server(httpServer)
+    } else io = new Server(httpsServer)
 } catch (error) {
     logger.error('start server', error)
 }
 
-io.on('connection', (socket) => {
-    console.log('a user connected')
+io.engine.on('initial_headers', (headers, req) => {
+    headers['test'] = 'test'
 })
 
+io.on('connection', async (socket) => {
+    const token = socket.handshake.headers.cookie.match(/refreshToken=(?<token>[^;]*)(;|$)/).groups
+        .token
+    const info = verifyToken(token)
+    if (info) {
+        const user = users.getUser(info)
+        socket.user = user
+        if (!user) {
+            socket.disconnect()
+            return
+        } else if (user.administrator) {
+            syncLogger.init(socket)
+            syncLogger.info('开始同步日志')
+            socket.on('clientLog', (...args) => {
+                clientLogger.info(args.join(' '))
+            })
+        }
+    } else return socket.disconnect()
+    socket.emit('data', 'init')
+})
+
+setInterval(() => {
+    io.emit('time', new Date().getMilliseconds())
+}, 1000)
 export default app

@@ -81,6 +81,16 @@ const config = {
             level: 'debug',
             maxLevel: 'error',
         },
+        client: {
+            type: 'dateFile',
+            filename: join(paths.log, 'client.log'),
+            pattern: '.yyyy-MM-dd',
+            layout: {
+                type: 'pattern',
+                pattern: '[%d{ISO8601}][%5p %z %c] %m',
+            },
+            compress: true,
+        },
     },
     categories: {
         default: {
@@ -99,6 +109,10 @@ const config = {
             appenders: ['scrape'],
             level: 'info',
         },
+        client: {
+            appenders: ['client'],
+            level: 'info',
+        },
     },
 }
 export const log4js = logForjs.configure(config)
@@ -106,6 +120,7 @@ export const logger = log4js.getLogger('default')
 export const transcodeLogger = log4js.getLogger('maxTranscode')
 export const scrapeLogger = log4js.getLogger('maxScrape')
 export const httpLogger = log4js.getLogger('http')
+export const clientLogger = log4js.getLogger('client')
 export const changeLevel = async (debug = false) => {
     const cat = config.categories
     for (const key in cat) {
@@ -119,4 +134,22 @@ export const changeLevel = async (debug = false) => {
     }
     log4js.configure(config)
     logger.debug('changeLevel~~~~~~~~~~~~~~~~~~~~~~~~~~')
+}
+export const syncLogger = {
+    socket: undefined,
+    init(socket) {
+        this.socket = socket
+    },
+    info(...args) {
+        if (this.socket) {
+            this.socket.emit('log', args.join(' '))
+        }
+        return logger.info(args)
+    },
+    debug(...args) {
+        if (this.socket) {
+            this.socket.emit('log', args.join(' '))
+        }
+        return logger.debug(args)
+    },
 }

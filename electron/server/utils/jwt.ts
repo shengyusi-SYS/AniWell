@@ -7,7 +7,6 @@ import { logger } from '@s/utils/logger'
 const issuer = init.APPNAME + ' ' + init.VERSION
 const secretOrPrivateKey = init.ssl.key
 export interface userInfoPayload {
-    username: string
     UID: string
     alias: string
     administrator: boolean
@@ -20,15 +19,15 @@ export const sign = (payload: string | object | Buffer, expiresIn = '6h') =>
         algorithm: 'RS256',
         issuer,
     })
-export const signRefreshToken = ({ username, UID, alias, administrator, access }: UserData) =>
-    jwt.sign({ username, UID, alias, administrator, access }, secretOrPrivateKey, {
+export const signRefreshToken = ({ UID, alias, administrator, access }: UserData) =>
+    jwt.sign({ UID, alias, administrator, access }, secretOrPrivateKey, {
         expiresIn: '30 days',
         algorithm: 'RS256',
         issuer,
         audience: UID,
     })
-export const signAccessToken = ({ username, UID, alias, administrator, access }: UserData) =>
-    jwt.sign({ username, UID, alias, administrator, access }, secretOrPrivateKey, {
+export const signAccessToken = ({ UID, alias, administrator, access }: UserData) =>
+    jwt.sign({ UID, alias, administrator, access }, secretOrPrivateKey, {
         expiresIn: '3h',
         algorithm: 'RS256',
         issuer,

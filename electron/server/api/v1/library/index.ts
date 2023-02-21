@@ -96,7 +96,7 @@ router.use('/poster', async (req, res, next) => {
     }
     if ((await getFileType(filePath)) === 'image') {
         try {
-            //貌似是static自带了etag缓存
+            //static自带了etag缓存
             // const ifModifiedSince = req.headers['if-modified-since']
             // const mtime = (await stat(filePath)).mtime.toUTCString()
             // if (mtime === ifModifiedSince) {

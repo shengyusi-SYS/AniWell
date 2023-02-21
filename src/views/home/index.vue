@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // import isDesktop from '@h/useIsDesktop'
-import { useGlobalStore } from '@v/stores/global'
+import { useGlobalStore, globalCache } from '@v/stores/global'
 import { storeToRefs } from 'pinia'
 const globalStore = useGlobalStore()
 const { isDesktop } = storeToRefs(globalStore)
@@ -34,7 +34,14 @@ export default {
                     </ElRow>
                 </ElCol>
                 <ElCol :span="16" class="headerCenter">
-                    <div>isDesktop:{{ isDesktop }}</div>
+                    <ElRow justify="start">
+                        <ElCol :span="8">
+                            <div>isDesktop:{{ isDesktop }}</div>
+                        </ElCol>
+                        <ElCol :span="16" style="height: 4em; overflow-y: scroll">
+                            <div v-for="msg in globalCache.serverLog.list">{{ msg }}</div>
+                        </ElCol>
+                    </ElRow>
                 </ElCol>
                 <ElCol :span="4" class="headerRight">
                     <ElRow justify="end">

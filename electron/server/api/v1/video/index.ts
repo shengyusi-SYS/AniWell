@@ -42,7 +42,7 @@ router.use(
     '/font',
     compressionMw,
     (req, res, next) => {
-        res.header('Cache-Control', `max-age=${3600 * 24 * 30},public`)
+        res.header('Cache-Control', `max-age=${3600 * 24 * 30},public,immutable`)
         next()
     },
     express.static(path.resolve(paths.temp, 'fonts')),

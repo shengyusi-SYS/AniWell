@@ -78,6 +78,15 @@ export const globalCache = {
     loggedIn: false,
     electronEnv: Boolean(window.electronAPI),
     serverPort: window.electronAPI ? await window.electronAPI.getServerPort() : 0,
+    serverLog: reactive({
+        list: [] as Array<string | number>,
+        info(log: string | number) {
+            if (this.list.length > 100) {
+                this.list.pop()
+            }
+            this.list.unshift(log)
+        },
+    }),
 }
 
 const globalData = {

@@ -6,6 +6,24 @@ import { io } from 'socket.io-client'
 
 export const socket = io()
 
+socket.on('connect', () => {
+    console.log(socket.id)
+})
+socket.on('data', (data) => {
+    console.log(data)
+})
+socket.on('time', (time) => {
+    const delay = new Date().getMilliseconds() - time
+    globalCache.serverLog.info(delay)
+})
+socket.on('log', (log) => {
+    globalCache.serverLog.info(log)
+})
+
+export const clientLog = (...args: any[]) => socket.emit('clientLog', args.join(' '))
+setTimeout(() => {
+    clientLog('dadada')
+}, 2222)
 export const reqSalt = (username: string): Promise<{ salt: string } | Error> =>
     requests.get('/users/salt?username=' + username)
 
@@ -128,5 +146,3 @@ export const reqLibraryItem = async (data: VideoQueryParams): Promise<VideoSrc> 
     requests.post(`/library/item`, data)
 
 export const reqStopTranscode = async (): Promise<{}> => requests.post(`/video/clearVideoTemp`)
-
-export * from './old'
