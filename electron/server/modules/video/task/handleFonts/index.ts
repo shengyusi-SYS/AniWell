@@ -59,8 +59,6 @@ async function handleFonts(videoInfo: VideoInfo) {
     } else if ((type = 'file')) {
         if (cache === fontsPath && fontsPath) {
             const fontsPathList = await listPack(fontsPath)
-            console.log('~~~~~~~~~~~~~~', fontsPathList, '~~~~~~~~~~~~~~')
-
             return Promise.resolve()
         } else {
             const fontsPathList = await extractAndList(fontsPath, tempFontsDir)

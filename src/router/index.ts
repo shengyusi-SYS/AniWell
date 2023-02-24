@@ -2,6 +2,7 @@ import Welcome from '@v/views/welcome/index.vue'
 import Login from '@v/views/login/index.vue'
 import Home from '@v/views/home/index.vue'
 import Library from '@v/views/home/library/index.vue'
+import Settings from '@v/views/home/settings/index.vue'
 import VideoPlayer from '@v/views/videoPlayer/index.vue'
 import * as VueRouter from 'vue-router'
 import { reqIsFirst } from '@v/api'
@@ -47,6 +48,7 @@ const routes = [
     },
     {
         path: '/home',
+        name: 'home',
         component: () => import('@v/views/home/index.vue'),
         children: [
             { path: '', redirect: '/home/library/video' },
@@ -57,11 +59,20 @@ const routes = [
                 props: true,
                 // children: [{ path: '', redirect: '' }]
             },
+            {
+                path: 'settings',
+                name: 'settings',
+                component: Settings,
+            },
         ],
     },
     {
         path: '/videoPlayer',
         component: () => import('@v/views/videoPlayer/index.vue'),
+    },
+    {
+        path: '/item',
+        component: () => import('@v/views/item/index.vue'),
     },
 ]
 

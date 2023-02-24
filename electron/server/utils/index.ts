@@ -74,29 +74,35 @@ async function extractFonts(packPath, fontsDir?: string) {
     }
 }
 
+//竟然不能解压rar，之后修复
 export async function extractAndList(packPath: string, fontsDir: string) {
     const list = []
-    await new Promise((resolve, reject) => {
-        const stream = Seven.extractFull(packPath, fontsDir, {
-            recursive: true,
-            $bin: pathTo7zip,
+    try {
+        await new Promise((resolve, reject) => {
+            const stream = Seven.extractFull(packPath, fontsDir, {
+                recursive: true,
+                $bin: pathTo7zip,
+            })
+            stream.on('data', (data) => {
+                const filePath = data.file
+                if (path.extname(filePath)) {
+                    list.push(filePath)
+                }
+            })
+            stream.on('end', function () {
+                resolve(null)
+            })
+            stream.on('error', (err) => resolve(err))
         })
-        stream.on('data', (data) => {
-            const filePath = data.file
-            if (path.extname(filePath)) {
-                list.push(filePath)
-            }
-        })
-        stream.on('end', function () {
-            resolve(null)
-        })
-        stream.on('error', (err) => resolve(err))
-    })
+    } catch (error) {
+        logger.error('extractAndList', packPath)
+    }
+
     return list
 }
 
 //列出压缩包内容
-function listPack(packPath) {
+async function listPack(packPath) {
     return Seven.list(packPath, {
         $bin: pathTo7zip,
     })

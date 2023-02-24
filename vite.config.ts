@@ -23,7 +23,8 @@ const isBuild = process.argv.slice(2).includes('build')
 // https://vitejs.dev/config/
 let proxyPort = 9010
 try {
-    proxyPort = +JSON.parse(readFileSync('./dev/Config/settings.json', 'utf8')).serverPort + 1
+    proxyPort =
+        +JSON.parse(readFileSync('./dev/Config/settings.json', 'utf8')).server.serverPort + 1
 } catch (error) {}
 
 export const config = {

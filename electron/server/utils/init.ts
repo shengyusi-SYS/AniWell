@@ -110,8 +110,8 @@ class Init {
             try {
                 const cert = createCertificate()
                 this.ssl = cert
-                fs.writeFileSync(join(defaultSSLPath, 'domain.pem'), cert.key)
-                fs.writeFileSync(join(defaultSSLPath, 'domain.key'), cert.cert)
+                fs.writeFileSync(join(defaultSSLPath, 'domain.pem'), cert.cert)
+                fs.writeFileSync(join(defaultSSLPath, 'domain.key'), cert.key)
                 logger.info('init 已创建自签名证书')
             } catch (error) {
                 logger.fatal('init 写入自签名证书失败', error)

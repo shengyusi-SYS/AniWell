@@ -7,6 +7,26 @@ const { isDesktop } = storeToRefs(globalStore)
 const menuOpenned = ref(false)
 
 const router = useRouter()
+
+const navTo = (e) => {
+    if (e.name) {
+        router.push({ name: e.name, params: { catagory: 'video' } })
+    } else router.push(e.path)
+}
+const nav = {
+    library: {
+        path: '',
+        icon: '',
+        name: 'library',
+        label: '库',
+    },
+    settings: {
+        path: '',
+        icon: '',
+        name: 'settings',
+        label: '设置',
+    },
+}
 </script>
 
 <script lang="ts">
@@ -18,11 +38,11 @@ export default {
 <template>
     <ElContainer direction="vertical" :class="`home-base ${isDesktop ? 'desktop' : ''}`">
         <ElHeader class="row">
-            <ElRow justify="space-between" align="middle" style="width: 100%">
+            <ElRow justify="space-between" :align="'middle'" style="width: 100%">
                 <ElCol :span="4" class="headerLeft">
                     <ElRow justify="start">
                         <ElIcon
-                            size="2rem"
+                            size="2em"
                             :style="`transform: translatex(${
                                 menuOpenned ? '1.5em' : 0
                             }); transform-origin:center;transition:transform 0.3s`"
@@ -44,39 +64,50 @@ export default {
                     </ElRow>
                 </ElCol>
                 <ElCol :span="4" class="headerRight">
-                    <ElRow justify="end">
-                        <ElIcon size="2rem" @click="router.push('/home/library/video')"
-                            ><IMdiHomeOutline
-                        /></ElIcon>
-                    </ElRow>
+                    <ElRow justify="end"> </ElRow>
                 </ElCol>
             </ElRow>
         </ElHeader>
         <ElContainer direction="horizontal" class="home-container">
             <ElAside :class="!isDesktop ? 'overlay' : ''">
-                <ElRow
-                    class="menu"
-                    style="height: 4em"
-                    align="middle"
-                    @click="
-                        router.push({
-                            path: '/home/library',
-                        })
-                    "
-                >
-                    <Transition name="menu-icon">
-                        <ElCol v-show="menuOpenned || isDesktop" class="menu-icon" :span="0.1"
-                            >图标
-                        </ElCol>
-                    </Transition>
-                    <Transition name="menu-title">
-                        <ElCol v-show="menuOpenned" class="menu-title" :span="0.1">有四个字 </ElCol>
-                    </Transition>
+                <ElRow class="menu" style="" :align="'middle'">
+                    <ElCol>
+                        <ElRow v-for="route in nav" class="menu-line" :align="'middle'">
+                            <Transition name="menu-icon">
+                                <ElCol
+                                    v-show="menuOpenned || isDesktop"
+                                    class="menu-icon"
+                                    :span="0.1"
+                                >
+                                    <ElIcon size="2em" @click="navTo(route)"
+                                        ><IMdiHomeOutline
+                                    /></ElIcon>
+                                </ElCol>
+                            </Transition>
+                            <Transition name="menu-title">
+                                <ElCol v-show="menuOpenned" class="menu-title" :span="0.1"
+                                    >{{ route.label }}
+                                </ElCol>
+                            </Transition>
+                        </ElRow>
+                    </ElCol>
                 </ElRow>
             </ElAside>
             <ElMain class="col">
                 <ElScrollbar>
-                    <RouterView></RouterView>
+                    <RouterView v-slot="{ Component, route }">
+                        <KeepAlive include="Library">
+                            <Suspense>
+                                <template #default>
+                                    <Component
+                                        :is="Component"
+                                        :key="route.meta.usePathKey ? route.path : undefined"
+                                    />
+                                </template>
+                                <template #fallback> Loading... </template>
+                            </Suspense>
+                        </KeepAlive>
+                    </RouterView>
                 </ElScrollbar>
             </ElMain>
         </ElContainer>
@@ -109,7 +140,7 @@ export default {
                     // transform-origin: left;
                 }
                 .menu-icon:extend(.menu-title) {
-                    width: 4rem;
+                    width: 4em;
                 }
                 .menu-title-enter-active,
                 .menu-title-leave-active,
@@ -141,7 +172,7 @@ export default {
         position: relative;
         background-color: var(--el-bg-color-overlay);
         // color: var(--el-text-color-primary);
-        height: 4rem;
+        height: 4em;
         max-height: 15vh;
         min-height: 2em;
         padding: 0;

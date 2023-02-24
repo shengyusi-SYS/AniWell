@@ -75,9 +75,9 @@ async function createWindow() {
         width: 1920,
         height: 1080,
         // frame: false,
-        titleBarStyle: 'hidden',
+        // titleBarStyle: 'hidden',
         // titleBarOverlay: false,
-        // autoHideMenuBar: true,
+        autoHideMenuBar: true,
     })
 
     if (process.env.VITE_DEV_SERVER_URL) {
@@ -109,7 +109,7 @@ app.whenReady()
     .then(async () => {
         if (import.meta.env.DEV === true) {
             //加载vue.js.devtools
-            await vueDevtools()
+            // await vueDevtools()
         }
 
         createWindow()

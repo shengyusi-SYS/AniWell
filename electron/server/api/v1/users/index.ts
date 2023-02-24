@@ -43,7 +43,7 @@ router.post('/login', upload.none(), async (req, res, next) => {
                 res.cookie('refreshToken', signRefreshToken(user), {
                     maxAge: 1000 * 3600 * 24 * 30,
                     httpOnly: true,
-                    secure: import.meta.env.DEV ? false : true,
+                    secure: !settings.server.DEV,
                 })
                 res.status(200).end()
                 return
@@ -72,7 +72,7 @@ router.post('/signup', upload.none(), async (req, res, next) => {
     } else {
         //TODO：验证添加用户的权限
         try {
-            users.addUser({
+            const user: UserData = {
                 username,
                 UID: uuidv4(),
                 password,
@@ -80,7 +80,8 @@ router.post('/signup', upload.none(), async (req, res, next) => {
                 salt,
                 administrator,
                 access,
-            })
+            }
+            users.addUser(user)
         } catch (error) {
             logger.error('/signup', error)
             res.status(500).json({ error: '/signup 服务器错误' })
@@ -114,12 +115,11 @@ if (users.first === true) {
                     res.cookie('refreshToken', signRefreshToken(user), {
                         maxAge: 1000 * 3600 * 24 * 30,
                         httpOnly: true,
-                        secure: true,
+                        secure: !settings.server.DEV,
                     })
                         .status(200)
                         .end()
                     users.first = false
-                    console.log(users.first)
                 }
                 return
             } catch (error) {

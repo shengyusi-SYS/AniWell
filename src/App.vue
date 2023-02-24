@@ -98,15 +98,15 @@ const test = () => {
             v-if="float"
             ref="el"
             :style="style"
-            style="position: fixed; font-size: 1rem; z-index: 10"
+            style="position: fixed; font-size: 1em; z-index: 10"
         >
             <div @click="float = false">close</div>
-            <div style="font-size: 16px; border: 1px solid black">16PX大小</div>
-            <div style="border: 1px solid black">1REM大小</div>
-            <div style="font-size: 24px; border: 1px solid black">24PX大小</div>
+            <div style="font-size: 1rem; border: 1px solid black">1REM大小(10px)</div>
+            <div style="font-size: 1em; border: 1px solid black">1EM大小</div>
             <div style="font-size: 2rem; border: 1px solid black">2REM大小</div>
-            <div style="font-size: 2rem; border: 1px solid black">{{ isDark }}</div>
-            <div style="font-size: 2rem; border: 1px solid black" @click="test">test</div>
+            <div style="font-size: 2em; border: 1px solid black">2EM大小</div>
+            <div style="font-size: 2em; border: 1px solid black">{{ isDark }}</div>
+            <div style="font-size: 2em; border: 1px solid black" @click="test">test</div>
             <div
                 :style="`background: #ffffffaa;
                     width: 12em;
@@ -146,8 +146,11 @@ html {
     margin: 0;
     padding: 0;
     @media screen and(min-width: 426px) and(min-height: 426px) {
-        font-size: 16px;
+        font-size: 10px;
     }
+}
+body {
+    // font-size: 1.6rem;
 }
 .col {
     display: flex;

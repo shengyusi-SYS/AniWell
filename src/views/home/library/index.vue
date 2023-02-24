@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { reqLibrary } from '@v/api'
+import useListenLifecycle from '@v/hooks/useListenLifecycle'
 import { useGlobalStore } from '@v/stores/global'
 import { CardData } from '@v/stores/library'
 import { useElementSize, useWindowSize } from '@vueuse/core'
@@ -65,10 +66,6 @@ const query = async (options = defaultOptions) => {
         if (!v.path) {
             v.path = cardData.path + '\\' + v.label
         }
-    })
-    library.value.scrollIntoView({
-        // behavior: 'smooth',
-        block: 'start',
     })
 }
 
@@ -138,18 +135,20 @@ onBeforeRouteUpdate(async (to, from, next) => {
         }
     }
     lastPath = from.query.path
+    library.value.scrollIntoView({
+        // behavior: 'smooth',
+        block: 'start',
+    })
     next()
 })
 
-onMounted(() => {
-    // console.log('3')
-    query({
-        catagory: router.currentRoute.value.params.catagory,
-        itemId: router.currentRoute.value.query.path,
-        start: router.currentRoute.value.query.page
-            ? (Number(router.currentRoute.value.query.page) - 1) * pageSize.value
-            : 0,
-    })
+onMounted(() => {})
+query({
+    catagory: router.currentRoute.value.params.catagory,
+    itemId: router.currentRoute.value.query.path,
+    start: router.currentRoute.value.query.page
+        ? (Number(router.currentRoute.value.query.page) - 1) * pageSize.value
+        : 0,
 })
 
 onBeforeMount(() => {})
@@ -157,6 +156,8 @@ onBeforeMount(() => {})
 onBeforeUpdate(() => {})
 
 onUnmounted(() => {})
+
+useListenLifecycle('Library')
 </script>
 
 <script lang="ts">

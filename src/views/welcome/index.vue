@@ -57,7 +57,7 @@ export default {
             />
         </div>
         <div>
-            <ElButton size="large" @click="confirmModify">登录</ElButton>
+            <ElButton size="large" @click="confirmModify">确认</ElButton>
         </div>
     </div>
 </template>

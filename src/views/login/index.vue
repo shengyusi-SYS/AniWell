@@ -66,7 +66,7 @@ export default {
             />
         </div>
         <div>
-            <ElButton size="large" @click="login(false)">确认</ElButton>
+            <ElButton size="large" @click="login(false)">登录</ElButton>
         </div>
     </div>
 </template>

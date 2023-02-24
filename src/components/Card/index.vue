@@ -13,7 +13,7 @@ const videoPlayerStore = useVideoPlayerStore()
 const { theme } = storeToRefs(globalStore)
 const props = defineProps<{
     data: CardData
-    fontSize?: ComputedRef<string>
+    fontSize?: string
     replace?: () => boolean
 }>()
 // const { title, poster, path, itemId, result } = props.data
