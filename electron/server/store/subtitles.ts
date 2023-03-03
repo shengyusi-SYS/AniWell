@@ -3,7 +3,7 @@ import paths from '@s/utils/envPath'
 import { resolve } from 'path'
 import { readFile } from 'fs/promises'
 import { test } from '@s/test'
-import { toWebvtt, extractSub } from '@s/utils/media/sub'
+import { toWebvtt, extractSub } from '@s/utils/media'
 
 const store = new Store({
     name: 'subtitles',

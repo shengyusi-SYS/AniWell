@@ -10,7 +10,7 @@ import { storeToRefs } from 'pinia'
 // import isDesktop from '@h/useIsDesktop'
 
 const router = useRouter()
-const props = defineProps(['catagory'])
+const props = defineProps(['category'])
 const globalStore = useGlobalStore()
 const { theme } = storeToRefs(globalStore)
 const pageSize = toRef(theme.value, 'libraryPageSize')
@@ -44,14 +44,14 @@ const currentPage = ref(
 
 //数据查询
 const total = ref(20)
-const defaultOptions: { catagory?: string; itemId?: string; start?: number } = {
-    catagory: props.catagory,
+const defaultOptions: { category?: string; itemId?: string; start?: number } = {
+    category: '',
     itemId: '',
     start: 0,
 }
 const query = async (options = defaultOptions) => {
-    const { catagory, itemId, start } = { ...defaultOptions, ...options }
-    const newData = await reqLibrary(catagory, itemId, {
+    const { category, itemId, start } = { ...defaultOptions, ...options }
+    const newData = await reqLibrary(category, itemId, {
         start,
         end: start + pageSize.value,
     })
@@ -106,10 +106,10 @@ onBeforeRouteUpdate(async (to, from, next) => {
     // console.log('1 onBeforeRouteUpdate', from.query.path, '~~~~~~~', to.query.path)
     toPath = to.query.path
     //准确跳转
-    if (typeof to.params.catagory === 'string' && typeof to.query.path === 'string') {
+    if (typeof to.params.category === 'string' && typeof to.query.path === 'string') {
         try {
             await query({
-                catagory: to.params.catagory,
+                category: to.params.category,
                 itemId: to.query.path,
                 start: to.query.page ? (Number(to.query.page) - 1) * pageSize.value : 0,
             })
@@ -144,7 +144,7 @@ onBeforeRouteUpdate(async (to, from, next) => {
 
 onMounted(() => {})
 query({
-    catagory: router.currentRoute.value.params.catagory,
+    category: router.currentRoute.value.params.category,
     itemId: router.currentRoute.value.query.path,
     start: router.currentRoute.value.query.page
         ? (Number(router.currentRoute.value.query.page) - 1) * pageSize.value
@@ -171,7 +171,7 @@ export default {
         <div>Library</div>
         <ElSlider v-model="theme.libraryColumnNum" :max="10" :min="1" style="width: 80%" />
         <div>{{ fontSize }}</div>
-
+        <div>{{ globalStore.qwe }}</div>
         <div class="library-cards">
             <VanGrid :column-num="theme.libraryColumnNum" :gutter="gutter" :border="false">
                 <VanGridItem v-for="data in cardData.children">

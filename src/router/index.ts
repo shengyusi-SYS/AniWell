@@ -14,6 +14,7 @@ const routes = [
     { path: '/', redirect: '/login' },
     {
         path: '/welcome',
+        name: 'welcome',
         component: () => import('@v/views/welcome/index.vue'),
         beforeEnter: async (to, from) => {
             console.log('welcome!', to, from)
@@ -29,6 +30,7 @@ const routes = [
     },
     {
         path: '/login',
+        name: 'login',
         component: () => import('@v/views/login/index.vue'),
         beforeEnter: (to, from) => {
             console.log('login!', to, from)
@@ -53,7 +55,7 @@ const routes = [
         children: [
             { path: '', redirect: '/home/library/video' },
             {
-                path: 'library/:catagory',
+                path: 'library',
                 name: 'library',
                 component: Library,
                 props: true,

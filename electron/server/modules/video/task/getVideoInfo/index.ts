@@ -1,5 +1,5 @@
 import { logger } from '@s/utils/logger'
-import { getScreenedMediaInfo, ScreenedMediaInfo } from '@s/utils/media/getMediaInfo'
+import { getScreenedMediaInfo, ScreenedMediaInfo } from '@s/utils/media'
 import settings from '@s/store/settings'
 import { access } from 'fs/promises'
 import path from 'path'

@@ -1,4 +1,4 @@
-import { getScreenedMediaInfo } from './getMediaInfo'
+import { getScreenedMediaInfo } from './info'
 import settings from '@s/store/settings'
 import path from 'path'
 import { spawnSync, spawn } from 'child_process'

@@ -1,0 +1,22 @@
+import { AppendedMetadata } from './filterAndAppend'
+import { ScraperResult, FileMetadata } from '@s/store/library'
+import { extractPicture } from '@s/utils/media'
+import { Ilibrary } from '@s/store/library'
+type fileMetadata = FileMetadata & {
+    fileInfo: AppendedMetadata
+}
+export const scraperName = 'extPic'
+
+export default async function scraper(library: Ilibrary['']) {
+    const flatFile = library.flatFile
+    const overwrite = library.config[scraperName]?.overwrite
+    for (const filePath in flatFile) {
+        const poster = await extractPicture({ inputPath: filePath, overwrite })
+        if (poster) {
+            const fileMetadata = flatFile[filePath]
+            fileMetadata.scraperInfo[scraperName] = {
+                poster,
+            }
+        }
+    }
+}

@@ -76,7 +76,7 @@ export const config = {
                         outDir: 'dist-electron/main',
                         rollupOptions: {
                             external: Object.keys(pkg.dependencies).filter((name) => {
-                                const pureEsm = ['env-paths']
+                                const pureEsm = ['env-paths', 'file-type']
                                 return !pureEsm.includes(name)
                             }),
                         },
@@ -85,7 +85,7 @@ export const config = {
                         alias: {
                             '@s': path.resolve(__dirname, './electron/server'),
                         },
-                        conditions: [],
+                        conditions: ['node'],
                     },
                     base: './',
                 },

@@ -3,7 +3,7 @@ process.on('uncaughtException', function (err) {
     logger.error('Caught exception !!!', err)
 })
 import fs from 'fs'
-import { join } from 'path'
+import { join, resolve } from 'path'
 import settings from '@s/store/settings'
 logger.info('settings', settings)
 import init from './utils/init'
@@ -18,7 +18,10 @@ import { Server } from 'socket.io'
 import router from '@s/api'
 import users from '@s/store/users'
 import { verifyToken } from '@s/utils/jwt'
+// import { MongoClient } from 'mongodb'
+// const url = 'mongodb://localhost:27017/fs'
 
+// MongoClient.connect(url, {})
 app.use(log4js.connectLogger(httpLogger, { level: 'trace' }))
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
@@ -104,4 +107,10 @@ io.on('connection', async (socket) => {
 setInterval(() => {
     io.emit('time', new Date().getMilliseconds())
 }, 1000)
+
+import('./modules/scraper')
+    .then((result) => {
+        console.log('``````````````````')
+    })
+    .catch((err) => {})
 export default app

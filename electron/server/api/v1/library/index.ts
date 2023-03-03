@@ -8,6 +8,7 @@ import videoHandler from './handler/video'
 import compression from 'compression'
 import { logger } from '@s/utils/logger'
 import paths from '@s/utils/envPath'
+import library, { getLibrary } from '@s/store/library'
 
 const router = express.Router()
 
@@ -16,11 +17,9 @@ router.use('/', async (req, res, next) => {
     next()
 })
 
-router.get('/old', (req, res, next) => {})
-
-router.get('/:catagory', compression(), (req, res, next) => {
+router.get('/old', (req, res, next) => {
     try {
-        const catagory = req.params?.catagory
+        const category = req.params?.category
         const reqPath = req.query.itemId
         const range = req.query.range
         if (typeof range === 'string') {
@@ -31,9 +30,9 @@ router.get('/:catagory', compression(), (req, res, next) => {
         const library = JSON.parse(
             fs.readFileSync(path.resolve(paths.data, 'libraryIndex.json')).toString(),
         )
-        // console.log(catagory, resolve(decode(reqPath)))
-        if (typeof catagory === 'string') {
-            if (catagory === 'video' && !reqPath) {
+        // console.log(category, resolve(decode(reqPath)))
+        if (typeof category === 'string') {
+            if (category === 'video' && !reqPath) {
                 library.total = library.children.length
                 const result = []
                 for (; start < end && start < library.children.length; start++) {
@@ -85,6 +84,29 @@ router.get('/:catagory', compression(), (req, res, next) => {
     }
 })
 
+interface libQuery {
+    category: string | undefined
+    sort: string
+    range: string
+    path: string
+}
+router.get('/lib', compression(), async (req, res, next) => {
+    const {
+        category,
+        sort = 'default',
+        range = '0,20',
+        path = 'root',
+    } = req.query as unknown as libQuery
+    console.log(req.query)
+
+    const lib = await getLibrary(category)
+    if (lib) {
+        res.json(lib)
+    } else {
+        res.status(404).json({ message: '未建立媒体库' })
+    }
+})
+
 //文件请求处理
 router.use('/poster', async (req, res, next) => {
     let filePath
@@ -94,7 +116,7 @@ router.use('/poster', async (req, res, next) => {
         res.status(404).json({})
         return
     }
-    if ((await getFileType(filePath)) === 'image') {
+    if ((await getFileType(filePath))?.type === 'image') {
         try {
             //static自带了etag缓存
             // const ifModifiedSince = req.headers['if-modified-since']
@@ -130,7 +152,7 @@ router.post('/item', async (req, res, next) => {
     }
 
     const itemPath = resolve(req.body.filePath)
-    const itemType = await getFileType(itemPath)
+    const itemType = (await getFileType(itemPath)).type
 
     if (typeof itemType === 'string') {
         try {

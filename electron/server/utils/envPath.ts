@@ -10,9 +10,10 @@ export const paths =
               config: resolve('./dev/Config'),
               cache: resolve('./dev/Cache'),
               log: resolve('./dev/Log'),
-              temp: os.tmpdir(),
+              temp: resolve('./dev/Temp'),
               asar: '',
               dist: '',
+              cut: resolve('./dev/Temp/cut'),
           }
         : envPaths('FileServer-for-qBittorrent', { suffix: '' })
 export default paths

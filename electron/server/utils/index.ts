@@ -10,6 +10,7 @@ import Seven from 'node-7z'
 import { readdir, mkdir, rename } from 'fs/promises'
 import crypto from 'crypto'
 import fs from 'fs'
+import { fileTypeFromFile } from 'file-type'
 
 //清理空字符串和数组（ffmpeg指令用）
 function cleanNull(arr) {
@@ -206,13 +207,12 @@ class TaskPool {
 }
 
 //获取文件类型
-async function getFileType(filePath) {
-    //新版file-type的package.json中将默认导出设为浏览器版，vite编译时不能正确引入node版，暂未找到其它解决方案
-    const { fromFile } = await import('file-type')
+async function getFileType(filePath: string): Promise<{ mime: string; type: string } | undefined> {
     try {
-        return (await fromFile(filePath)).mime.split('/')[0]
+        const mime = (await fileTypeFromFile(filePath))?.mime
+        return { mime, type: mime.split('/')[0] }
     } catch (error) {
-        return false
+        return undefined
     }
 }
 
@@ -283,24 +283,51 @@ export function toNumber<T>(val): T | number {
     } else return val
 }
 
-export function toNumberDeep(obj) {
+export function toNumberDeep(obj, ignore: string[] = ['level']) {
     if (obj instanceof Array) {
         obj.forEach((v, i, a) => {
             if (typeof v === 'object') {
-                a[i] = toNumberDeep(v)
-            } else a[i] = toNumber(v)
+                a[i] = toNumberDeep(v, ignore)
+            } else if (!ignore.includes(v)) {
+                a[i] = toNumber(v)
+            }
         })
     } else if (obj instanceof Object) {
         for (const key in obj) {
             if (Object.hasOwnProperty.call(obj, key)) {
                 const element = obj[key]
                 if (typeof element === 'object') {
-                    obj[key] = toNumberDeep(element)
-                } else obj[key] = toNumber(element)
+                    obj[key] = toNumberDeep(element, ignore)
+                } else if (!ignore.includes(key)) {
+                    obj[key] = toNumber(element)
+                }
             }
         }
     }
     return obj
+}
+
+export async function filterDirFile(filterDirPath, { fileList, dirList }) {
+    const curList = (await readdir(filterDirPath)).map((v) => path.resolve(filterDirPath, v))
+    const typeResult = await Promise.allSettled(curList.map((v) => readdir(v)))
+    const nextDirList = []
+    typeResult.forEach((v, i) => {
+        v.status === 'fulfilled'
+            ? (() => {
+                  dirList.push(curList[i])
+                  nextDirList.push(curList[i])
+              })()
+            : fileList.push(curList[i])
+    })
+    return Promise.allSettled(nextDirList.map((v) => this.filterDirFile(v, { fileList, dirList })))
+}
+
+export const dotGet = (obj, key) => {
+    const args = key.split('.')
+    return args.reduce((pre, val, ind, arr) => {
+        if (pre == undefined) return pre
+        return pre[val]
+    }, obj)
 }
 
 export {
@@ -319,4 +346,4 @@ export {
     TaskPool,
 }
 export { readDirTree, readDirTreeSync, appedDirTree, searchLeaf, Tree } from './tree'
-export * from './media/getMediaInfo'
+export * from './media/info'

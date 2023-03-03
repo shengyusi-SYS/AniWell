@@ -1,16 +1,18 @@
 import { spawnSync, spawn } from 'child_process'
 import settings from '@s/store/settings'
-import path from 'path'
+import path, { basename, dirname, resolve } from 'path'
 import init from '@s/utils/init'
 import MP4Box from 'mp4box'
 import { readChunkSync, toNumberDeep } from '@s/utils'
+import paths from '../envPath'
+import { createReadStream, ReadStream } from 'fs'
+import { mkdir } from 'fs/promises'
+import { v4 as uuidv4 } from 'uuid'
+import { cutVideo } from './video'
 
 export function getMediaInfoSync(filePath: string): Promise<MediaInfo> {
-    const ffprobePath = settings.server.ffmpegPath
-        ? `"${path.resolve(settings.server.ffmpegPath, `ffprobe${init.ffmpegSuffix}`)}"`
-        : 'ffprobe'
-    const process = spawnSync(
-        ffprobePath,
+    const task = spawnSync(
+        init.ffprobePath,
         [
             `-i "${path.resolve(filePath)}"`,
             '-show_streams',
@@ -20,17 +22,14 @@ export function getMediaInfoSync(filePath: string): Promise<MediaInfo> {
         ],
         { shell: true },
     )
-    const result = JSON.parse(process.stdout.toString())
+    const result = JSON.parse(task.stdout.toString())
     return result
 }
 
 export async function getMediaInfo(filePath: string): Promise<MediaInfo> {
-    const ffprobePath = settings.server.ffmpegPath
-        ? `"${path.resolve(settings.server.ffmpegPath, `ffprobe${init.ffmpegSuffix}`)}"`
-        : 'ffprobe'
     return new Promise((resolve, reject) => {
-        const process = spawn(
-            ffprobePath,
+        const task = spawn(
+            init.ffprobePath,
             [
                 `-i "${path.resolve(filePath)}"`,
                 '-show_streams',
@@ -42,10 +41,10 @@ export async function getMediaInfo(filePath: string): Promise<MediaInfo> {
             { shell: true },
         )
         let info = ''
-        process.stdout.on('data', (data) => {
+        task.stdout.on('data', (data) => {
             info += data.toString()
         })
-        process.on('exit', (code) => {
+        task.on('exit', (code) => {
             if (code === 0) {
                 const result = JSON.parse(info)
                 resolve(toNumberDeep(result))
@@ -83,23 +82,29 @@ export async function getScreenedMediaInfo(filePath: string): Promise<ScreenedMe
 }
 
 export async function getVideoMimeType(filePath: string) {
-    const readMediaHeader = () => {
-        if (path.extname(filePath) === '.mkv') {
-            //ffmpeg不能直接获得标准的mime codec，MP4box不能直接解析mkv格式，就很烦
-            //解决方案：ffmpeg提取MP4格式的视频头，交给MP4box解析
-            return null
-        } else {
-            return readChunkSync(filePath, { length: 5 * 1024 * 1024 })
-        }
+    const readMediaHeader = async () => {
+        // if (path.extname(filePath) !== '.mp4') {
+        //ffmpeg不能直接获得标准的mime codec，MP4box不能直接解析mkv格式，就很烦
+        //解决方案：ffmpeg提取MP4格式的视频头，交给MP4box解析，但准确度待验证，要彻底解决怕是要去读规范文件
+        const cutPath = await cutVideo(filePath)
+        return readChunkSync(cutPath, { length: 5 * 1024 * 1024 })
+        // } else {
+        //     return readChunkSync(filePath, { length: 8 * 1024 * 1024 })
+        // }
     }
     const mp4boxfile = MP4Box.createFile()
-    const chunk = readMediaHeader()
+    try {
+        var chunk = await readMediaHeader()
+    } catch (error) {}
     if (!chunk) {
         return Promise.reject()
     }
     const arrayBuffer = new Uint8Array(chunk).buffer
     arrayBuffer.fileStart = 0
-    return new Promise<string | Error>((resolve, reject) => {
+    return new Promise<string>((resolve, reject) => {
+        setTimeout(() => {
+            reject('未知原因，部分视频会卡住，也不报错')
+        }, 3000)
         mp4boxfile.onReady = (info) => {
             resolve(info?.mime)
         }
@@ -107,6 +112,7 @@ export async function getVideoMimeType(filePath: string) {
             reject(e)
         }
         mp4boxfile.appendBuffer(arrayBuffer)
+        mp4boxfile.flush()
     })
 }
 

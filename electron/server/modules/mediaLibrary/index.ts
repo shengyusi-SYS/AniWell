@@ -98,7 +98,7 @@ async function getLibraryRootDir(dirPath = '') {
             {},
             {
                 fileFilter: async (filePath) => {
-                    const res = await getFileType(filePath)
+                    const res = (await getFileType(filePath)).type
                     if (res == 'video') {
                         if (!libraryRootDir) {
                             libraryRootDir = path.dirname(filePath)

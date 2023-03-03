@@ -32,7 +32,7 @@ async function dandanplayScraper(
         )
         const taskQueue = new TaskPool(3)
         //处理文件过滤器
-        let fileFilter = async (filePath) => (await getFileType(filePath)) == 'video'
+        let fileFilter = async (filePath) => (await getFileType(filePath)).type == 'video'
         try {
             if (!existTree) {
                 existTree = {
@@ -48,7 +48,7 @@ async function dandanplayScraper(
                     // console.log('.........................', filePath);
                     const leaf: MediaLeaf | false = searchLeaf(existTree as Tree, filePath)
                     if (!leaf || params.full) {
-                        return (await getFileType(filePath)) == 'video'
+                        return (await getFileType(filePath)).type == 'video'
                     }
                     if (leaf.title) {
                         scrapeLogger.debug('exist', leaf.label)

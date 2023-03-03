@@ -103,17 +103,19 @@ export const reqIsFirst = async (): Promise<boolean> => {
 export const reqOldLibrary = async () => requests.get('/library/old')
 
 export const reqLibrary = async (
-    catagory: string,
-    itemId = '',
+    category: string,
+    path = '',
     params = { start: 0, end: 20 },
 ): Promise<CardData> => {
-    const res = await requests.get(
-        `/library/${catagory}?itemId=${itemId}&range=${params.start},${params.end}`,
-        {
-            // responseType: 'json',
-            decompress: true,
+    const res = await requests.get(`/library/lib`, {
+        // responseType: 'json',
+        decompress: true,
+        params: {
+            category,
+            path,
+            range: `${params.start},${params.end}`,
         },
-    )
+    })
     console.log(res)
     return res
 }

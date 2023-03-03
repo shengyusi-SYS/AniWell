@@ -3,7 +3,7 @@ import paths from '@s/utils/envPath'
 import { verify } from '@s/utils/jwt'
 const store = new Store({
     name: 'bannedToken',
-    cwd: paths.cache,
+    cwd: paths.data,
     defaults: {
         t0: 't0',
     },

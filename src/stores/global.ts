@@ -71,7 +71,12 @@ export const useGlobalStore = defineStore('global', () => {
 
     const libraryConfig = reactive({})
 
-    return { rootEl, theme, initTheme, clientState, isDesktop }
+    const qwe = reactive({
+        qq:['a'],
+        ww:{b:'b'}
+    })
+
+    return { rootEl, theme, initTheme, clientState, isDesktop,qwe }
 })
 
 export const globalCache = {

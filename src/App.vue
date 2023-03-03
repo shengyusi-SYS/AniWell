@@ -51,7 +51,7 @@ const mediaConfig = {
      * 这里写 `file` 或 `media-source` 都可以, 结果一致,
      * 不要写 `webrtc`, 因为目前 WebRTC 还不支持 HEVC
      */
-    type: 'file',
+    type: 'file' as const,
     video: {
         /**
          * 视频的Profile
@@ -61,7 +61,7 @@ const mediaConfig = {
          * Main still-picture: `hvc1.3.E.L93.B0`
          * Range extensions: `hvc1.4.10.L93.B0`
          */
-        contentType: 'video/mp4;codecs="hev1.1.6.L120.90"',
+        contentType: 'video/mp4; codecs="avc1.640028"',
         /* 视频的宽度 */
         width: 1920,
         /* 视频的高度 */
@@ -73,14 +73,19 @@ const mediaConfig = {
     },
 }
 
-navigator.mediaCapabilities.decodingInfo(mediaConfig).then((result) => {
-    /* 指定的 Profile + 宽高的视频是否可解码 */
-    if (result.supported) {
-        console.log('Video can play!')
-    } else {
-        console.log("Video can't play!")
-    }
-})
+navigator.mediaCapabilities
+    .decodingInfo(mediaConfig)
+    .then((result) => {
+        /* 指定的 Profile + 宽高的视频是否可解码 */
+        if (result.supported) {
+            console.log('Video can play!')
+        } else {
+            console.log("Video can't play!")
+        }
+    })
+    .catch((e) => {
+        console.log("Video can't play!", e)
+    })
 
 const float = import.meta.env.DEV ? ref(true) : false
 const test = () => {

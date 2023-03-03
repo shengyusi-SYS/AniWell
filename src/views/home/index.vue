@@ -10,7 +10,7 @@ const router = useRouter()
 
 const navTo = (e) => {
     if (e.name) {
-        router.push({ name: e.name, params: { catagory: 'video' } })
+        router.push({ name: e.name, params: { category: 'video' } })
     } else router.push(e.path)
 }
 const nav = {
