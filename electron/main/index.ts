@@ -109,7 +109,7 @@ app.whenReady()
     .then(async () => {
         if (import.meta.env.DEV === true) {
             //加载vue.js.devtools
-            // await vueDevtools()
+            await vueDevtools()
         }
 
         createWindow()

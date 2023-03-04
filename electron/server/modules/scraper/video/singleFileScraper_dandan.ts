@@ -9,12 +9,12 @@ import settings from '@s/store/settings'
 import init from '@s/utils/init'
 
 type fileMetadata = FileMetadata & {
-    fileInfo: AppendedMetadata
+    baseInfo: AppendedMetadata
 }
 
 export function genarateOption(fileMetadata: fileMetadata) {
-    const filePath = fileMetadata.fileInfo.path
-    const fileHash = fileMetadata.fileInfo.hash
+    const filePath = fileMetadata.baseInfo.path
+    const fileHash = fileMetadata.baseInfo.hash
     const fileName = basename(filePath)
 
     if (fileHash) {
@@ -47,9 +47,8 @@ export function genarateOption(fileMetadata: fileMetadata) {
 export async function match(fileMetadata: fileMetadata): Promise<ScraperResult> {
     const opt = genarateOption(fileMetadata)
     const res = await got(opt)
-    console.log(res.body)
     const dandanResult = res.body
-    scrapeLogger.info('dandanplayMatch dandanResult', dandanResult)
+    scrapeLogger.debug('dandanplayMatch dandanResult', dandanResult)
     if (dandanResult.errorCode != 0) {
         scrapeLogger.error('dandanplayMatch dandanResult err', dandanResult.errorMessage)
     }
@@ -81,7 +80,7 @@ export default async function scraper(library) {
     const flatFile = library.flatFile
     const queryList = []
     for (const filePath in flatFile) {
-        if (queryList.length >= 32) {
+        if (queryList.length >= 100) {
             await Promise.allSettled(queryList)
             queryList.length = 0
         }

@@ -7,15 +7,15 @@ import {
 import { getFileType, vidoeHash } from '@s/utils'
 import { FileMetadata } from '@s/store/library'
 
-type fileInfo = FileMetadata['fileInfo']
-export interface AppendedMetadata extends fileInfo, ScreenedMediaInfo {
+type baseInfo = FileMetadata['baseInfo']
+export interface AppendedMetadata extends baseInfo, ScreenedMediaInfo {
     hash: string
     mime?: string
 }
 export default async function filterAndAppend(filePath: string) {
     try {
-        const firstFilter = (await getFileType(filePath))?.type === 'video'
-        if (!firstFilter) {
+        const typeFilter = (await getFileType(filePath))?.type === 'video'
+        if (!typeFilter) {
             return
         }
         const mediaInfo = (await getScreenedMediaInfo(filePath)) as AppendedMetadata

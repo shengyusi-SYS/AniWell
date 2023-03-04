@@ -29,12 +29,12 @@ interface opt {
 }
 
 type fileMetadata = FileMetadata & {
-    fileInfo: AppendedMetadata
+    baseInfo: AppendedMetadata
 }
 
 export function genarateOption(fileMetadata: fileMetadata): opt['json']['requests'][0] {
-    const filePath = fileMetadata.fileInfo.path
-    const fileHash = fileMetadata.fileInfo.hash
+    const filePath = fileMetadata.baseInfo.path
+    const fileHash = fileMetadata.baseInfo.hash
     const fileName = basename(filePath)
 
     if (fileHash) {
@@ -57,8 +57,8 @@ export default async function match(flatFile: {
     [path: string]: fileMetadata
 }): Promise<ScraperResult> {
     const fileList = Object.values(flatFile)
-    const hashList = [...new Set(fileList.map((v) => v.fileInfo.hash).filter((v) => v))]
-    const queryList = hashList.map((hash) => fileList.find((val) => val.fileInfo.hash === hash))
+    const hashList = [...new Set(fileList.map((v) => v.baseInfo.hash).filter((v) => v))]
+    const queryList = hashList.map((hash) => fileList.find((val) => val.baseInfo.hash === hash))
     queryList.reduce((pre: opt | undefined, fileMetadata, ind, arr) => {
         const template: opt = {
             url: `https://api.dandanplay.net/api/v2/match`,

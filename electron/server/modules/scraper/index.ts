@@ -1,10 +1,19 @@
 import path, { basename, dirname, extname, resolve } from 'path'
 import { readFile, readdir, stat, writeFile } from 'fs/promises'
-import library, { Ilibrary, resultType, boxLevel } from '@s/store/library'
-import { filterDirFile, dotGet } from '@s/utils'
+import library, {
+    Ilibrary,
+    resultType,
+    boxLevel,
+    MapRule,
+    libraryConfig,
+    LibraryTree,
+} from '@s/store/library'
+import { filterDirFile, dotGet, Tree } from '@s/utils'
+import { treeMerger } from '@s/utils/tree'
 
 type FilterAndAppend = (filePath: string) => Promise<object | undefined>
 
+//需要模块化的地方暂时用动态导入替代
 export default class Scraper {
     public dirAndFile: { fileList: string[]; dirList: string[] }
     public library: Ilibrary['']
@@ -31,37 +40,68 @@ export default class Scraper {
     /**
      * build
      */
-    public async build({ libPath, type, name }: { libPath: string; type: string; name: string }) {
+    public async build({
+        rootPath,
+        name,
+        mapFile,
+        mapDir,
+        config,
+    }: {
+        rootPath: string
+        name: string
+        mapFile?: MapRule
+        mapDir?: MapRule
+        config?: libraryConfig
+    }) {
+        if (library[name]) {
+            return Promise.reject('资源库不可重名')
+        }
         this.library = {
             name,
-            type,
             flatFile: {},
             flatDir: {},
-            rootPath: resolve(libPath),
-            map: {
-                path: 'fileInfo.path',
-                label: 'fileInfo.label',
-                type: 'fileInfo.type',
+            rootPath: resolve(rootPath),
+            mapFile: mapFile || {
+                path: 'baseInfo.path',
+                title: 'baseInfo.title',
+                result: 'baseInfo.result',
+                display: 'baseInfo.display',
+                // "poster": "scraperInfo.extPic.poster",
+                // "title": "scraperInfo.dandan.title",
+                // "episode": "scraperInfo.dandan.episode",
+                // "parentTitle": "scraperInfo.dandan.animeTitle"
             },
-            config: {
+            mapDir: mapDir || {
+                path: 'baseInfo.path',
+                title: 'baseInfo.title',
+                result: 'baseInfo.result',
+            },
+            config: config || {
                 library: {},
             },
         }
-        await this.countDirAndFile()
 
-        const filterAndAppend = (await import('./video/filterAndAppend')).default
-        await this.filterFileType(filterAndAppend)
+        //统计库根路径下的所有文件与文件夹
+        await this.countDirAndFile()
+        //过滤出所需类型的文件并附加相关信息
+        await this.filterFileType()
         this.save()
+        //仅通过层级关系初始化文件夹box类型及基础信息
         await this.initDirLevel(true)
         this.save()
+        //调用刮削器对单文件进行刮削
         await this.scrapeFlatFile()
         this.save()
+        //映射出文件的最终刮削结果
         await this.mapFileResult()
         this.save()
+        //对文件夹进行刮削
+        await this.scrapeFlatDir()
+        this.save()
+        //映射文件夹的最终刮削结果
         await this.mapDirResult()
         this.save()
-        await this.appendDirResult
-        this.save()
+        this.flatToTree()
     }
 
     /**
@@ -78,12 +118,13 @@ export default class Scraper {
     /**
      * filterFileType
      */
-    public async filterFileType(filterAndAppend: FilterAndAppend = () => Promise.resolve({})) {
+    public async filterFileType() {
         this.library.flatFile = {}
+        const filterAndAppend = (await import('./video/filterAndAppend')).default
         for (let index = 0; index < this.dirAndFile.fileList.length; index++) {
             try {
                 const filePath = this.dirAndFile.fileList[index]
-                const fileInfo = await this.singleUpdata(filePath, filterAndAppend)
+                const baseInfo = await this.singleUpdata(filePath, filterAndAppend)
                 console.log(index, '/', this.dirAndFile.fileList.length - 1)
             } catch (error) {
                 console.log(error)
@@ -102,20 +143,20 @@ export default class Scraper {
         const filetrResult = await filterAndAppend(filePath)
         if (filetrResult) {
             const filestat = await stat(filePath)
-            const fileInfo = {
+            const baseInfo = {
                 path: filePath,
-                label: basename(filePath).replace(extname(filePath), ''),
+                title: basename(filePath).replace(extname(filePath), ''),
                 result: 'item' as const,
+                display: 'video',
                 size: filestat.size,
                 atime: filestat.atime,
                 mtime: filestat.mtime,
                 ctime: filestat.ctime,
                 birthtime: filestat.birthtime,
-                type: this.library.type,
                 ...filetrResult,
             }
-            flat[filePath] = { ...flat[filePath], fileInfo }
-            return fileInfo
+            flat[filePath] = { ...flat[filePath], baseInfo }
+            return baseInfo
         }
         return undefined
     }
@@ -133,6 +174,7 @@ export default class Scraper {
             box3: {},
         }
 
+        //统计boxlevel
         for (const filePath in this.library.flatFile) {
             Object.keys(count).reduce((prePath: string, key) => {
                 const boxPath = dirname(prePath)
@@ -150,24 +192,30 @@ export default class Scraper {
                 const boxNum = levelCount[boxPath]
                 const target = this.library.flatDir[boxPath]
                 if (!target || overwrtie) {
+                    //生成box基础信息
                     this.library.flatDir[boxPath] = {
-                        path: boxPath,
-                        label: basename(boxPath),
-                        type: this.library.type,
-                        result: this.library.rootPath.includes(boxPath) ? 'dir' : level,
-                        usersInfo: {},
-                        children:
-                            level === 'box0'
-                                ? Object.keys(this.library.flatFile).filter(
-                                      (filePath) => dirname(filePath) === boxPath,
-                                  )
-                                : Object.keys(this.library.flatDir).filter(
-                                      (dirPath) => dirname(dirPath) === boxPath,
-                                  ),
+                        baseInfo: {
+                            path: boxPath,
+                            title: basename(boxPath),
+                            result: this.library.rootPath.includes(boxPath) ? 'dir' : level,
+                            children:
+                                level === 'box0'
+                                    ? Object.keys(this.library.flatFile).filter(
+                                          (filePath) => dirname(filePath) === boxPath,
+                                      )
+                                    : Object.keys(this.library.flatDir).filter(
+                                          (dirPath) => dirname(dirPath) === boxPath,
+                                      ),
+                        },
+                        userInfo: {},
+                        scraperInfo: {
+                            mapResult: {},
+                        },
                     }
                 } else {
-                    if (target.result && boxNum > count[target.result][boxPath]) {
-                        target.result = level
+                    //排除掉个别存储位置不规范的文件的干扰
+                    if (target.baseInfo.result && boxNum > count[target.baseInfo.result][boxPath]) {
+                        target.baseInfo.result = level
                     }
                 }
             }
@@ -178,7 +226,7 @@ export default class Scraper {
     /**
      * scrapeFlatFile
      */
-    public async scrapeFlatFile(method: 'single' | 'combined' = 'single', scraperName = 'dandan') {
+    public async scrapeFlatFile(method: 'single' | 'combined' = 'single') {
         if (method === 'single') {
             return await this.singlyScrapeFlatFile()
         }
@@ -213,11 +261,11 @@ export default class Scraper {
      * mapFileResult
      */
     public async mapFileResult() {
-        const libMap = this.library.map
+        const libMap = this.library.mapFile
         const mapFilter = (await import('./video/mapFilter')).default
         Object.values(this.library.flatFile).forEach((fileMetaData, ind, arr) => {
             // fileMetaData.scraperInfo = fileMetaData.scraperInfo || {}
-            const mapData = (fileMetaData.scraperInfo.map = {})
+            const mapData = (fileMetaData.scraperInfo.mapResult = {})
             for (const mapName in libMap) {
                 const mapTarget = libMap[mapName]
                 const res = mapFilter(fileMetaData, mapName, mapTarget)
@@ -230,76 +278,104 @@ export default class Scraper {
     }
 
     /**
-     * mapDirResult
+     * scrapeFlatDir
      */
-    public async mapDirResult() {
-        const flatFile = this.library.flatFile
-        const flatDir = this.library.flatDir
-        const boxLevel = ['box0', 'box1', 'box2', 'box3']
-
-        for (let index = 0; index < boxLevel.length; index++) {
-            const level = boxLevel[index]
-            const boxPathList = Object.values(flatDir)
-                .filter((v) => v.result === level)
-                .map((v) => v.path)
-            let i = 0
-            while (i < boxPathList.length) {
-                const count: { [title: string]: number } = {}
-                const boxPath = boxPathList[i]
-                const box = flatDir[boxPath]
-                const childrenPathList = box.children
-                let titleList
-                if (level === 'box0') {
-                    titleList = childrenPathList.map(
-                        (filePath) => flatFile[filePath].scraperInfo?.map?.parentTitle,
-                    )
-                } else {
-                    titleList = childrenPathList.map((dirPath) => flatDir[dirPath].title)
-                }
-                for (let index = 0; index < titleList.length; index++) {
-                    const title = titleList[index]
-                    if (title != undefined && title != 'undefined') {
-                        if (!count[title]) {
-                            count[title] = 1
-                        } else count[title]++
-                    }
-                }
-                for (const title in count) {
-                    const titleNum = count[title]
-                    const existTitle = box.title
-                    box.title = existTitle
-                        ? titleNum > count[existTitle]
-                            ? title
-                            : existTitle
-                        : title
-                }
-                i++
-            }
+    public async scrapeFlatDir() {
+        const scrapers = [
+            (await import('./video/boxTitleScraper')).default,
+            (await import('./video/appendDir')).default,
+        ]
+        for (let index = 0; index < scrapers.length; index++) {
+            const scraper = scrapers[index]
+            await scraper(this.library)
         }
     }
 
     /**
      * appendDirResult
      */
-    public async appendDirResult() {
-        const appendDir = (await import('./video/appendDir')).default
-        await appendDir(this.library)
+    public async mapDirResult() {
+        const libMap = this.library.mapDir
+        const mapFilter = (await import('./video/mapFilter')).default
+        Object.values(this.library.flatDir).forEach((dirMetadata, ind, arr) => {
+            const mapData = (dirMetadata.scraperInfo.mapResult = {})
+            for (const mapName in libMap) {
+                const mapTarget = libMap[mapName]
+                const res = mapFilter(dirMetadata, mapName, mapTarget)
+                if (res) {
+                    mapData[mapName] = res
+                }
+            }
+        })
+    }
+
+    /**
+     * appendDirResult
+     */
+    public flatToTree() {
+        const nodeList: LibraryTree[] = [
+            ...Object.values(vs.library.flatDir).map((v) => v.scraperInfo.mapResult),
+            ...Object.values(vs.library.flatFile).map((v) => v.scraperInfo.mapResult),
+        ]
+        const tree: Tree = {}
+        const branches = []
+        for (let index = 0; index < nodeList.length; index++) {
+            const node = nodeList[index]
+            delete node.children
+            const nodePath = node.path
+            const nodePathSegment = nodePath.split(path.sep)
+            const branch: Tree = {}
+            nodePathSegment.reduce((pre, val, ind, arr) => {
+                const child = {}
+                pre.label = val
+                if (ind < arr.length - 1) {
+                    pre.children = []
+                    pre.children.push(child)
+                } else Object.assign(pre, node)
+                return child
+            }, branch)
+            branches.push(branch)
+        }
+
+        treeMerger(tree, branches)
+        this.save()
+        return tree
     }
 }
 
 const vs = new Scraper()
 vs.load('video')
-    // vs.build({ libPath: 'D:/test', type: 'video', name: 'video' })
+    // vs.build({
+    //     rootPath: 'D:/test',
+    //     name: 'video',
+    //     mapFile: {
+    //         path: 'baseInfo.path',
+    //         result: 'baseInfo.result',
+    //         display: 'baseInfo.display',
+    //         poster: 'scraperInfo.extPic.poster',
+    //         title: 'scraperInfo.dandan.title',
+    //         episode: 'scraperInfo.dandan.episode',
+    //         parentTitle: 'scraperInfo.dandan.animeTitle',
+    //     },
+    //     mapDir: {
+    //         path: 'baseInfo.path',
+    //         title: 'scraperInfo.children.title',
+    //         result: 'baseInfo.result',
+    //         poster: 'scraperInfo.local.poster',
+    //     },
+    // })
     .then(async (result) => {
         // await vs.initDirLevel(true)
         // await vs.combinedScrapeFlatFile('dandan')
         // await vs.singlyScrapeFlatFile()
         // await vs.mapFileResult()
+        // await vs.scrapeFlatDir()
         // await vs.mapDirResult()
-        // await vs.appendDirResult()
+        // vs.library.tree = flatToTree()
+        // console.log(vs.library.tree)
 
         // vs.save()
-        console.log('done')
+        console.log('~~~~~~~~~~~~~~~done')
         // console.log(vs.library)
     })
     .catch((err) => {

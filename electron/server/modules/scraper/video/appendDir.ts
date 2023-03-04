@@ -11,7 +11,8 @@ export default async function (library: Ilibrary['']) {
             const posterPath = posterPathList[index]
             try {
                 await access(posterPath)
-                box.poster = posterPath
+                box.scraperInfo.local = box.scraperInfo.local || {}
+                box.scraperInfo.local.poster = posterPath
             } catch (error) {}
         }
     }

@@ -53,7 +53,7 @@ const routes = [
         name: 'home',
         component: () => import('@v/views/home/index.vue'),
         children: [
-            { path: '', redirect: '/home/library/video' },
+            { path: '', redirect: '/home/library' },
             {
                 path: 'library',
                 name: 'library',

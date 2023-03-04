@@ -3,7 +3,7 @@ import { ScraperResult, FileMetadata } from '@s/store/library'
 import { extractPicture } from '@s/utils/media'
 import { Ilibrary } from '@s/store/library'
 type fileMetadata = FileMetadata & {
-    fileInfo: AppendedMetadata
+    baseInfo: AppendedMetadata
 }
 export const scraperName = 'extPic'
 

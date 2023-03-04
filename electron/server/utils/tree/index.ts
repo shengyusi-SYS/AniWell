@@ -4,10 +4,10 @@ import { readdir } from 'fs/promises'
 import { logger } from '../logger'
 
 export interface Tree {
-    label?: unknown
-    name?: unknown
+    label: unknown
     children?: Array<Tree>
     path?: string
+    [key: string]: unknown
 }
 
 //获取树形文件夹内容，异步
@@ -115,10 +115,10 @@ async function appedDirTree(dirPath = '', dirTree: Tree = {}, append = defaultAp
             // console.log('readdir error~~~~~~~~~~~~~~~~~~~~~~~',dirPath,error);
             const filePath = dirPath
             try {
-                const fileInfo = await appendFileInfo(filePath, tag)
-                return { label: path.basename(filePath), ...fileInfo }
+                const baseInfo = await appendFileInfo(filePath, tag)
+                return { label: path.basename(filePath), ...baseInfo }
             } catch (error) {
-                logger.error('fileInfo', error)
+                logger.error('baseInfo', error)
             }
         }
         try {
@@ -212,6 +212,33 @@ function searchLeaf(dirTree: Tree, targetPath = ''): Tree | false {
     } catch (error) {
         // console.log(error);
     }
+}
+
+export const treeMerger = (toA: Tree, addB: Tree[] | Tree) => {
+    if (addB instanceof Array) {
+        for (let index = 0; index < addB.length; index++) {
+            const addVal = addB[index]
+            treeMerger(toA, addVal)
+        }
+    } else if (addB instanceof Object) {
+        if (Object.keys(toA).length > 0 && toA.label !== addB.label) {
+            console.log(toA, addB, '===================')
+            return
+        }
+        const deepChildren = addB.children
+        if (toA.children) {
+            delete addB.children
+        }
+        Object.assign(toA, addB)
+        if (deepChildren) {
+            deepChildren.forEach((val) => {
+                const exist = toA.children.find((v) => v.label === val.label)
+                if (exist) {
+                    return treeMerger(exist, val)
+                } else return toA.children.push(val)
+            })
+        }
+    } else return new Error('参数错误')
 }
 
 export { readDirTree, readDirTreeSync, appedDirTree, searchLeaf }

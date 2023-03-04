@@ -1,11 +1,15 @@
 import { dotGet } from '@s/utils'
 import { AppendedMetadata } from './filterAndAppend'
-import { ScraperResult, FileMetadata } from '@s/store/library'
+import { ScraperResult, FileMetadata, DirMetadata } from '@s/store/library'
 type fileMetadata = FileMetadata & {
-    fileInfo: AppendedMetadata
+    baseInfo: AppendedMetadata
 }
-export default function filter(fileMetaData: fileMetadata, mapName: string, mapTarget: string) {
-    const mapValue = dotGet(fileMetaData, mapTarget)
+export default function filter(
+    metaData: fileMetadata | DirMetadata,
+    mapName: string,
+    mapTarget: string,
+) {
+    const mapValue = dotGet(metaData, mapTarget)
     if (mapValue == undefined) {
         return
     }
