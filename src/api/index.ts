@@ -1,6 +1,6 @@
 import requests from './request'
 import bcrypt from 'bcryptjs'
-import { CardData } from '@v/stores/library'
+import { libraryData } from '@v/stores/library'
 import { globalCache, proxyGlobalData } from '@v/stores/global'
 import { io } from 'socket.io-client'
 
@@ -13,7 +13,7 @@ socket.on('data', (data) => {
     console.log(data)
 })
 socket.on('time', (time) => {
-    const delay = new Date().getMilliseconds() - time
+    const delay = Date.now() - time
     globalCache.serverLog.info(delay)
 })
 socket.on('log', (log) => {
@@ -100,24 +100,41 @@ export const reqIsFirst = async (): Promise<boolean> => {
     }
 }
 
-export const reqOldLibrary = async () => requests.get('/library/old')
-
-export const reqLibrary = async (
-    category: string,
+export type sortBy = 'path' | 'title' | 'id' | 'order' | 'rank' | 'like'
+export interface LibQuery {
+    libName?: string
+    sort?: Array<'asc' | 'desc'>
+    sortBy?: Array<sortBy> | 'random'
+    range?: string
+    path?: string
+}
+export interface ReqLibrary {
+    libName: string
+    path?: string
+    start?: number
+    end?: number
+    sort?: Array<'asc' | 'desc'>
+    sortBy?: Array<sortBy> | 'random'
+}
+/*  */
+export async function reqLibrary({
+    libName = '',
     path = '',
-    params = { start: 0, end: 20 },
-): Promise<CardData> => {
-    const res = await requests.get(`/library/lib`, {
-        // responseType: 'json',
+    start = 0,
+    end = 20,
+    sort = ['asc'],
+    sortBy = ['title'],
+}: ReqLibrary): Promise<libraryData> {
+    return (await requests.get(`/library/lib`, {
         decompress: true,
         params: {
-            category,
+            libName,
             path,
-            range: `${params.start},${params.end}`,
-        },
-    })
-    console.log(res)
-    return res
+            sort,
+            sortBy,
+            range: `${start},${end}`,
+        } as LibQuery,
+    })) as libraryData
 }
 
 export interface VideoQueryParams {

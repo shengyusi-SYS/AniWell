@@ -354,7 +354,7 @@ vs.load('video')
     //         display: 'baseInfo.display',
     //         poster: 'scraperInfo.extPic.poster',
     //         title: 'scraperInfo.dandan.title',
-    //         episode: 'scraperInfo.dandan.episode',
+    //         order: 'scraperInfo.dandan.episode',
     //         parentTitle: 'scraperInfo.dandan.animeTitle',
     //     },
     //     mapDir: {

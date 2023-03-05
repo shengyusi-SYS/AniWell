@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reqLibrary } from '@v/api'
 import useListenLifecycle from '@v/hooks/useListenLifecycle'
-import { useGlobalStore } from '@v/stores/global'
+import { sortConfig, useGlobalStore } from '@v/stores/global'
 import { libraryData, useLibraryStore } from '@v/stores/library'
 import { useElementSize, useWindowSize } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
@@ -12,11 +12,11 @@ import { storeToRefs } from 'pinia'
 const router = useRouter()
 const props = defineProps(['category'])
 const globalStore = useGlobalStore()
-const { theme } = storeToRefs(globalStore)
+const { theme, libraryConfig } = storeToRefs(globalStore)
 const pageSize = toRef(theme.value, 'libraryPageSize')
 const libraryStore = useLibraryStore()
 const { libraryData } = storeToRefs(libraryStore)
-const query = libraryStore.query
+const enterLibrary = libraryStore.enterLibrary
 
 // //字体计算
 // const library = ref()
@@ -53,9 +53,56 @@ let oldPage = 0
 const pageChange = watch(currentPage, (newPage, old) => {
     oldPage = old
 })
-console.log(libraryData.value, '=======')
 
-query({})
+enterLibrary({ libName: '' })
+
+let sortConfig: sortConfig = {
+    start: 0,
+    end: 20,
+    sort: ['asc'],
+    sortBy: ['title'],
+}
+let currentLibName: string
+async function openCard(libName: string, cardData: libraryData) {
+    if (cardData.result === 'item') {
+        if (cardData.display === 'video') {
+            router.push({ name: 'item' })
+        }
+    } else {
+        let boxLevel = cardData.result
+        if (libraryConfig.value[libName] == undefined) {
+            libraryConfig.value[libName] = globalStore.defaultLibraryConfig
+        }
+        sortConfig = libraryConfig.value[libName]?.[boxLevel]
+        console.log(sortConfig)
+
+        const query = { libName, path: cardData.path, ...sortConfig }
+        router.push({
+            name: 'library',
+            query,
+        })
+    }
+}
+
+onBeforeRouteUpdate(async (to, from, next) => {
+    console.log(to.query)
+    try {
+        const query = to.query
+        if (typeof query.sort === 'string') {
+            query.sort = [query.sort]
+        }
+        if (typeof query.sortBy === 'string') {
+            query.sortBy = [query.sortBy]
+        }
+        await enterLibrary(query || { libName: '' })
+        if (typeof to.query.libName === 'string') {
+            currentLibName = to.query.libName
+        }
+    } catch (error) {
+        next(from)
+    }
+    next()
+})
 
 useListenLifecycle('Library')
 </script>
@@ -68,27 +115,60 @@ export default {
 
 <template>
     <div ref="library" class="library-base col">
-        <div>Library</div>
         <ElSlider v-model="theme.libraryColumnNum" :max="10" :min="1" style="width: 80%" />
-        <div>{{ fontSize }}</div>
-        <div>{{ globalStore.qwe }}</div>
-        <div>{{ libraryData.title || libraryData.label }}</div>
+        <!-- <div>{{ fontSize }}</div> -->
         <div v-if="libraryData.label === 'overview'" class="library-overview col">
             <div v-for="lib in libraryData.children" :key="lib.path">
-                <div>title:{{ lib.label }}</div>
+                <ElRow>
+                    <ElCol
+                        :span="4"
+                        justify="start"
+                        class="library-overview-title"
+                        style="
+                            font-size: 2em;
+                            line-height: 2;
+                            text-align: left;
+                            padding-left: 2em;
+                            font-weight: bold;
+                        "
+                        @click.left="
+                            () => {
+                                openCard(lib.title, lib)
+                            }
+                        "
+                    >
+                        {{ lib.title }}
+                    </ElCol>
+                </ElRow>
+                <VanGrid :column-num="10" :gutter="30" :border="false">
+                    <VanGridItem v-for="cardData in lib.children" :key="cardData.path">
+                        <Card
+                            :data="cardData"
+                            class="library-item"
+                            @click.left="
+                                () => {
+                                    openCard(lib.title, cardData)
+                                }
+                            "
+                        />
+                    </VanGridItem>
+                </VanGrid>
             </div>
         </div>
+
         <div v-else class="library-cards">
-            <VanGrid :column-num="theme.libraryColumnNum" :gutter="gutter" :border="false">
-                <VanGridItem v-for="data in libraryData.children">
+            <VanGrid :column-num="theme.libraryColumnNum" :gutter="24" :border="false">
+                <VanGridItem v-for="cardData in libraryData.children" :key="cardData.path">
                     <LazyComponent class="library-lazy">
                         <Card
-                            :key="data.title"
-                            :data="data"
+                            :data="cardData"
                             class="library-item"
-                            :replace="replace"
-                            :root="libraryData.path"
-                            :font-size="fontSize"
+                            :font-size="'16px'"
+                            @click.left="
+                                () => {
+                                    openCard(currentLibName, cardData)
+                                }
+                            "
                         />
                     </LazyComponent>
                 </VanGridItem>
@@ -122,7 +202,7 @@ export default {
 .library-base {
     min-height: 100%;
     width: 100%;
-    font-size: v-bind('fontSize');
+    font-size: v-bind('"16px"');
     display: flex;
     flex-direction: column;
     // align-items: center;

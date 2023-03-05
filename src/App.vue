@@ -98,7 +98,19 @@ const test = () => {
 
 <template>
     <div ref="app" class="app">
-        <RouterView></RouterView>
+        <RouterView v-slot="{ Component, route }">
+            <KeepAlive include="Home">
+                <Suspense>
+                    <template #default>
+                        <Component
+                            :is="Component"
+                            :key="route.meta.usePathKey ? route.path : undefined"
+                        />
+                    </template>
+                    <template #fallback> Loading... </template>
+                </Suspense>
+            </KeepAlive>
+        </RouterView>
         <div
             v-if="float"
             ref="el"

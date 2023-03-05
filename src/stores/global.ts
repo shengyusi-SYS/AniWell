@@ -1,6 +1,20 @@
 import { defineStore } from 'pinia'
 import { useWindowSize, useMediaQuery } from '@vueuse/core'
 import { useCssVar, UseCssVarOptions } from '@vueuse/core'
+import { Ref } from 'vue'
+import { boxLevel } from './library'
+import { LibQuery } from '@v/api'
+
+export interface LibraryConfig {
+    [boxLevel: string]: sortConfig & {}
+}
+
+export interface sortConfig {
+    sort?: LibQuery['sort']
+    sortBy?: LibQuery['sortBy']
+    start?: number
+    end?: number
+}
 
 export const useGlobalStore = defineStore('global', () => {
     const windowsSize = useWindowSize()
@@ -69,20 +83,50 @@ export const useGlobalStore = defineStore('global', () => {
         } else return
     }
 
-    const libraryConfig = reactive({})
+    const defaultLibraryConfig: LibraryConfig = {
+        dir: {
+            sort: ['asc'],
+            sortBy: ['title'],
+            start: 0,
+            end: 20,
+        },
+        box0: {
+            sort: ['asc', 'asc'],
+            sortBy: ['order', 'episode'],
+            start: 0,
+            end: 20,
+        },
+        box1: {
+            sort: ['asc'],
+            sortBy: ['title'],
+            start: 0,
+            end: 20,
+        },
+        box2: {
+            sort: ['asc'],
+            sortBy: ['title'],
+            start: 0,
+            end: 20,
+        },
+        box3: {
+            sort: ['asc'],
+            sortBy: ['title'],
+            start: 0,
+            end: 20,
+        },
+    }
 
-    const qwe = reactive({
-        qq:['a'],
-        ww:{b:'b'}
-    })
+    const libraryConfig: Ref<{
+        [libName: string]: LibraryConfig
+    }> = ref({})
 
-    return { rootEl, theme, initTheme, clientState, isDesktop,qwe }
+    return { rootEl, theme, initTheme, clientState, isDesktop, libraryConfig, defaultLibraryConfig }
 })
 
 export const globalCache = {
     loggedIn: false,
     electronEnv: Boolean(window.electronAPI),
-    serverPort: window.electronAPI ? await window.electronAPI.getServerPort() : 0,
+    serverPort: window.electronAPI ? await window.electronAPI.getServerPort() : undefined,
     serverLog: reactive({
         list: [] as Array<string | number>,
         info(log: string | number) {
@@ -99,17 +143,24 @@ const globalData = {
     salt: '',
     username: '',
 }
-
+const inited = false
 export const proxyGlobalData = new Proxy(globalData, {
-    get(target, prop) {
-        const local = localStorage.getItem('globalData')
-        if (local) {
-            target = JSON.parse(local)
+    get(target, key) {
+        if (inited) {
+            return Reflect.get(target, key)
         }
-        return target[prop]
+        let local
+        try {
+            local = JSON.parse(localStorage.getItem('globalData'))
+            Reflect.set(target, key, local)
+            return Reflect.get(local, key)
+        } catch (error) {
+            localStorage.setItem('globalData', JSON.stringify(target))
+            return Reflect.get(target, key)
+        }
     },
-    set(target, prop, value) {
-        switch (prop) {
+    set(target, key, value) {
+        switch (key) {
             case 'first':
                 if (typeof value !== 'boolean') {
                     throw new Error('TypeError:need boolean')
@@ -126,8 +177,7 @@ export const proxyGlobalData = new Proxy(globalData, {
                 }
                 break
         }
-        target[prop] = value
         localStorage.setItem('globalData', JSON.stringify(target))
-        return true
+        return Reflect.set(target, key, value)
     },
 })

@@ -18,27 +18,6 @@ const props = defineProps<{
 }>()
 // const { title, poster, path, itemId, result } = props.data
 
-const router = useRouter()
-
-const go = async () => {
-    if (props.data.result === 'episodedetails' && props.data.path) {
-        const src = await reqLibraryItem({ filePath: props.data.path, method: 'direct' })
-        if (src) {
-            videoPlayerStore.playSrc(src)
-        }
-    } else {
-        if (props.data.path) {
-            console.log(router.currentRoute.value.params)
-            router.push({
-                name: router.currentRoute.value.name || 'library',
-                query: { path: encode(props.data.path) },
-                params: router.currentRoute.value.params,
-                replace: props.replace ? props.replace() : false,
-            })
-        }
-    }
-}
-
 const aspectRatio = computed(() => {
     return props.data.result === 'episodedetails'
         ? theme.value.cardAspectRatio
@@ -66,7 +45,7 @@ export default {
             data.poster,
         )}')`"
     >
-        <div class="overlay" @click="go">
+        <div class="overlay">
             <div class="info">
                 <div class="title van-multi-ellipsis--l2">{{ data.title }}</div>
                 <div class="note van-multi-ellipsis--l2">{{ data.label }}</div>

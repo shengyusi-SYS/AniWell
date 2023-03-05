@@ -105,7 +105,7 @@ io.on('connection', async (socket) => {
 })
 
 setInterval(() => {
-    io.emit('time', new Date().getMilliseconds())
+    io.emit('time', Date.now())
 }, 1000)
 
 import('./modules/scraper')

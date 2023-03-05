@@ -97,6 +97,7 @@ export interface MapResult extends ScraperResult {
     title: string
     path: string
     result: resultType
+    order: number
     locked?: boolean //用于防止覆写用户设定
 }
 
@@ -104,6 +105,7 @@ export type MapRule = { [key in MapResult as string]: string } & MapResult
 
 export interface LibraryTree extends MapResult {
     //前端参考基准
+    label: string
     children?: Array<LibraryTree>
 }
 
@@ -129,8 +131,7 @@ const library: Ilibrary = shallowProxy(store.store, (method, { target, key }) =>
 export default library
 
 function getChildren() {}
-
-export async function getLibrary(libName: string) {
+export async function getLibrary(libName: string, libPath?: string): Promise<LibraryTree> {
     if (!libName) {
         const overview = {
             label: 'overview',
@@ -142,6 +143,7 @@ export async function getLibrary(libName: string) {
             if (targetLibraryRootDir) {
                 const result = {
                     ...targetLibraryRootDir,
+                    title: libraryName,
                     children: targetLibraryRootDir.children
                         .filter((val, ind) => ind < 10)
                         .map((v) => {
@@ -157,7 +159,10 @@ export async function getLibrary(libName: string) {
             return undefined
         }
         const targetLibrary = library[libName]
-        const targetLibraryRootDir = searchLeaf(targetLibrary.tree, targetLibrary.rootPath)
+        const targetLibraryRootDir = searchLeaf(
+            targetLibrary.tree,
+            libPath || targetLibrary.rootPath,
+        )
         if (targetLibraryRootDir) {
             const result = {
                 ...targetLibraryRootDir,
@@ -165,7 +170,7 @@ export async function getLibrary(libName: string) {
                     return { ...v, children: null }
                 }),
             }
-            return targetLibraryRootDir
+            return result
         }
         return undefined
     }

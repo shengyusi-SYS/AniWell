@@ -77,7 +77,7 @@ const config = {
         },
         maxScrape: {
             type: 'logLevelFilter',
-            appender: 'allScrape',
+            appender: 'scrape',
             level: 'debug',
             maxLevel: 'error',
         },

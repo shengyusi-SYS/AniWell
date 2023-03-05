@@ -8,7 +8,9 @@ import videoHandler from './handler/video'
 import compression from 'compression'
 import { logger } from '@s/utils/logger'
 import paths from '@s/utils/envPath'
-import library, { getLibrary } from '@s/store/library'
+import library, { getLibrary, MapResult } from '@s/store/library'
+import shuffle from 'lodash/shuffle'
+import { orderBy } from 'lodash'
 
 const router = express.Router()
 
@@ -84,27 +86,42 @@ router.get('/old', (req, res, next) => {
     }
 })
 
-interface libQuery {
-    category: string | undefined
-    sort: string
-    range: string
-    path: string
+type sortBy = 'path' | 'title' | 'id' | 'order' | 'rank' | 'like'
+interface LibQuery {
+    libName?: string
+    path?: string
+    sort?: Array<'asc' | 'desc'>
+    sortBy?: Array<sortBy> | 'random'
+    range?: string
 }
 router.get('/lib', compression(), async (req, res, next) => {
-    const {
-        category,
-        sort = 'default',
-        range = '0,20',
-        path = 'root',
-    } = req.query as unknown as libQuery
-    console.log(req.query)
+    const { libName, sort, sortBy, range = '0,20', path } = req.query as unknown as LibQuery
 
-    const lib = await getLibrary(category)
-    if (lib) {
-        res.json(lib)
-    } else {
-        res.status(404).json({ message: '未建立媒体库' })
+    const lib = await getLibrary(libName, path)
+    console.log(req.query, lib)
+    if (!lib) {
+        res.status(404).json({ message: '未建立媒体库', alert: true })
+        return
     }
+
+    if (sortBy) {
+        if (sortBy instanceof Array && sort instanceof Array) {
+            orderBy(lib.children, sortBy, sort)
+        } else if (sortBy === 'random') {
+            shuffle(lib.children)
+        } else {
+            res.status(400).json({ message: '参数错误', alert: true })
+            return
+        }
+    }
+
+    if (typeof range === 'string') {
+        const start = Number(range.split(',')[0])
+        const end = Number(range.split(',')[1])
+        const content = lib.children.slice(start, end)
+        lib.children = content
+    }
+    res.json(lib)
 })
 
 //文件请求处理
