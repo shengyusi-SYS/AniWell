@@ -155,42 +155,29 @@ router.use('/poster', async (req, res, next) => {
 })
 
 interface itemQuery {
-    itemId?: string
-    filePath?: string
-    UID: string
+    display: 'video' | ''
+    libName: string
+    filePath: string
 }
 router.post('/item', async (req, res, next) => {
     logger.info('/item', req.body)
-    const itemId = req.body.itemId
-    let target
-    const getItemInfo = (itemId: string) => {}
-    if (typeof itemId === 'string') {
-        target = getItemInfo(itemId)
+    const { display, libName, filePath } = req.body as itemQuery
+
+    const itemPath = resolve(filePath)
+
+    try {
+        await access(itemPath)
+    } catch (error) {
+        res.status(400).json({ message: '资源文件不存在', alert: true })
     }
 
-    const itemPath = resolve(req.body.filePath)
-    const itemType = (await getFileType(itemPath)).type
-
-    if (typeof itemType === 'string') {
-        try {
-            // let handler
-            // if (vi) {
-            //     handler = vi
-            // } else {
-            //     handler = (await import(`./handler/video`)).default
-            // }
-            // console.log('1')
-            if (itemType === 'video') {
-                await videoHandler(req, res, next)
-                console.log('2')
-                return
-            } else return res.status(500).json({ message: '无对应处理程序' })
-        } catch (error) {
-            console.log(error)
-            res.status(500).json({ message: '无对应处理程序' })
-        }
-    } else {
-        res.status(400).json({ message: '参数错误' })
+    try {
+        if (display === 'video') {
+            await videoHandler(req, res, next)
+        } else return res.status(500).json({ message: '无对应处理程序', alert: true })
+    } catch (error) {
+        logger.error('/library/item', error)
+        res.status(500).json({ message: '处理失败', alert: true })
     }
 })
 export default router

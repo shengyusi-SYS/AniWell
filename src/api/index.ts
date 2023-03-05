@@ -137,20 +137,27 @@ export async function reqLibrary({
     })) as libraryData
 }
 
-export interface VideoQueryParams {
-    filePath?: string
-    resourceId?: string
+export interface itemQuery {
+    display: 'video' | ''
+    libName: string
+    filePath: string
+}
+export interface VideoQueryParams extends itemQuery {
+    display: 'video'
     bitrate?: number
     autoBitrate?: boolean
     resolution?: string
     method?: string
 }
-export interface VideoSrc {
+
+export interface ItemSrc {
     url: string
     type: string
+}
+export interface VideoSrc extends ItemSrc {
     sub?: Buffer
     fontsList?: Array<string>
-    subtitleList: Array<subInfo>
+    subtitleList?: Array<subInfo>
 }
 export interface subInfo {
     source: string
@@ -161,7 +168,9 @@ export interface subInfo {
     type?: string
 }
 
-export const reqLibraryItem = async (data: VideoQueryParams): Promise<VideoSrc> =>
-    requests.post(`/library/item`, data)
+export async function reqItemSrc(data: VideoQueryParams): Promise<VideoSrc>
+export async function reqItemSrc(data: itemQuery): Promise<ItemSrc> {
+    return requests.post(`/library/item`, data)
+}
 
 export const reqStopTranscode = async (): Promise<{}> => requests.post(`/video/clearVideoTemp`)

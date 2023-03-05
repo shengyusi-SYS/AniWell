@@ -6,9 +6,10 @@ import MP4Box from 'mp4box'
 import { readChunkSync, toNumberDeep } from '@s/utils'
 import paths from '../envPath'
 import { createReadStream, ReadStream } from 'fs'
-import { mkdir } from 'fs/promises'
+import { mkdir, unlink } from 'fs/promises'
 import { v4 as uuidv4 } from 'uuid'
 import { cutVideo } from './video'
+import { scrapeLogger } from '@s/utils/logger'
 
 export function getMediaInfoSync(filePath: string): Promise<MediaInfo> {
     const task = spawnSync(
@@ -81,20 +82,25 @@ export async function getScreenedMediaInfo(filePath: string): Promise<ScreenedMe
     }
 }
 
+const mimeReg = /codecs="(?<codec>(av|he|hv|vp)\w+(\.\w+)*)(,\w+(\.\w+)*)+"/i
 export async function getVideoMimeType(filePath: string) {
     const readMediaHeader = async () => {
         // if (path.extname(filePath) !== '.mp4') {
         //ffmpeg不能直接获得标准的mime codec，MP4box不能直接解析mkv格式，就很烦
         //解决方案：ffmpeg提取MP4格式的视频头，交给MP4box解析，但准确度待验证，要彻底解决怕是要去读规范文件
         const cutPath = await cutVideo(filePath)
-        return readChunkSync(cutPath, { length: 5 * 1024 * 1024 })
+        console.log(cutPath)
+
+        return { cutPath, chunk: readChunkSync(cutPath, { length: 5 * 1024 * 1024 }) }
         // } else {
         //     return readChunkSync(filePath, { length: 8 * 1024 * 1024 })
         // }
     }
     const mp4boxfile = MP4Box.createFile()
     try {
-        var chunk = await readMediaHeader()
+        const res = await readMediaHeader()
+        var chunk = res.chunk
+        unlink(res.cutPath)
     } catch (error) {}
     if (!chunk) {
         return Promise.reject()
@@ -106,7 +112,14 @@ export async function getVideoMimeType(filePath: string) {
             reject('未知原因，部分视频会卡住，也不报错')
         }, 3000)
         mp4boxfile.onReady = (info) => {
-            resolve(info?.mime)
+            try {
+                const codec = info.mime.match(mimeReg)?.groups?.codec
+                scrapeLogger.info('getVideoMimeType', codec)
+                resolve(`video/mp4; codecs="${codec}"`)
+            } catch (error) {
+                scrapeLogger.error('getVideoMimeType', info.mime)
+                reject(error)
+            }
         }
         mp4boxfile.onError = function (e) {
             reject(e)
@@ -210,8 +223,8 @@ export interface ScreenedMediaInfo {
     format: MediaInfo['format']
     vidoeStream: StreamInfo
     audioStreams: Array<StreamInfo>
-    subtitleStreams: Array<StreamInfo>
-    chapters: Array<{
+    subtitleStreams?: Array<StreamInfo>
+    chapters?: Array<{
         title: string
         start: number
     }>

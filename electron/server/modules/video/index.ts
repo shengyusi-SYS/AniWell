@@ -3,6 +3,9 @@ import path from 'path'
 import VideoTask from './task'
 import { ClientParams } from '@s/api/v1/library/handler/video'
 
+const uuidReg =
+    /^\/(?<uuid>[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\..+/
+
 class VideoTaskCenter {
     public taskQueue: Array<VideoTask>
     constructor() {
@@ -49,9 +52,7 @@ class VideoTaskCenter {
      * handleRequest
      */
     public async handleRequest(req, res) {
-        const reg =
-            /^\/(?<uuid>[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\..+/
-        const taskId = req.path.match(reg)?.groups?.uuid
+        const taskId = req.path.match(uuidReg)?.groups?.uuid
         const targetTask = this.taskQueue.find((v) => v.taskId === taskId)
         if (targetTask) {
             await targetTask.handleRequest(req, res)

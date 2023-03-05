@@ -41,9 +41,9 @@ export default class VideoTask implements IVideoTask {
      * init
      */
     public async init(params: ClientParams) {
-        const { filePath, bitrate, autoBitrate, resolution, user, method } = params //测试，待删
+        const { filePath, libName, bitrate, autoBitrate, resolution, method, user } = params
         this.taskId = uuidv4()
-        this.videoInfo = await getVideoInfo(filePath)
+        this.videoInfo = await getVideoInfo(filePath, libName)
         this.videoInfo.taskId = this.taskId
 
         this.subtitleList = await handleSubtitles(this.videoInfo)

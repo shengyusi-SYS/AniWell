@@ -46,9 +46,11 @@ export default class Scraper {
         mapFile,
         mapDir,
         config,
+        category,
     }: {
         rootPath: string
         name: string
+        category: 'video' | 'anime'
         mapFile?: MapRule
         mapDir?: MapRule
         config?: libraryConfig
@@ -63,24 +65,24 @@ export default class Scraper {
             rootPath: resolve(rootPath),
             mapFile: mapFile || {
                 path: 'baseInfo.path',
-                title: 'baseInfo.title',
                 result: 'baseInfo.result',
                 display: 'baseInfo.display',
-                // "poster": "scraperInfo.extPic.poster",
-                // "title": "scraperInfo.dandan.title",
-                // "episode": "scraperInfo.dandan.episode",
-                // "parentTitle": "scraperInfo.dandan.animeTitle"
+                mime: 'baseInfo.mime',
+                poster: 'scraperInfo.extPic.poster',
+                title: 'scraperInfo.dandan.title',
+                order: 'scraperInfo.dandan.episode',
+                parentTitle: 'scraperInfo.dandan.animeTitle',
             },
             mapDir: mapDir || {
                 path: 'baseInfo.path',
-                title: 'baseInfo.title',
+                title: 'scraperInfo.children.title',
                 result: 'baseInfo.result',
+                poster: 'scraperInfo.local.poster',
             },
             config: config || {
                 library: {},
             },
         }
-
         //统计库根路径下的所有文件与文件夹
         await this.countDirAndFile()
         //过滤出所需类型的文件并附加相关信息
@@ -245,7 +247,9 @@ export default class Scraper {
         ]
         for (let index = 0; index < scrapers.length; index++) {
             const scraper = scrapers[index]
-            await scraper(this.library)
+            try {
+                await scraper(this.library)
+            } catch (error) {}
         }
     }
 
@@ -338,32 +342,34 @@ export default class Scraper {
         }
 
         treeMerger(tree, branches)
+        this.library.tree = tree
         this.save()
         return tree
     }
 }
 
 const vs = new Scraper()
-vs.load('video')
-    // vs.build({
-    //     rootPath: 'D:/test',
-    //     name: 'video',
-    //     mapFile: {
-    //         path: 'baseInfo.path',
-    //         result: 'baseInfo.result',
-    //         display: 'baseInfo.display',
-    //         poster: 'scraperInfo.extPic.poster',
-    //         title: 'scraperInfo.dandan.title',
-    //         order: 'scraperInfo.dandan.episode',
-    //         parentTitle: 'scraperInfo.dandan.animeTitle',
-    //     },
-    //     mapDir: {
-    //         path: 'baseInfo.path',
-    //         title: 'scraperInfo.children.title',
-    //         result: 'baseInfo.result',
-    //         poster: 'scraperInfo.local.poster',
-    //     },
-    // })
+// vs.load('video')
+vs.build({
+    rootPath: 'D:/test/www',
+    name: 'test',
+    mapFile: {
+        path: 'baseInfo.path',
+        result: 'baseInfo.result',
+        display: 'baseInfo.display',
+        mime: 'baseInfo.mime',
+        poster: 'scraperInfo.extPic.poster',
+        title: 'scraperInfo.dandan.title',
+        order: 'scraperInfo.dandan.episode',
+        parentTitle: 'scraperInfo.dandan.animeTitle',
+    },
+    mapDir: {
+        path: 'baseInfo.path',
+        title: 'scraperInfo.children.title',
+        result: 'baseInfo.result',
+        poster: 'scraperInfo.local.poster',
+    },
+})
     .then(async (result) => {
         // await vs.initDirLevel(true)
         // await vs.combinedScrapeFlatFile('dandan')
@@ -371,7 +377,7 @@ vs.load('video')
         // await vs.mapFileResult()
         // await vs.scrapeFlatDir()
         // await vs.mapDirResult()
-        // vs.library.tree = flatToTree()
+        // vs.flatToTree()
         // console.log(vs.library.tree)
 
         // vs.save()

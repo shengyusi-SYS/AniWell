@@ -232,10 +232,14 @@ export const treeMerger = (toA: Tree, addB: Tree[] | Tree) => {
         Object.assign(toA, addB)
         if (deepChildren) {
             deepChildren.forEach((val) => {
-                const exist = toA.children.find((v) => v.label === val.label)
-                if (exist) {
-                    return treeMerger(exist, val)
-                } else return toA.children.push(val)
+                if (toA.children instanceof Array) {
+                    const exist = toA.children.find((v) => v.label === val.label)
+                    if (exist) {
+                        return treeMerger(exist, val)
+                    } else return toA.children.push(val)
+                }
+                toA.children = []
+                toA.children.push(val)
             })
         }
     } else return new Error('参数错误')

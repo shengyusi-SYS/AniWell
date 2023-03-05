@@ -2,10 +2,11 @@ import settings from '@s/store/settings'
 import { users, UserData } from '@s/store/users'
 import { signAccessToken, verifyToken } from '@s/utils/jwt'
 import VideoTaskCenter from '@s/modules/video'
+import { getLibrary } from '@s/store/library'
 
 export interface ClientParams {
-    filePath?: string
-    resourceId?: string
+    libName?: string
+    filePath: string
     user?: UserData
     bitrate?: number
     autoBitrate?: boolean
@@ -14,21 +15,21 @@ export interface ClientParams {
 }
 
 export default async function videoHandler(req, res, next) {
-    const { filePath, resourceId, bitrate, autoBitrate, resolution, method } = req.body
+    const { filePath, libName, bitrate, autoBitrate, resolution, method } = req.body as ClientParams
+
     const user = req.user as UserData
 
     const params: ClientParams = {
         filePath,
-        resourceId,
+        libName,
         user,
         bitrate:
-            typeof bitrate === 'undefined'
+            bitrate == undefined
                 ? Number(settings.transcode.bitrate) * 1000000
                 : Number(bitrate) * 1000000,
-        autoBitrate:
-            typeof autoBitrate === 'undefined' ? settings.transcode.autoBitrate : autoBitrate,
-        resolution: resolution ? resolution : '1080p',
-        method: method ? method : 'transcode',
+        autoBitrate: autoBitrate || settings.transcode.autoBitrate,
+        resolution: resolution || '1080p',
+        method: method || 'transcode',
     }
     try {
         const task = await VideoTaskCenter.singleTask(params)

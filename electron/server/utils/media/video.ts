@@ -74,8 +74,10 @@ export async function cutVideo(
             init.ffmpegPath,
             [
                 `-i "${path.resolve(filePath)}"`,
+                '-map v:0',
                 `-t ${length}`,
                 '-hide_banner',
+                '-c copy',
                 '-y',
                 path.resolve(savePath),
             ],
@@ -91,7 +93,8 @@ export async function cutVideo(
             }
         })
         task.on('error', (e) => {
-            // console.log(e)
+            scrapeLogger.error(e)
+            reject(e)
         })
     })
 }

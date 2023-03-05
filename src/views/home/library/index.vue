@@ -2,6 +2,7 @@
 import { reqLibrary } from '@v/api'
 import useListenLifecycle from '@v/hooks/useListenLifecycle'
 import { sortConfig, useGlobalStore } from '@v/stores/global'
+import { useItemStore } from '@v/stores/item'
 import { libraryData, useLibraryStore } from '@v/stores/library'
 import { useElementSize, useWindowSize } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
@@ -11,13 +12,16 @@ import { storeToRefs } from 'pinia'
 
 const router = useRouter()
 const props = defineProps(['category'])
+
 const globalStore = useGlobalStore()
 const { theme, libraryConfig } = storeToRefs(globalStore)
 const pageSize = toRef(theme.value, 'libraryPageSize')
+
 const libraryStore = useLibraryStore()
 const { libraryData } = storeToRefs(libraryStore)
 const enterLibrary = libraryStore.enterLibrary
 
+const itemStore = useItemStore()
 // //字体计算
 // const library = ref()
 // const librarySize = useElementSize(library)
@@ -66,6 +70,11 @@ let currentLibName: string
 async function openCard(libName: string, cardData: libraryData) {
     if (cardData.result === 'item') {
         if (cardData.display === 'video') {
+            if (libraryData.value.children) {
+                await itemStore.generatePlaylist(
+                    libraryData.value.children.filter((v) => v.display === 'video'),
+                )
+            }
             router.push({ name: 'item' })
         }
     } else {

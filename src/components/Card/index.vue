@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { encode } from 'js-base64'
-import { CardData } from '@v/stores/library'
+import { libraryData } from '@v/stores/library'
 import { useVideoPlayerStore } from '@v/stores/videoPlayer'
 import { useGlobalStore } from '@v/stores/global'
 import { storeToRefs } from 'pinia'
-import { reqLibraryItem } from '@v/api'
+import {} from '@v/api'
 import { ComputedRef } from 'vue'
 import { el } from 'element-plus/es/locale'
 
@@ -12,21 +12,21 @@ const globalStore = useGlobalStore()
 const videoPlayerStore = useVideoPlayerStore()
 const { theme } = storeToRefs(globalStore)
 const props = defineProps<{
-    data: CardData
+    data: libraryData
     fontSize?: string
     replace?: () => boolean
 }>()
 // const { title, poster, path, itemId, result } = props.data
 
 const aspectRatio = computed(() => {
-    return props.data.result === 'episodedetails'
+    return props.data.result === 'item'
         ? theme.value.cardAspectRatio
         : theme.value.libraryItemAspectRatio
 })
 
 const cardFontSize = computed(() => {
     const libraryFontSize = parseInt(props.fontSize)
-    if (props.data.result === 'episodedetails') {
+    if (props.data.result === 'item') {
         return libraryFontSize / aspectRatio.value + 'px'
     } else return libraryFontSize + 'px'
 })

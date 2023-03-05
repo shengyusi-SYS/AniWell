@@ -130,7 +130,6 @@ const library: Ilibrary = shallowProxy(store.store, (method, { target, key }) =>
 
 export default library
 
-function getChildren() {}
 export async function getLibrary(libName: string, libPath?: string): Promise<LibraryTree> {
     if (!libName) {
         const overview = {
@@ -139,6 +138,8 @@ export async function getLibrary(libName: string, libPath?: string): Promise<Lib
         }
         for (const libraryName in library) {
             const targetLibrary = library[libraryName]
+
+            // console.log(libraryName, targetLibraryRootDir)
             const targetLibraryRootDir = searchLeaf(targetLibrary.tree, targetLibrary.rootPath)
             if (targetLibraryRootDir) {
                 const result = {
@@ -174,4 +175,8 @@ export async function getLibrary(libName: string, libPath?: string): Promise<Lib
         }
         return undefined
     }
+}
+
+export async function getItem(libName: string, itemPath: string) {
+    return library[libName].flatFile[itemPath] || library[libName].flatDir[itemPath]
 }

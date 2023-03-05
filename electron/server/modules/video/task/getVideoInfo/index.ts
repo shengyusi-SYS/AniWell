@@ -5,6 +5,7 @@ import { access } from 'fs/promises'
 import path from 'path'
 import { subInfo } from '../handleSubtitles'
 import { fontInfo } from '../handleFonts'
+import { getItem } from '@s/store/library'
 
 export interface VideoInfo {
     filePath: string
@@ -32,10 +33,25 @@ export interface VideoInfo {
     exist?: boolean
 }
 
-export default async function getVideoInfo(filePath): Promise<VideoInfo> {
+export default async function getVideoInfo(filePath: string, libName?: string): Promise<VideoInfo> {
     try {
         logger.debug('getVideoInfo', 'start')
-        const metadata = await getScreenedMediaInfo(filePath)
+        let metadata: ScreenedMediaInfo
+        if (libName) {
+            try {
+                const savedMetadata = (await getItem(libName, filePath)).baseInfo
+                if (
+                    savedMetadata.audioStreams &&
+                    savedMetadata.format &&
+                    savedMetadata.vidoeStream
+                ) {
+                    metadata = savedMetadata
+                }
+            } catch (error) {}
+        }
+        if (metadata == undefined) {
+            metadata = await getScreenedMediaInfo(filePath)
+        }
 
         const { format, vidoeStream, audioStreams, subtitleStreams } = metadata
         const { bit_rate, duration } = format
