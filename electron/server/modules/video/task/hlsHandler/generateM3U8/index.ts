@@ -4,12 +4,25 @@ import { mkdir, writeFile } from 'fs/promises'
 
 import settings from '@s/store/settings'
 import path from 'path'
+import { VideoInfo } from '../../getVideoInfo'
+
+export interface VideoIndex {
+    [index: string]: {
+        start_pts: number
+        duration_ts: number
+        start: number
+        end: number
+        segmentDuration: number
+        id: number
+        state: 'init'
+    }
+}
 
 //转码串流功能的次核心，预处理分段信息，同时生成m3u8清单文件
-async function generateM3U8(videoInfo) {
+async function generateM3U8(videoInfo: VideoInfo) {
     try {
         logger.debug('generateM3U8', 'start')
-        const videoIndex = (videoInfo.videoIndex = {})
+        const videoIndex: VideoIndex = (videoInfo.videoIndex = {})
         const SID = videoInfo.SID
         logger.debug('generateM3U8', 'SID', SID)
         const { duration } = videoInfo
@@ -28,14 +41,10 @@ async function generateM3U8(videoInfo) {
             start = Number(((start_pts - base_pts) / 90000).toFixed(6))
             if (i < segmentNum) {
                 end = Number(((start_pts - base_pts + duration_ts) / 90000).toFixed(6))
-                M3U8 += `#EXTINF:${segmentDuration}\nindex${i}.ts?cookie=SID=${encodeURIComponent(
-                    SID,
-                )}\n`
+                M3U8 += `#EXTINF:${segmentDuration}\nindex${i}.ts?taskId=${videoInfo.taskId}\n`
             } else {
                 end = duration
-                M3U8 += `#EXTINF:${lastSegmentDuration}\nindex${i}.ts?cookie=SID=${encodeURIComponent(
-                    SID,
-                )}\n#EXT-X-ENDLIST`
+                M3U8 += `#EXTINF:${lastSegmentDuration}\nindex${i}.ts?taskId=${videoInfo.taskId}\n#EXT-X-ENDLIST`
                 endLoop = true
             }
             videoIndex[`index${i}`] = {

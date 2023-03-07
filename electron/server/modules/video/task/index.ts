@@ -7,7 +7,7 @@ import handleFonts, { fontInfo } from './handleFonts'
 import DirectPlayHandler from './directPlayHandler'
 import { v4 as uuidv4 } from 'uuid'
 import { signAccessToken } from '@s/utils/jwt'
-import HlsHandler from './hlsHandler/a'
+import HlsHandler from './hlsHandler'
 import { readFileSync } from 'fs'
 import { Request, Response } from 'express'
 
@@ -19,14 +19,19 @@ export interface IVideoTask {
 
 export interface VideoHandler {
     contentType: string
-    init: (params: ClientParams) => Promise<void>
-    handle: (req, res) => Promise<void>
+    init: ({
+        videoInfo,
+    }: {
+        videoInfo: VideoInfo
+        params?: ClientParams
+        taskId?: string
+    }) => Promise<void>
+    handle: (req: Request, res: Response) => Promise<void>
     stop: () => Promise<void>
 }
 
 export default class VideoTask implements IVideoTask {
     public videoInfo: VideoInfo
-    public subtitleList: Array<subInfo>
     public handler: VideoHandler
     public taskId: string
     public src: {
@@ -46,24 +51,24 @@ export default class VideoTask implements IVideoTask {
         this.videoInfo = await getVideoInfo(filePath, libName)
         this.videoInfo.taskId = this.taskId
 
-        this.subtitleList = await handleSubtitles(this.videoInfo)
+        await handleSubtitles(this.videoInfo)
         await handleFonts(this.videoInfo)
         selectMethod(this.videoInfo, params)
 
         console.log('VideoTask videoInfo', this.videoInfo)
-        const subList: Array<subInfo> = JSON.parse(
-            JSON.stringify(this.subtitleList),
-        ) as Array<subInfo>
-        subList.forEach((v) => {
-            delete v.path
-            v.url = `/api/v1/video/sub?id=${v.id}&codec=${v.codec}&index=${v.subStreamIndex || ''}`
+        const subList: Array<subInfo> = this.videoInfo.subtitleList.map((v) => {
+            return {
+                ...v,
+                url: `/api/v1/video/sub?id=${v.id}&codec=${v.codec}&index=${
+                    v.subStreamIndex || ''
+                }`,
+            }
         })
-
         if (this.videoInfo.method == 'direct') {
             logger.info('handleVideoRequest', 'start direct')
 
             this.handler = new DirectPlayHandler()
-            await this.handler.init(this.videoInfo)
+            await this.handler.init({ videoInfo: this.videoInfo })
 
             this.src = {
                 url: `/api/v1/video/src/${this.taskId}.mp4?token=${signAccessToken(user)}`,
@@ -73,12 +78,22 @@ export default class VideoTask implements IVideoTask {
                 chapters: this.videoInfo.chapters,
             }
         } else if (this.videoInfo.method == 'transcode') {
+            logger.info('handleVideoRequest', 'start transcode')
             this.handler = new HlsHandler()
-            await this.handler.init(this.videoInfo)
+            await this.handler.init({
+                videoInfo: this.videoInfo,
+                params,
+                taskId: this.taskId,
+            })
             this.src = {
-                url: `/api/v1/video/src/${this.taskId}.m3u8?token=${signAccessToken(user)}`,
+                url: `/api/v1/video/src/index.m3u8?taskId=${this.taskId}&token=${signAccessToken(
+                    user,
+                )}`,
+                // url: `/api/v1/video/src/${this.taskId}.m3u8?token=${signAccessToken(user)}`,
                 type: this.handler.contentType,
                 subtitleList: subList,
+                fontsList: this.videoInfo.fontsList,
+                chapters: this.videoInfo.chapters,
             }
         }
     }

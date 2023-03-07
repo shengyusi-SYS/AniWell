@@ -52,7 +52,8 @@ class VideoTaskCenter {
      * handleRequest
      */
     public async handleRequest(req, res) {
-        const taskId = req.path.match(uuidReg)?.groups?.uuid
+        const taskId = req.path.match(uuidReg)?.groups?.uuid || req.query.taskId
+
         const targetTask = this.taskQueue.find((v) => v.taskId === taskId)
         if (targetTask) {
             await targetTask.handleRequest(req, res)

@@ -1,36 +1,41 @@
 import { logger } from '@s/utils/logger'
 import generateFFmpegCommand from './generateFFmpegCommand'
-import hlsProcessController from './hlsProcessController'
+import HlsProcessController from './hlsProcessController'
 import { generateM3U8 } from './generateM3U8'
-async function handleTranscode(videoInfo, subtitleList) {
-    try {
-        // logger.debug('handleTranscode','start',videoInfo,subtitleList)
-        await generateM3U8(videoInfo)
-        const commandTemplate = await generateFFmpegCommand(videoInfo, subtitleList)
-        const HlsProcessController = new hlsProcessController(videoInfo, commandTemplate)
-        logger.debug('handleTranscode', 'end')
-        return HlsProcessController
-    } catch (error) {
-        logger.error('handleTranscode', error)
-    }
-}
-
+import HlsRequestHandler from './hlsRequestHandler'
 import { VideoHandler } from '@s/modules/video/task'
-import { ClientParams } from '@s/api/v1/library/handler/video'
+import { ClientParams } from '@s/api/v1/library/requestHandler/video'
+import { VideoInfo } from '../getVideoInfo'
+
 export default class HlsHandler implements VideoHandler {
     contentType: string
+    processController: HlsProcessController
+    requestHandler: HlsRequestHandler
     /**
      * init
      */
-    public async init(params: ClientParams) {
+    public async init({
+        videoInfo,
+        params,
+        taskId,
+    }: {
+        videoInfo: VideoInfo
+        params: ClientParams
+        taskId: string
+    }) {
         try {
             // logger.debug('handleTranscode','start',videoInfo,subtitleList)
             this.contentType = 'application/x-mpegURL'
             await generateM3U8(videoInfo)
-            const commandTemplate = await generateFFmpegCommand(videoInfo, subtitleList)
-            const HlsProcessController = new hlsProcessController(videoInfo, commandTemplate)
+            const commandTemplate = await generateFFmpegCommand(videoInfo)
+            this.processController = new HlsProcessController()
+            await this.processController.init(videoInfo, commandTemplate)
+            this.requestHandler = new HlsRequestHandler()
+            await this.requestHandler.init({
+                videoInfo,
+                HlsProcessController: this.processController,
+            })
             logger.debug('handleTranscode', 'end')
-            return HlsProcessController
         } catch (error) {
             logger.error('handleTranscode', error)
         }
@@ -38,5 +43,10 @@ export default class HlsHandler implements VideoHandler {
     /**
      * handle
      */
-    public async handle(req: any, res: any) {}
+    public async handle(req: any, res: any) {
+        return this.requestHandler.handler(req, res)
+    }
+    public async stop() {
+        await this.requestHandler.clearVideoTemp()
+    }
 }

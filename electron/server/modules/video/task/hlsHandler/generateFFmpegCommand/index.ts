@@ -3,7 +3,8 @@ import path from 'path'
 import init from '@s/utils/init'
 const { osPlatform, gpus } = init
 import settings from '@s/store/settings'
-import { cleanNull } from '@s/utils'
+import { clearEmpty } from '@s/utils'
+import { VideoInfo } from '../../getVideoInfo'
 
 //转码串流的精髓，ffmpeg指令生成系统，自己看着都头大...
 const encoders = {
@@ -125,10 +126,12 @@ const hwaccels = {
         },
     },
 }
-function generateFfmpegCommand(videoInfo, subtitleList) {
+
+export default function generateFfmpegCommand(videoInfo: VideoInfo) {
     try {
         logger.debug('generateFfmpegCommand', 'start')
         const videoIndex = videoInfo.videoIndex
+        const subtitleList = videoInfo.subtitleList
         // settings.transcode.advAccel = false
         let inputParams = []
         let outputParams = []
@@ -285,7 +288,7 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
                 }
             }
             subtitleFilter.push(`hwupload=derive_device=${flHwDevice}:extra_hw_frames=64[sub]`)
-            subtitleFilter = cleanNull(subtitleFilter).join(',')
+            subtitleFilter = clearEmpty(subtitleFilter).join(',')
         }
 
         if (hwaccel == 'd3d11va') {
@@ -301,7 +304,7 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
             )
             // }
         }
-        videoFilter = cleanNull(videoFilter).join(',')
+        videoFilter = clearEmpty(videoFilter).join(',')
         if (overlay) {
             videoFilter = `[0:${videoInfo.index}]${videoFilter}[main]`
         }
@@ -316,9 +319,9 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
                 ]
             }
         }
-        overlayFilter = cleanNull(overlayFilter).join(',')
+        overlayFilter = clearEmpty(overlayFilter).join(',')
 
-        filter = cleanNull([subtitleFilter, videoFilter, overlayFilter])
+        filter = clearEmpty([subtitleFilter, videoFilter, overlayFilter])
         // if (!overlay) {
         //     filter = `-vf "${filter.join(';')}"`
         // } else {
@@ -489,8 +492,8 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
             '-hls_list_size 0',
         ]
 
-        inputParams = (start) =>
-            cleanNull([
+        inputParams = (start) => {
+            return clearEmpty([
                 ss(start),
                 ...hwaccelParams,
                 decoder,
@@ -498,9 +501,10 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
                 ...customInputCommand,
                 `-i "${videoInfo.filePath}"`,
             ])
+        }
 
-        outputParams = (start, segment) =>
-            cleanNull([
+        outputParams = (start, segment) => {
+            return clearEmpty([
                 ...outTest,
                 ...map,
                 threads,
@@ -519,16 +523,14 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
                 '-y',
                 path.resolve(settings.server.tempPath, 'output', 'tempList', `${segment}.m3u8`),
             ])
+        }
 
-        const commandTemplate = (start, segment) => [
-            ...inputParams(start),
-            ...outputParams(start, segment),
-        ]
+        const commandTemplate = (start: number, segment: string) => {
+            return [...inputParams(start), ...outputParams(start, segment)]
+        }
         // logger.debug('generateFfmpegCommand', 'end', commandTemplate(0, 'index1'))
         return commandTemplate
     } catch (error) {
         logger.error('generateFfmpegCommand', error)
     }
 }
-
-export default generateFfmpegCommand

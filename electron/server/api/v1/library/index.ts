@@ -127,30 +127,34 @@ router.get('/lib', compression(), async (req, res, next) => {
 //文件请求处理
 router.use('/poster', async (req, res, next) => {
     let filePath
-    if (req.query?.path) {
+    if (req.query?.path && req.query?.path != 'undefined') {
         filePath = path.resolve(req.query.path as string)
     } else {
-        res.status(404).json({})
+        res.status(404).json({ message: '需要路径' })
         return
     }
-    if ((await getFileType(filePath))?.type === 'image') {
-        try {
-            //static自带了etag缓存
-            // const ifModifiedSince = req.headers['if-modified-since']
-            // const mtime = (await stat(filePath)).mtime.toUTCString()
-            // if (mtime === ifModifiedSince) {
-            //     res.status(304).end()
-            // } else {
-            res
-                // .header('Cache-Control', `no-cache`)
-                // .header('Last-Modified', mtime)
-                .sendFile(path.resolve(filePath))
-            // }
-            return
-        } catch (error) {
-            res.status(404).json({})
-            return
+    try {
+        if ((await getFileType(filePath))?.type === 'image') {
+            try {
+                //static自带了etag缓存
+                // const ifModifiedSince = req.headers['if-modified-since']
+                // const mtime = (await stat(filePath)).mtime.toUTCString()
+                // if (mtime === ifModifiedSince) {
+                //     res.status(304).end()
+                // } else {
+                res
+                    // .header('Cache-Control', `no-cache`)
+                    // .header('Last-Modified', mtime)
+                    .sendFile(path.resolve(filePath))
+                // }
+                return
+            } catch (error) {
+                res.status(404).json({})
+                return
+            }
         }
+    } catch (error) {
+        res.status(404).json({ message: '资源错误' })
     }
 })
 

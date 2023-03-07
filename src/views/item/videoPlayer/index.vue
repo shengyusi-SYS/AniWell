@@ -17,7 +17,8 @@ import SubtitlesOctopus from '@v/lib/ass/subtitles-octopus'
 const videoPlayerStore = useVideoPlayerStore()
 // const { videoSize } = storeToRefs(videoPlayerStore)
 // const controller = videoPlayerStore.controller
-
+const uuidReg =
+    /(?<uuid>[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/
 const initialPlayer = ref()
 let videoSize = useElementSize(initialPlayer)
 const controller = {
@@ -34,6 +35,7 @@ const controller = {
         autoBitrate: false,
         bitrate: 5,
     },
+    taskId: '' as string | undefined,
 
     async setPlaylist(itemList: libraryData[], libName?: string) {
         this.playlist.length = 0
@@ -67,6 +69,7 @@ const controller = {
     async setPlayerOptions({ index = 0 } = {}) {
         this.currentIndex = index
         const src: VideoSrc = await this.getSrc(index)
+        this.taskId = src.url.match(uuidReg)?.groups?.uuid
         //direct
         if (src.type === 'video/mp4') {
             this.playerOptions = {
@@ -146,7 +149,6 @@ const controller = {
     },
     async setPlayer() {
         console.log(this.playerOptions)
-
         this.player = new DPlayer(this.playerOptions)
     },
     bindEvents() {
@@ -177,7 +179,9 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
-    // reqStopTranscode()
+    if (controller.taskId) {
+        reqStopTranscode(controller.taskId)
+    }
     if (controller.assInstance?.dispose) {
         controller.assInstance.dispose()
     }

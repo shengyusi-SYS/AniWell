@@ -4,13 +4,14 @@ import { generatePictureUrl, mediaContentType } from '@s/utils'
 import { stat } from 'fs/promises'
 import { logger } from '@s/utils/logger'
 import { VideoHandler } from '@s/modules/video/task'
+import { VideoInfo } from '../getVideoInfo'
 
 //处理直接播放
 export default class DirectPlayHandler implements VideoHandler {
     filePath
     contentType
     constructor() {}
-    public async init(videoInfo) {
+    public async init({ videoInfo }: { videoInfo: VideoInfo }) {
         this.filePath = videoInfo.filePath
         this.contentType = mediaContentType(this.filePath)
         // return this

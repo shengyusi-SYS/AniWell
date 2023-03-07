@@ -13,14 +13,8 @@ import fs from 'fs'
 import { fileTypeFromFile } from 'file-type'
 
 //清理空字符串和数组（ffmpeg指令用）
-function cleanNull(arr) {
-    const temp = []
-    arr.forEach((v) => {
-        if (v.length > 0 || typeof v == 'function') {
-            temp.push(v)
-        }
-    })
-    return temp
+export function clearEmpty(arr: Array<string | Function>) {
+    return arr.filter((v) => v.length > 0 || typeof v === 'function')
 }
 
 function generatePictureUrl(path) {
@@ -331,7 +325,6 @@ export const dotGet = (obj, key) => {
 }
 
 export {
-    cleanNull,
     generatePictureUrl,
     mediaContentType,
     extractFonts,

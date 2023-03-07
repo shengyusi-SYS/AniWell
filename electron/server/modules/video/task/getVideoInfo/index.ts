@@ -6,6 +6,7 @@ import path from 'path'
 import { subInfo } from '../handleSubtitles'
 import { fontInfo } from '../handleFonts'
 import { getItem } from '@s/store/library'
+import { VideoIndex } from '../hlsHandler/generateM3U8'
 
 export interface VideoInfo {
     filePath: string
@@ -26,6 +27,7 @@ export interface VideoInfo {
     encode: string
     subtitleList?: Array<subInfo>
     fontsList?: Array<fontInfo>
+    videoIndex?: VideoIndex
     taskId?: string
     method?: string
     targetBitrate?: number

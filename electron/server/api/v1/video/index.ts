@@ -15,6 +15,12 @@ router.use('/src', (req, res) => {
     return VideoTaskCenter.handleRequest(req, res)
 })
 
+router.get('/clearVideoTemp', async (req, res) => {
+    await VideoTaskCenter.stopSingleTask(req.query.taskId)
+    res.status(200).end()
+    return
+})
+
 router.use('/sub', compressionMw, async (req, res) => {
     const { id, codec, index } = req.query
     if (id) {

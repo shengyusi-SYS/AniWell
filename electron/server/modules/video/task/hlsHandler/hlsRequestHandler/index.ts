@@ -5,33 +5,41 @@ import { mkdir, stat } from 'fs/promises'
 import path from 'path'
 import { debounce } from 'lodash'
 import { VideoHandler } from '@s/modules/video/task'
-let _this
+import { VideoInfo } from '../../getVideoInfo'
 //hls请求处理
-export default class HlsRequestHandler implements VideoHandler {
+export default class HlsRequestHandler {
     videoIndex
     HlsProcessController
     currentProcess
     lastTargetId
-
     readTimeout
     tempReqPath
+    contentType: string
+
     constructor() {}
     /**
      * init
      */
-    public async init(videoIndex, HlsProcessController) {
+    public async init({
+        videoInfo,
+        HlsProcessController,
+    }: {
+        videoInfo: VideoInfo
+        HlsProcessController
+    }) {
         logger.debug('hlsRequestHandler constructor', 'start')
-        this.videoIndex = videoIndex
+        this.videoIndex = videoInfo.videoIndex
         this.HlsProcessController = HlsProcessController
         this.currentProcess = HlsProcessController.currentProcess
         this.lastTargetId = 0
     }
     //处理分段请求
-    output = debounce(
-        async (req, res) => {
+    public handler = debounce(
+        async function (req, res) {
             res.header('Access-Control-Allow-Origin', '*')
             if (req.path == '/index.m3u8') {
                 res.header('Content-Type', 'application/x-mpegURL')
+
                 res.sendFile(path.resolve(settings.server.tempPath, 'output', 'index.m3u8'))
                 return
             }
@@ -50,7 +58,7 @@ export default class HlsRequestHandler implements VideoHandler {
                     tryTimes = 0
                     return
                 } else {
-                    if (_this.videoIndex[targetSegment].state == 'done') {
+                    if (this.videoIndex[targetSegment].state == 'done') {
                         logger.debug(
                             'hlsRequestHandler /api/localFile/output',
                             'send',
@@ -72,6 +80,10 @@ export default class HlsRequestHandler implements VideoHandler {
             // if (transState=='stop') {
             //         continueFFmpegProgress()
             // }
+            if (targetSegment === 'index0') {
+                await this.HlsProcessController.killCurrentProcess()
+                await this.HlsProcessController.generateHlsProcess(targetSegment)
+            }
 
             //处理跳转，如果所有人都把视频从头看到尾，就没它什么事了...
             res.header('Content-Type', 'video/m2pt')
@@ -79,23 +91,23 @@ export default class HlsRequestHandler implements VideoHandler {
                 'hlsRequestHandler handler 2',
                 targetSegment,
                 '-------',
-                _this.videoIndex[targetSegment].state,
+                this.videoIndex[targetSegment].state,
             )
             const targetSegmentId = Number(targetSegment.replace('index', ''))
             const beforeSegment = `index${targetSegmentId - 1 >= 0 ? targetSegmentId - 1 : 0}`
-            const endId = Object.keys(_this.videoIndex).length - 1
-            if (targetSegmentId < Number(_this.lastTargetId)) {
-                if (_this.videoIndex[targetSegment].state != 'done') {
+            const endId = Object.keys(this.videoIndex).length - 1
+            if (targetSegmentId < Number(this.lastTargetId)) {
+                if (this.videoIndex[targetSegment].state != 'done') {
                     logger.info(
                         'hlsRequestHandler handler 3',
                         'back----------',
                         targetSegmentId,
-                        _this.lastTargetId,
+                        this.lastTargetId,
                     )
-                    await _this.HlsProcessController.killCurrentProcess()
-                    await _this.HlsProcessController.generateHlsProcess(targetSegment)
+                    await this.HlsProcessController.killCurrentProcess()
+                    await this.HlsProcessController.generateHlsProcess(targetSegment)
                 } else {
-                    if (_this.HlsProcessController.currentProcess.id <= targetSegmentId) {
+                    if (this.HlsProcessController.currentProcess.id <= targetSegmentId) {
                         logger.debug(
                             'hlsRequestHandler handler 3',
                             'continue----------',
@@ -109,7 +121,7 @@ export default class HlsRequestHandler implements VideoHandler {
                         )
                         let nextProcessId = Number(targetSegment.replace('index', ''))
                         // logger.debug('debug',videoIndex[`index${nextProcessId}`]);
-                        while (_this.videoIndex[`index${nextProcessId}`].state == 'done') {
+                        while (this.videoIndex[`index${nextProcessId}`].state == 'done') {
                             if (nextProcessId < endId) {
                                 nextProcessId++
                             } else {
@@ -121,25 +133,25 @@ export default class HlsRequestHandler implements VideoHandler {
                             logger.debug('hlsRequestHandler handler 3', 'end', nextProcessId)
                         } else {
                             logger.debug('hlsRequestHandler handler 3', 'back to', nextProcessId)
-                            await _this.HlsProcessController.killCurrentProcess()
-                            await _this.HlsProcessController.generateHlsProcess(
+                            await this.HlsProcessController.killCurrentProcess()
+                            await this.HlsProcessController.generateHlsProcess(
                                 `index${nextProcessId}`,
                             )
                         }
                     }
                 }
-            } else if (targetSegmentId > Number(_this.lastTargetId) + 1) {
-                if (_this.videoIndex[targetSegment].state != 'done') {
+            } else if (targetSegmentId > Number(this.lastTargetId) + 1) {
+                if (this.videoIndex[targetSegment].state != 'done') {
                     logger.debug('hlsRequestHandler handler 3', 'jump', targetSegment)
-                    await _this.HlsProcessController.killCurrentProcess()
-                    await _this.HlsProcessController.generateHlsProcess(targetSegment)
+                    await this.HlsProcessController.killCurrentProcess()
+                    await this.HlsProcessController.generateHlsProcess(targetSegment)
                 } else {
-                    if (_this.HlsProcessController.currentProcess.id <= targetSegmentId) {
+                    if (this.HlsProcessController.currentProcess.id <= targetSegmentId) {
                         logger.debug('hlsRequestHandler handler 3', 'seek', targetSegment)
                     } else {
                         logger.debug('hlsRequestHandler handler 3', 'jump check', targetSegment)
                         let nextProcessId = Number(targetSegment.replace('index', ''))
-                        while (_this.videoIndex[`index${nextProcessId}`].state == 'done') {
+                        while (this.videoIndex[`index${nextProcessId}`].state == 'done') {
                             if (nextProcessId < endId) {
                                 nextProcessId++
                             } else {
@@ -155,8 +167,8 @@ export default class HlsRequestHandler implements VideoHandler {
                                 'jump continue',
                                 nextProcessId,
                             )
-                            await _this.HlsProcessController.killCurrentProcess()
-                            await _this.HlsProcessController.generateHlsProcess(
+                            await this.HlsProcessController.killCurrentProcess()
+                            await this.HlsProcessController.generateHlsProcess(
                                 `index${nextProcessId}`,
                             )
                         }
@@ -165,16 +177,16 @@ export default class HlsRequestHandler implements VideoHandler {
             } else {
                 // logger.debug('debug','teeeeee---------eeeeeest', targetSegmentId, this.lastTargetId);
             }
-            _this.lastTargetId = targetSegmentId
+            this.lastTargetId = targetSegmentId
             read()
-        },
+        }.bind(this),
         500,
         { leading: true },
     )
-    clearVideoTemp = async (req, res) => {
+    async clearVideoTemp() {
         try {
             logger.debug('hlsRequestHandler /api/localFile/clearVideoTemp', 'start')
-            await _this.HlsProcessController.killCurrentProcess()
+            await this.HlsProcessController.killCurrentProcess()
             await new Promise((resolve, reject) => {
                 rimraf(path.resolve(settings.server.tempPath, 'output'), async (err) => {
                     if (err) {
@@ -184,12 +196,8 @@ export default class HlsRequestHandler implements VideoHandler {
             })
             await mkdir(path.resolve(settings.server.tempPath, 'output'))
             logger.info('hlsRequestHandler /api/localFile/clearVideoTemp', 'clear')
-            res.send('Ok.')
         } catch (error) {
             logger.error('hlsRequestHandler /api/localFile/clearVideoTemp', error)
         }
-    }
-    stopTranscode = async (req, res) => {
-        res.send('Ok.')
     }
 }

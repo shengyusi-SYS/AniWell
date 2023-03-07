@@ -23,7 +23,6 @@ declare module '@vue/runtime-core' {
     IEpExpand: typeof import('~icons/ep/expand')['default']
     IEpFold: typeof import('~icons/ep/fold')['default']
     IMdiHomeOutline: typeof import('~icons/mdi/home-outline')['default']
-    Indev: typeof import('./components/Template/index.vue')['default']
     OInput: typeof import('./components/OInput/index.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

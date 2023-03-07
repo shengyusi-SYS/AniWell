@@ -3,7 +3,7 @@ import path from 'path'
 import init from '@s/utils/init'
 const { osPlatform, gpus } = init
 import settings from '@s/store/settings'
-import { cleanNull } from '@s/utils'
+import { clearEmpty } from '@s/utils'
 
 //转码串流的精髓，ffmpeg指令生成系统，自己看着都头大...
 const encoders = {
@@ -285,7 +285,7 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
                 }
             }
             subtitleFilter.push(`hwupload=derive_device=${flHwDevice}:extra_hw_frames=64[sub]`)
-            subtitleFilter = cleanNull(subtitleFilter).join(',')
+            subtitleFilter = clearEmpty(subtitleFilter).join(',')
         }
 
         if (hwaccel == 'd3d11va') {
@@ -301,7 +301,7 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
             )
             // }
         }
-        videoFilter = cleanNull(videoFilter).join(',')
+        videoFilter = clearEmpty(videoFilter).join(',')
         if (overlay) {
             videoFilter = `[0:${videoInfo.index}]${videoFilter}[main]`
         }
@@ -316,9 +316,9 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
                 ]
             }
         }
-        overlayFilter = cleanNull(overlayFilter).join(',')
+        overlayFilter = clearEmpty(overlayFilter).join(',')
 
-        filter = cleanNull([subtitleFilter, videoFilter, overlayFilter])
+        filter = clearEmpty([subtitleFilter, videoFilter, overlayFilter])
         // if (!overlay) {
         //     filter = `-vf "${filter.join(';')}"`
         // } else {
@@ -490,7 +490,7 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
         ]
 
         inputParams = (start) =>
-            cleanNull([
+            clearEmpty([
                 ss(start),
                 ...hwaccelParams,
                 decoder,
@@ -500,7 +500,7 @@ function generateFfmpegCommand(videoInfo, subtitleList) {
             ])
 
         outputParams = (start, segment) =>
-            cleanNull([
+            clearEmpty([
                 ...outTest,
                 ...map,
                 threads,

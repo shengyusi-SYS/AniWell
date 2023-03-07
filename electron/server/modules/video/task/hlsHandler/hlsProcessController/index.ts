@@ -8,18 +8,19 @@ import kill from 'tree-kill'
 import { spawn } from 'child_process'
 import { debounce } from 'lodash'
 import fs from 'fs'
+import { VideoInfo } from '../../getVideoInfo'
 //转码串流的核心，进程控制系统，测试感觉挺完善了（删）
-let _this
 class hlsProcessController {
-    constructor(videoInfo = {}, commandTemplate = {}) {
-        logger.info('hlsProcessController', 'constructor', 'start')
-        _this = this
+    videoInfo
+    commandTemplate
+    currentProcess
+    processList = []
+    transState = 'init'
+    async init(videoInfo: VideoInfo, commandTemplate: Function) {
+        logger.info('hlsProcessController init start')
         this.videoInfo = videoInfo
         this.commandTemplate = commandTemplate
-        this.currentProcess = null
-        this.processList = []
-        this.transState = 'init'
-        logger.info('hlsProcessController', 'constructor', 'end')
+        logger.info('hlsProcessController init end')
     }
     async generateHlsProcess(segment) {
         try {
@@ -64,7 +65,7 @@ class hlsProcessController {
                 transcodeLogger.info('transcode', `~${stderrLine}`)
                 const isWriting = stderrLine.match(/Opening.*index\d+\.ts\.tmp.*?for writing/)
                 if (isWriting) {
-                    //打脸来得太快了，任务密集时，信息输出会合并为一条，需要匹配全部
+                    //任务密集时，信息输出会合并为一条，需要匹配全部
                     const writings = [
                         ...stderrLine.matchAll(/Opening.*index\d+\.ts\.tmp.*?for writing/g),
                     ]
@@ -131,7 +132,7 @@ class hlsProcessController {
                             writingSegment,
                             writingSegmentId,
                         )
-                        await _this.killCurrentProcess()
+                        await this.killCurrentProcess()
                         let nextProcessId = writingSegmentId + 1
                         if (videoIndex[`index${nextProcessId}`]) {
                             while (videoIndex[`index${nextProcessId}`].state == 'done') {
@@ -154,7 +155,7 @@ class hlsProcessController {
                                 `index${nextProcessId}`,
                             )
                             this.transState = 'changing'
-                            await _this.generateHlsProcess(`index${nextProcessId}`)
+                            await this.generateHlsProcess(`index${nextProcessId}`)
                         } else {
                             logger.info(
                                 'hlsProcessController',
