@@ -11,7 +11,7 @@ export interface ClientParams {
     bitrate?: number
     autoBitrate?: boolean
     resolution?: string
-    method?: string
+    method?: 'direct' | 'transcode'
 }
 
 export default async function videoHandler(req, res, next) {

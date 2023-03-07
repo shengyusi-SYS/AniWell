@@ -1,5 +1,5 @@
 export default function useListenLifecycle(name: string) {
-    console.log('useListenLifecycle~~~~~~~~~~~~~~~~~~~')
+    console.log('useListenLifecycle~~~~~~~~~~~~~~~~~~~' + name)
     onBeforeMount(() => console.log(name + ' - onBeforeMount'))
     onMounted(() => console.log(name + ' - onMounted'))
     onBeforeUpdate(() => console.log(name + ' - onBeforeUpdate'))

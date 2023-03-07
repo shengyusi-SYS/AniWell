@@ -5,7 +5,7 @@ import electron from 'vite-plugin-electron'
 import pkg from './package.json'
 import { fileURLToPath, URL } from 'url'
 import path from 'path'
-import postcsspxtoviewport from 'postcss-px-to-viewport-8-plugin'
+// import postcsspxtoviewport from 'postcss-px-to-viewport-8-plugin'
 
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
@@ -114,7 +114,6 @@ export const config = {
         alias: {
             '@v': path.resolve(__dirname, 'src'),
             '@h': path.resolve(__dirname, 'src/hooks'),
-            '@s': path.resolve(__dirname, './electron/server'),
         },
     },
     base: './',

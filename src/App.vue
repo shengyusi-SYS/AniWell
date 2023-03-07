@@ -4,6 +4,7 @@ import { useGlobalStore, globalCache } from '@v/stores/global'
 import { storeToRefs } from 'pinia'
 import { useDark, useToggle } from '@vueuse/core'
 import { proxyGlobalData } from '@v/stores/global'
+import useListenLifecycle from './hooks/useListenLifecycle'
 
 const isDark = useDark()
 const toggleDark = useToggle(isDark)
@@ -57,19 +58,7 @@ const test = () => {
 
 <template>
     <div ref="app" class="app">
-        <RouterView v-slot="{ Component, route }">
-            <KeepAlive include="Home">
-                <Suspense>
-                    <template #default>
-                        <Component
-                            :is="Component"
-                            :key="route.meta.usePathKey ? route.path : undefined"
-                        />
-                    </template>
-                    <template #fallback> Loading... </template>
-                </Suspense>
-            </KeepAlive>
-        </RouterView>
+        <RouterView></RouterView>
         <div
             v-if="float"
             ref="el"

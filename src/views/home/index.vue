@@ -26,6 +26,10 @@ const nav = {
         name: 'settings',
         label: '设置',
     },
+    test: {
+        name: 'test',
+        label: 'test',
+    },
 }
 </script>
 
@@ -96,17 +100,19 @@ export default {
             <ElMain class="col">
                 <ElScrollbar>
                     <RouterView v-slot="{ Component, route }">
-                        <KeepAlive include="Library">
-                            <Suspense>
-                                <template #default>
-                                    <Component
-                                        :is="Component"
-                                        :key="route.meta.usePathKey ? route.path : undefined"
-                                    />
-                                </template>
-                                <template #fallback> Loading... </template>
-                            </Suspense>
-                        </KeepAlive>
+                        <template v-if="Component">
+                            <KeepAlive include="Library">
+                                <Suspense>
+                                    <template #default>
+                                        <Component
+                                            :is="Component"
+                                            :key="route.meta.usePathKey ? route.path : undefined"
+                                        />
+                                    </template>
+                                    <template #fallback> Loading... </template>
+                                </Suspense>
+                            </KeepAlive>
+                        </template>
                     </RouterView>
                 </ElScrollbar>
             </ElMain>

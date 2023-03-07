@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { reqLogin, reqIsFirst } from '@v/api'
+import useListenLifecycle from '@v/hooks/useListenLifecycle'
 import { proxyGlobalData } from '@v/stores/global'
 const router = useRouter()
 
 const loginUser = reactive({ username: '', password: '' })
-const login = async (qb = false) => {
+const login = async () => {
     const res = await reqLogin(loginUser.username, loginUser.password)
     console.log('login', proxyGlobalData.first, res)
 
@@ -16,12 +17,7 @@ const login = async (qb = false) => {
             if (first) {
                 router.push('/welcome')
             } else {
-                if (qb === true) {
-                    // router.push('/old/home')
-                    window.location.replace('/old/index.html')
-                } else {
-                    router.push('/home')
-                }
+                router.push({ name: 'home' })
             }
         } catch (error) {
             console.log(error)
@@ -32,10 +28,11 @@ const login = async (qb = false) => {
 onMounted(() => {
     reqLogin() //尝试自动登录
         .then((result) => {
-            if (result) router.push('/home')
+            if (result) router.push({ name: 'home' })
         })
         .catch((err) => {})
 })
+useListenLifecycle('login')
 </script>
 
 <script lang="ts">

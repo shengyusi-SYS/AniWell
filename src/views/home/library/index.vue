@@ -67,15 +67,16 @@ let sortConfig: sortConfig = {
     sortBy: ['title'],
 }
 let currentLibName: string
-async function openCard(libName: string, cardData: libraryData) {
+async function openCard(libName: string, cardData: libraryData, start?: number) {
     if (cardData.result === 'item') {
-        if (cardData.display === 'video') {
-            if (libraryData.value.children) {
-                await itemStore.generatePlaylist(
-                    libraryData.value.children.filter((v) => v.display === 'video'),
-                )
-            }
-            router.push({ name: 'item' })
+        if (libraryData.value.children) {
+            const cards = libraryData.value.children.filter((v) => v.display === cardData.display)
+            if (typeof start === 'number') cards.push(...cards.splice(0, start))
+            router.push({ name: 'item', query: { title: cardData.title, display: 'video' } })
+            await itemStore.setItemList(cards, {
+                libName: currentLibName,
+                display: cardData.display || 'file',
+            })
         }
     } else {
         let boxLevel = cardData.result
@@ -83,8 +84,6 @@ async function openCard(libName: string, cardData: libraryData) {
             libraryConfig.value[libName] = globalStore.defaultLibraryConfig
         }
         sortConfig = libraryConfig.value[libName]?.[boxLevel]
-        console.log(sortConfig)
-
         const query = { libName, path: cardData.path, ...sortConfig }
         router.push({
             name: 'library',
@@ -150,13 +149,13 @@ export default {
                     </ElCol>
                 </ElRow>
                 <VanGrid :column-num="10" :gutter="30" :border="false">
-                    <VanGridItem v-for="cardData in lib.children" :key="cardData.path">
+                    <VanGridItem v-for="(cardData, cardIndex) in lib.children" :key="cardData.path">
                         <Card
                             :data="cardData"
                             class="library-item"
                             @click.left="
                                 () => {
-                                    openCard(lib.title, cardData)
+                                    openCard(lib.title, cardData, cardIndex)
                                 }
                             "
                         />
@@ -167,7 +166,10 @@ export default {
 
         <div v-else class="library-cards">
             <VanGrid :column-num="theme.libraryColumnNum" :gutter="24" :border="false">
-                <VanGridItem v-for="cardData in libraryData.children" :key="cardData.path">
+                <VanGridItem
+                    v-for="(cardData, cardIndex) in libraryData.children"
+                    :key="cardData.path"
+                >
                     <LazyComponent class="library-lazy">
                         <Card
                             :data="cardData"
@@ -175,7 +177,7 @@ export default {
                             :font-size="'16px'"
                             @click.left="
                                 () => {
-                                    openCard(currentLibName, cardData)
+                                    openCard(currentLibName, cardData, cardIndex)
                                 }
                             "
                         />

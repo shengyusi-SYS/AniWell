@@ -1,43 +1,19 @@
 import { defineStore } from 'pinia'
 import { reqLibrary } from '@v/api'
 import { Ref } from 'vue'
-import router from '@v/router'
-
-export interface videoSrc {
-    url: string
-    type: string
-    fontsList: Array<fontInfo>
-    subtitleList: Array<subInfo>
-    chapters: Array<chaptersInfo>
-}
-export interface subInfo {
-    path: string
-    source: string
-    codec: string
-    id: string
-    details?: object
-    subStreamIndex?: number
-    type?: string
-    url?: string
-}
-export interface fontInfo {
-    url: string
-    name: string
-}
-
-export interface chaptersInfo {
-    title: string
-    start: number
-}
+import { libraryData } from '@v/stores/library'
+import { testVideoMime } from '@v/utils'
+import Hls from 'hls.js'
+import DPlayer from 'dplayer'
+import { reqItemSrc, reqStopTranscode, VideoSrc, subInfo, fontInfo, chaptersInfo } from '@v/api'
+import libassWorkerUrl from '@v/lib/ass/libassjs-worker.js?url'
+import libassLegacyWorkerUrl from '@v/lib/ass/libassjs-worker-legacy.js?url'
+import libassWASMUrl from '@v/lib/ass/subtitles-octopus-worker.wasm?url'
+import SubtitlesOctopus from '@v/lib/ass/subtitles-octopus'
+import { useElementSize } from '@vueuse/core'
+// import router from '@v/router'
 
 export const useVideoPlayerStore = defineStore('videoPlayer', () => {
-    const show = ref(false)
-    const src: Ref<videoSrc> = ref({})
-    const playSrc = (videoSrc: videoSrc) => {
-        console.log('router', router)
-        router.push('/videoPlayer')
-        // show.value = true
-        src.value = videoSrc
-    }
-    return { show, playSrc, src }
+    const itemList: libraryData[] = []
+    return { itemList }
 })

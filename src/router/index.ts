@@ -1,9 +1,9 @@
-import Welcome from '@v/views/welcome/index.vue'
-import Login from '@v/views/login/index.vue'
-import Home from '@v/views/home/index.vue'
-import Library from '@v/views/home/library/index.vue'
-import Settings from '@v/views/home/settings/index.vue'
-import VideoPlayer from '@v/views/videoPlayer/index.vue'
+// import Welcome from '@v/views/welcome/index.vue'
+// import Login from '@v/views/login/index.vue'
+// import Home from '@v/views/home/index.vue'
+// import Library from '@v/views/home/library/index.vue'
+// import Settings from '@v/views/home/settings/index.vue'
+// import VideoPlayer from '@v/views/videoPlayer/index.vue'
 import * as VueRouter from 'vue-router'
 import { reqIsFirst } from '@v/api'
 import { proxyGlobalData, globalCache } from '@v/stores/global'
@@ -42,7 +42,7 @@ const routes = [
                 sessionStorage.getItem('logout') !== 'true'
             ) {
                 if (from.path === '/') {
-                    return '/home'
+                    return { name: 'home' }
                 }
                 return false
             } else return true
@@ -50,32 +50,42 @@ const routes = [
     },
     {
         path: '/home',
-        name: 'home',
         component: () => import('@v/views/home/index.vue'),
         children: [
-            { path: '', redirect: '/home/library' },
+            { path: '', name: 'home', redirect: '/home/library' },
             {
                 path: 'library',
                 name: 'library',
-                component: Library,
+                component: () => import('@v/views/home/library/index.vue'),
                 props: true,
                 // children: [{ path: '', redirect: '' }]
             },
             {
                 path: 'settings',
                 name: 'settings',
-                component: Settings,
+                component: () => import('@v/views/home/settings/index.vue'),
             },
         ],
     },
-    {
-        path: '/videoPlayer',
-        component: () => import('@v/views/videoPlayer/index.vue'),
-    },
+
     {
         path: '/item',
         name: 'item',
         component: () => import('@v/views/item/index.vue'),
+        children: [
+            {
+                path: 'test',
+                name: 'test',
+                component: () => import('@v/components/TestTemplate/index.vue'),
+                props: true,
+            },
+            {
+                path: '/videoPlayer',
+                name: 'videoPlayer',
+                component: () => import('@v/views/item/videoPlayer/index.vue'),
+                props: true,
+            },
+        ],
     },
 ]
 

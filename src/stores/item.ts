@@ -1,19 +1,33 @@
+import { reqItemSrc } from '@v/api'
 import { testVideoMime } from '@v/utils'
 import { defineStore } from 'pinia'
 import { libraryData } from './library'
+import { useVideoPlayerStore } from './videoPlayer'
+import router from '@v/router'
+const videoStore = useVideoPlayerStore()
 export const useItemStore = defineStore('item', () => {
-    async function generatePlaylist(items: libraryData[]) {
-        const playlist = []
-        console.log(items)
-
-        for (let index = 0; index < items.length; index++) {
-            const item = items[index]
+    async function setItemList(
+        items: libraryData[],
+        {
+            libName,
+            display,
+            start = 0,
+        }: {
+            libName: string
+            display: string
+            start?: number
+        },
+    ) {
+        if (display === 'video') {
             try {
-                const method = (await testVideoMime(item.mime)) ? 'direct' : 'transcode'
-                console.log(item.mime, method)
-            } catch (error) {}
+                videoStore.itemList = items
+                router.push({ name: 'videoPlayer', query: router.currentRoute.value.query })
+                // await videoStore.controller.setPlaylist(items, libName)
+            } catch (error) {
+                console.log(error)
+            }
         }
     }
 
-    return { generatePlaylist }
+    return { setItemList }
 })

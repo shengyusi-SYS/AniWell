@@ -138,16 +138,17 @@ export async function reqLibrary({
 }
 
 export interface itemQuery {
-    display: 'video' | ''
+    display: 'video' | 'file'
     libName: string
     filePath: string
 }
 export interface VideoQueryParams extends itemQuery {
     display: 'video'
+    filePath: string
     bitrate?: number
     autoBitrate?: boolean
     resolution?: string
-    method?: string
+    method?: 'direct' | 'transcode'
 }
 
 export interface ItemSrc {
@@ -155,10 +156,11 @@ export interface ItemSrc {
     type: string
 }
 export interface VideoSrc extends ItemSrc {
-    sub?: Buffer
-    fontsList?: Array<string>
+    fontsList?: Array<fontInfo>
     subtitleList?: Array<subInfo>
+    chapters: Array<chaptersInfo>
 }
+
 export interface subInfo {
     source: string
     codec: string
@@ -167,9 +169,18 @@ export interface subInfo {
     subStreamIndex?: number
     type?: string
 }
+export interface fontInfo {
+    url: string
+    name: string
+}
 
+export interface chaptersInfo {
+    title: string
+    start: number
+}
 export async function reqItemSrc(data: VideoQueryParams): Promise<VideoSrc>
-export async function reqItemSrc(data: itemQuery): Promise<ItemSrc> {
+export async function reqItemSrc(data: itemQuery): Promise<ItemSrc>
+export async function reqItemSrc(data: itemQuery | VideoQueryParams): Promise<ItemSrc | VideoSrc> {
     return requests.post(`/library/item`, data)
 }
 
