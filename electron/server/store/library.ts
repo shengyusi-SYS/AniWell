@@ -41,6 +41,12 @@ export interface Ilibrary {
         mapDir: MapRule
         tree: LibraryTree //方便读取结果给前端
         config: libraryConfig
+        progress?: {
+            step: string
+            target: string
+            current: number
+            total: number
+        }
     }
 }
 

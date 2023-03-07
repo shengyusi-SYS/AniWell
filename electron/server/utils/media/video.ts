@@ -73,13 +73,13 @@ export async function cutVideo(
         const task = spawn(
             init.ffmpegPath,
             [
-                `-i "${path.resolve(filePath)}"`,
+                `-i "${filePath}"`,
                 '-map v:0',
                 `-t ${length}`,
                 '-hide_banner',
                 '-c copy',
                 '-y',
-                path.resolve(savePath),
+                savePath,
             ],
             {
                 shell: true,
@@ -89,6 +89,17 @@ export async function cutVideo(
             if (code === 0) {
                 resolve(savePath)
             } else {
+                scrapeLogger.error(
+                    [
+                        `-i "${filePath}"`,
+                        '-map v:0',
+                        `-t ${length}`,
+                        '-hide_banner',
+                        '-c copy',
+                        '-y',
+                        savePath,
+                    ].join(' '),
+                )
                 reject()
             }
         })

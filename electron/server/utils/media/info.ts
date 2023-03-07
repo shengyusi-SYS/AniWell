@@ -82,24 +82,29 @@ export async function getScreenedMediaInfo(filePath: string): Promise<ScreenedMe
     }
 }
 
-const mimeReg = /codecs="(?<codec>(av|he|hv|vp)\w+(\.\w+)*)(,\w+(\.\w+)*)+"/i
+const mimeReg = /codecs="(?<codec>(av|he|hv|vp)\w+(\.\w+)*)(,\w+(\.\w+)*)?"/i
 export async function getVideoMimeType(filePath: string) {
     const readMediaHeader = async () => {
-        // if (path.extname(filePath) !== '.mp4') {
         //ffmpeg不能直接获得标准的mime codec，MP4box不能直接解析mkv格式，就很烦
         //解决方案：ffmpeg提取MP4格式的视频头，交给MP4box解析，但准确度待验证，要彻底解决怕是要去读规范文件
-        const cutPath = await cutVideo(filePath)
-        console.log(cutPath)
-
-        return { cutPath, chunk: readChunkSync(cutPath, { length: 5 * 1024 * 1024 }) }
-        // } else {
-        //     return readChunkSync(filePath, { length: 8 * 1024 * 1024 })
-        // }
+        try {
+            const cutPath = await cutVideo(filePath)
+            return {
+                cutPath,
+                chunk: readChunkSync(cutPath, { length: 1024 * 1024 * 5, startPosition: 0 }),
+            }
+        } catch (error) {
+            return {
+                cutPath: filePath,
+                chunk: readChunkSync(filePath, { length: 1024 * 1024 * 5, startPosition: 0 }),
+            }
+        }
     }
     const mp4boxfile = MP4Box.createFile()
+    let chunk
     try {
         const res = await readMediaHeader()
-        var chunk = res.chunk
+        chunk = res.chunk
         unlink(res.cutPath)
     } catch (error) {}
     if (!chunk) {
@@ -122,6 +127,8 @@ export async function getVideoMimeType(filePath: string) {
             }
         }
         mp4boxfile.onError = function (e) {
+            scrapeLogger.error('getVideoMimeType', e)
+
             reject(e)
         }
         mp4boxfile.appendBuffer(arrayBuffer)

@@ -313,6 +313,9 @@ export async function filterDirFile(filterDirPath, { fileList, dirList }) {
               })()
             : fileList.push(curList[i])
     })
+    if (fileList.length % 100 === 0) {
+        console.warn(fileList.length)
+    }
     return Promise.allSettled(nextDirList.map((v) => this.filterDirFile(v, { fileList, dirList })))
 }
 

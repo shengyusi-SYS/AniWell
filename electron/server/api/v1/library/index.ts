@@ -19,73 +19,6 @@ router.use('/', async (req, res, next) => {
     next()
 })
 
-router.get('/old', (req, res, next) => {
-    try {
-        const category = req.params?.category
-        const reqPath = req.query.itemId
-        const range = req.query.range
-        if (typeof range === 'string') {
-            var start = Number(range.split(',')[0])
-            var end = Number(range.split(',')[1])
-        }
-
-        const library = JSON.parse(
-            fs.readFileSync(path.resolve(paths.data, 'libraryIndex.json')).toString(),
-        )
-        // console.log(category, resolve(decode(reqPath)))
-        if (typeof category === 'string') {
-            if (category === 'video' && !reqPath) {
-                library.total = library.children.length
-                const result = []
-                for (; start < end && start < library.children.length; start++) {
-                    const element = library.children[start]
-                    result.push(element)
-                }
-                library.children = result
-                library.start = start
-                library.pageSize = library.children.length
-                res.send(library)
-                return
-            }
-            const search = searchLeaf(library, resolve(decode(reqPath)))
-            if (search) {
-                search.children.sort((a, b) => {
-                    const n = a.episode - b.episode
-                    if (n) {
-                        return n
-                    }
-                    if (a.children && b.children) {
-                        return 0
-                    }
-                    if (a.children) {
-                        return -1
-                    }
-                    if (b.children) {
-                        return 1
-                    }
-                    return 0
-                })
-                search.total = search.children.length
-                const result = []
-                for (; start < end && start < search.children.length; start++) {
-                    const element = search.children[start]
-                    result.push(element)
-                }
-                search.children = result
-                search.start = start
-                search.pageSize = search.children.length
-                res.send(search)
-            } else {
-                res.status(404).json({ message: '不存在' })
-            }
-        } else {
-            res.status(400).json({ message: '参数错误' })
-        }
-    } catch (error) {
-        res.status(404).json({ message: '未建立媒体库' })
-    }
-})
-
 type sortBy = 'path' | 'title' | 'id' | 'order' | 'rank' | 'like'
 interface LibQuery {
     libName?: string
@@ -98,7 +31,7 @@ router.get('/lib', compression(), async (req, res, next) => {
     const { libName, sort, sortBy, range = '0,20', path } = req.query as unknown as LibQuery
 
     const lib = await getLibrary(libName, path)
-    console.log(req.query, lib)
+    logger.debug('/lib', lib)
     if (!lib) {
         res.status(404).json({ message: '未建立媒体库', alert: true })
         return

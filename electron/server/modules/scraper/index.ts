@@ -7,9 +7,12 @@ import library, {
     MapRule,
     libraryConfig,
     LibraryTree,
+    MapResult,
 } from '@s/store/library'
 import { filterDirFile, dotGet, Tree } from '@s/utils'
 import { treeMerger } from '@s/utils/tree'
+import { scrapeLogger } from '@s/utils/logger'
+import { throttle } from 'lodash'
 
 type FilterAndAppend = (filePath: string) => Promise<object | undefined>
 
@@ -17,7 +20,25 @@ type FilterAndAppend = (filePath: string) => Promise<object | undefined>
 export default class Scraper {
     public dirAndFile: { fileList: string[]; dirList: string[] }
     public library: Ilibrary['']
-    constructor() {}
+    public progressTimer
+    constructor() {
+        this.progressTimer = setInterval(() => {
+            this.save()
+        }, 2000)
+    }
+
+    setProgress = throttle(
+        function ([current, step, target, total]: [number?, string?, string?, number?] = []) {
+            const progress = this.library?.progress
+            if (progress) {
+                if (current) progress.current = current
+                if (step) progress.step = step
+                if (target) progress.target = target
+                if (total) progress.total = total
+            }
+        }.bind(this),
+        2000,
+    )
 
     /**
      * countDirAndFile
@@ -82,6 +103,12 @@ export default class Scraper {
             config: config || {
                 library: {},
             },
+            progress: {
+                step: '',
+                target: '',
+                current: 0,
+                total: 0,
+            },
         }
         //统计库根路径下的所有文件与文件夹
         await this.countDirAndFile()
@@ -115,6 +142,12 @@ export default class Scraper {
         }
 
         this.library = library[libName]
+        this.library.progress = {
+            step: '',
+            target: '',
+            current: 0,
+            total: 0,
+        }
     }
 
     /**
@@ -229,36 +262,18 @@ export default class Scraper {
      * scrapeFlatFile
      */
     public async scrapeFlatFile(method: 'single' | 'combined' = 'single') {
-        if (method === 'single') {
-            return await this.singlyScrapeFlatFile()
-        }
-        if (method === 'combined') {
-            return await this.combinedScrapeFlatFile()
-        }
-    }
-
-    /**
-     * singlyScrapeFlatFile
-     */
-    public async singlyScrapeFlatFile() {
         const scrapers = [
-            (await import('./video/singleFileScraper_dandan')).default,
-            (await import('./video/singleFileScraper_extPic')).default,
+            (await import('./video/fileScraper_dandan')).default,
+            (await import('./video/fileScraper_extPic')).default,
         ]
         for (let index = 0; index < scrapers.length; index++) {
-            const scraper = scrapers[index]
+            const scraper = scrapers[index].bind(this)
             try {
                 await scraper(this.library)
-            } catch (error) {}
+            } catch (error) {
+                scrapeLogger.error('scrapeFlatFile', error)
+            }
         }
-    }
-
-    /**
-     * combinedScrapeFlatFile
-     */
-    public async combinedScrapeFlatFile() {
-        const scraper = (await import('./video/combinedFileScraper')).default
-        await scraper(this.library.flatFile)
     }
 
     /**
@@ -285,11 +300,13 @@ export default class Scraper {
      * scrapeFlatDir
      */
     public async scrapeFlatDir() {
+        this.setProgress([, 'scrapeFlatDir start'])
         const scrapers = [
             (await import('./video/boxTitleScraper')).default,
             (await import('./video/appendDir')).default,
         ]
         for (let index = 0; index < scrapers.length; index++) {
+            this.setProgress([index, 'scrapeFlatDir'])
             const scraper = scrapers[index]
             await scraper(this.library)
         }
@@ -299,9 +316,11 @@ export default class Scraper {
      * appendDirResult
      */
     public async mapDirResult() {
+        this.setProgress([, 'mapDirResult start', , Object.values(this.library.flatDir).length])
         const libMap = this.library.mapDir
         const mapFilter = (await import('./video/mapFilter')).default
         Object.values(this.library.flatDir).forEach((dirMetadata, ind, arr) => {
+            this.setProgress([ind])
             const mapData = (dirMetadata.scraperInfo.mapResult = {})
             for (const mapName in libMap) {
                 const mapTarget = libMap[mapName]
@@ -317,73 +336,95 @@ export default class Scraper {
      * appendDirResult
      */
     public flatToTree() {
-        const nodeList: LibraryTree[] = [
-            ...Object.values(vs.library.flatDir).map((v) => v.scraperInfo.mapResult),
-            ...Object.values(vs.library.flatFile).map((v) => v.scraperInfo.mapResult),
-        ]
-        const tree: Tree = {}
-        const branches = []
-        for (let index = 0; index < nodeList.length; index++) {
-            const node = nodeList[index]
-            delete node.children
-            const nodePath = node.path
-            const nodePathSegment = nodePath.split(path.sep)
-            const branch: Tree = {}
-            nodePathSegment.reduce((pre, val, ind, arr) => {
-                const child = {}
-                pre.label = val
-                if (ind < arr.length - 1) {
-                    pre.children = []
-                    pre.children.push(child)
-                } else Object.assign(pre, node)
-                return child
-            }, branch)
-            branches.push(branch)
-        }
+        try {
+            this.setProgress([, 'flatToTree-start'])
+            const nodeList: MapResult[] = [
+                ...Object.values(vs.library.flatDir).map((v) => v.scraperInfo?.mapResult),
+                ...Object.values(vs.library.flatFile).map((v) => v.scraperInfo?.mapResult),
+            ]
+            const tree: Tree = {}
+            const branches = []
+            for (let index = 0; index < nodeList.length; index++) {
+                // this.setProgress([index])
+                const node = nodeList[index]
+                try {
+                    delete node.children
+                    const nodePath = node.path
+                    const nodePathSegment = nodePath.split(path.sep)
+                    const branch: Tree = {}
+                    nodePathSegment.reduce((pre, val, ind, arr) => {
+                        const child = {}
+                        pre.label = val
+                        if (ind < arr.length - 1) {
+                            pre.children = []
+                            pre.children.push(child)
+                        } else Object.assign(pre, node)
+                        return child
+                    }, branch)
+                    branches.push(branch)
+                } catch (error) {
+                    scrapeLogger.error('flatToTree', error)
+                }
+            }
 
-        treeMerger(tree, branches)
-        this.library.tree = tree
+            treeMerger(tree, branches)
+            this.library.tree = tree
+            this.save()
+            this.setProgress([, 'flatToTree-end'])
+            return tree
+        } catch (error) {
+            scrapeLogger.error('flatToTree', error)
+        }
+    }
+
+    /**
+     * allUpdate
+     */
+    public async allUpdate() {
+        //调用刮削器对单文件进行刮削
+        await this.scrapeFlatFile()
         this.save()
-        return tree
+        //映射出文件的最终刮削结果
+        await this.mapFileResult()
+        this.save()
+        //对文件夹进行刮削
+        await this.scrapeFlatDir()
+        this.save()
+        //映射文件夹的最终刮削结果
+        await this.mapDirResult()
+        this.save()
+        this.flatToTree()
+        clearInterval(this.progressTimer)
+        console.log('~~~~~~~~~~~~~~~done')
     }
 }
 
-const vs = new Scraper()
-// vs.load('video')
-vs.build({
-    rootPath: 'D:/test/www',
-    name: 'test',
-    mapFile: {
-        path: 'baseInfo.path',
-        result: 'baseInfo.result',
-        display: 'baseInfo.display',
-        mime: 'baseInfo.mime',
-        poster: 'scraperInfo.extPic.poster',
-        title: 'scraperInfo.dandan.title',
-        order: 'scraperInfo.dandan.episode',
-        parentTitle: 'scraperInfo.dandan.animeTitle',
-    },
-    mapDir: {
-        path: 'baseInfo.path',
-        title: 'scraperInfo.children.title',
-        result: 'baseInfo.result',
-        poster: 'scraperInfo.local.poster',
-    },
-})
-    .then(async (result) => {
-        // await vs.initDirLevel(true)
-        // await vs.combinedScrapeFlatFile('dandan')
-        // await vs.singlyScrapeFlatFile()
-        // await vs.mapFileResult()
-        // await vs.scrapeFlatDir()
-        // await vs.mapDirResult()
-        // vs.flatToTree()
-        // console.log(vs.library.tree)
+// setTimeout(() => {
+// const vs = new Scraper()
+// vs.load('anime')
+// vs.build({
+//     rootPath: 'D:/test',
+//     name: 'anime',
+//     mapFile: {
+//         path: 'baseInfo.path',
+//         result: 'baseInfo.result',
+//         display: 'baseInfo.display',
+//         mime: 'baseInfo.mime',
+//         poster: 'scraperInfo.extPic.poster',
+//         title: 'scraperInfo.dandan.title',
+//         order: 'scraperInfo.dandan.episode',
+//         parentTitle: 'scraperInfo.dandan.animeTitle',
+//     },
+//     mapDir: {
+//         path: 'baseInfo.path',
+//         title: 'scraperInfo.children.title',
+//         result: 'baseInfo.result',
+//         poster: 'scraperInfo.local.poster',
+//     },
+// })
 
-        // vs.save()
-        console.log('~~~~~~~~~~~~~~~done')
-        // console.log(vs.library)
-    })
-    .catch((err) => {
-        console.log(err)
-    })
+// .then(async (result) => {})
+// .catch((err) => {
+//     console.log(err)
+// })
+// }, 3000)
