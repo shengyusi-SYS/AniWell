@@ -20,13 +20,19 @@ store.$subscribe((mutation, state) => {
 })
 
 onMounted(() => {
-    store.rootEl = app.value
     store.initTheme()
-})
-
-const el = ref()
-const { x, y, style } = useDraggable(el, {
-    initialValue: { x: 100, y: 440 },
+    watch(
+        theme.value.base,
+        (baseTheme, old) => {
+            for (const varName in store.baseThemeMap) {
+                const baseThemeName = store.baseThemeMap[varName]
+                app.value.style.setProperty(varName, baseTheme[baseThemeName])
+            }
+        },
+        {
+            immediate: true,
+        },
+    )
 })
 
 // try {
@@ -46,56 +52,19 @@ const { x, y, style } = useDraggable(el, {
 //         event.sender.send('test2', 'test2_back')
 //     })
 // } catch (error) {}
-
-const float = import.meta.env.DEV ? ref(true) : false
-const test = () => {
-    // toggleDark()
-    proxyGlobalData.first = false
-    proxyGlobalData.salt = ''
-    localStorage.removeItem('globalData')
-}
 </script>
 
 <template>
     <div ref="app" class="app">
         <RouterView></RouterView>
-        <div
-            v-if="float"
-            ref="el"
-            :style="style"
-            style="position: fixed; font-size: 1em; z-index: 10"
-        >
-            <div @click="float = false">close</div>
-            <div style="font-size: 1rem; border: 1px solid black">1REM大小(10px)</div>
-            <div style="font-size: 1em; border: 1px solid black">1EM大小</div>
-            <div style="font-size: 2rem; border: 1px solid black">2REM大小</div>
-            <div style="font-size: 2em; border: 1px solid black">2EM大小</div>
-            <div style="font-size: 2em; border: 1px solid black">{{ isDark }}</div>
-            <div style="font-size: 2em; border: 1px solid black" @click="test">test</div>
-            <div
-                :style="`background: #ffffffaa;
-                    width: 12em;
-                    color: black;
-                    overflow-y: scroll;
-                    height: ${theme.testHeight};`"
-            >
-                <template v-for="(item, p, i) in theme">
-                    {{ p }}
-                    <input v-model="theme[p]" type="text" />
-                </template>
-            </div>
-        </div>
+
         <VanNumberKeyboard safe-area-inset-bottom />
     </div>
 </template>
 
 <style lang="less">
 .app {
-    --font-size: v-bind('theme.fontSize');
-    --card-shadow: v-bind('theme.cardShadow');
-    --card-shadow-hover: v-bind('theme.cardShadowHover');
-    --card-aspect-ratio: v-bind('theme.cardAspectRatio');
-    --library-item-aspect-ratio: v-bind('theme.libraryItemAspectRatio');
+    --font-size: v-bind('theme.base.fontSize');
     background-color: var(--el-bg-color);
     font-size: var(--font-size);
     color: var(--font-color);

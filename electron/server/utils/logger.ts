@@ -59,12 +59,6 @@ const config = {
             },
             compress: true,
         },
-        maxTranscode: {
-            type: 'logLevelFilter',
-            appender: 'transcode',
-            level: 'debug',
-            maxLevel: 'error',
-        },
         scrape: {
             type: 'dateFile',
             filename: join(paths.log, 'scrape.log'),
@@ -74,12 +68,6 @@ const config = {
                 pattern: '[%d{ISO8601}][%5p %z %c] %m',
             },
             compress: true,
-        },
-        maxScrape: {
-            type: 'logLevelFilter',
-            appender: 'scrape',
-            level: 'debug',
-            maxLevel: 'error',
         },
         client: {
             type: 'dateFile',
@@ -110,7 +98,7 @@ const config = {
             level: 'info',
         },
         client: {
-            appenders: ['client'],
+            appenders: ['client', 'console'],
             level: 'info',
         },
     },

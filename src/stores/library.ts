@@ -31,6 +31,7 @@ export interface MapResult extends ScraperResult {
 
 export interface libraryData extends MapResult {
     label: string
+    total?: number
     children?: libraryData[]
 }
 

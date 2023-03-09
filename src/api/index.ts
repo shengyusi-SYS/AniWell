@@ -186,3 +186,8 @@ export async function reqItemSrc(data: itemQuery | VideoQueryParams): Promise<It
 
 export const reqStopTranscode = async (taskId: string): Promise<{}> =>
     requests.get(`/video/clearVideoTemp?taskId=${taskId}`)
+
+export const reqPoster = async (path: string): Promise<Blob> =>
+    requests.get(`/library/poster?path=` + encodeURIComponent(path), {
+        responseType: 'blob',
+    })

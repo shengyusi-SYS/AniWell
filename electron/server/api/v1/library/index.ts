@@ -37,6 +37,8 @@ router.get('/lib', compression(), async (req, res, next) => {
         return
     }
 
+    lib.total = lib.children.length
+
     if (sortBy) {
         if (sortBy instanceof Array && sort instanceof Array) {
             orderBy(lib.children, sortBy, sort)
@@ -51,8 +53,10 @@ router.get('/lib', compression(), async (req, res, next) => {
     if (typeof range === 'string') {
         const start = Number(range.split(',')[0])
         const end = Number(range.split(',')[1])
-        const content = lib.children.slice(start, end)
-        lib.children = content
+        if (typeof start === 'number' && typeof end === 'number') {
+            const content = lib.children.slice(start, end)
+            lib.children = content
+        }
     }
     res.json(lib)
 })
