@@ -92,6 +92,14 @@ const routes = [
 const router = VueRouter.createRouter({
     history: VueRouter.createWebHistory(),
     routes,
+    // scrollBehavior(to, from, savedPosition) {
+    //     console.log('~~~~~~~~~', to, from, savedPosition, '==========')
+    //     if (savedPosition) {
+    //         return savedPosition
+    //     } else {
+    //         return { el: '#app', top: 0 }
+    //     }
+    // },
 })
 
 router.beforeEach(async (to, from) => {

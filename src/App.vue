@@ -56,7 +56,11 @@ onMounted(() => {
 
 <template>
     <div ref="app" class="app">
-        <RouterView></RouterView>
+        <RouterView v-slot="{ Component, route }">
+            <KeepAlive include="Home">
+                <Component :is="Component" :key="route.meta.usePathKey ? route.path : undefined" />
+            </KeepAlive>
+        </RouterView>
 
         <VanNumberKeyboard safe-area-inset-bottom />
     </div>
@@ -79,9 +83,7 @@ onMounted(() => {
 html {
     margin: 0;
     padding: 0;
-    @media screen and(min-width: 426px) and(min-height: 426px) {
-        font-size: 10px;
-    }
+    font-size: 10px;
 }
 body {
     // font-size: 1.6rem;
@@ -102,5 +104,8 @@ body {
 }
 ::-webkit-scrollbar {
     width: 0px;
+}
+.svg-icon {
+    width: 2em;
 }
 </style>

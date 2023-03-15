@@ -14,16 +14,14 @@ socket.on('data', (data) => {
 })
 socket.on('time', (time) => {
     const delay = Date.now() - time
-    globalCache.serverLog.info(delay)
+    globalCache.serverDelay.add(delay)
 })
 socket.on('log', (log) => {
     globalCache.serverLog.info(log)
 })
 
 export const clientLog = (...args: any[]) => socket.emit('clientLog', args.join(' '))
-setTimeout(() => {
-    clientLog('dadada')
-}, 2222)
+
 export const reqSalt = (username: string): Promise<{ salt: string } | Error> =>
     requests.get('/users/salt?username=' + username)
 
@@ -116,7 +114,6 @@ export interface ReqLibrary {
     sort?: Array<'asc' | 'desc'>
     sortBy?: Array<sortBy> | 'random'
 }
-/*  */
 export async function reqLibrary({
     libName = '',
     path = '',
@@ -136,6 +133,8 @@ export async function reqLibrary({
         } as LibQuery,
     })) as libraryData
 }
+
+/*  */
 
 export interface itemQuery {
     display: 'video' | 'file'
@@ -173,11 +172,11 @@ export interface fontInfo {
     url: string
     name: string
 }
-
 export interface chaptersInfo {
     title: string
     start: number
 }
+
 export async function reqItemSrc(data: VideoQueryParams): Promise<VideoSrc>
 export async function reqItemSrc(data: itemQuery): Promise<ItemSrc>
 export async function reqItemSrc(data: itemQuery | VideoQueryParams): Promise<ItemSrc | VideoSrc> {
@@ -191,3 +190,26 @@ export const reqPoster = async (path: string): Promise<Blob> =>
     requests.get(`/library/poster?path=` + encodeURIComponent(path), {
         responseType: 'blob',
     })
+
+export interface settings {
+    server: {
+        serverPort: number
+        ffmpegPath: string
+        tempPath: string
+        cert: string
+        key: string
+        debug: boolean
+        dev: boolean
+        base: string
+    }
+    transcode: {
+        platform: string
+        bitrate: number
+        autoBitrate: boolean
+        advAccel: boolean
+        encode: string
+        customInputCommand: string
+        customOutputCommand: string
+    }
+}
+export const reqSettings = async (): Promise<settings> => requests.get(`/settings`)

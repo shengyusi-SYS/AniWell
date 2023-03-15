@@ -111,7 +111,7 @@ export type MapRule = { [key in MapResult as string]: string } & MapResult
 
 export interface LibraryTree extends MapResult {
     //前端参考基准
-    label: string
+    libName: string
     children?: Array<LibraryTree>
 }
 
@@ -139,7 +139,7 @@ export default library
 export async function getLibrary(libName: string, libPath?: string): Promise<LibraryTree> {
     if (!libName) {
         const overview = {
-            label: 'overview',
+            libName: 'overview',
             children: [],
         }
         for (const libraryName in library) {
@@ -150,7 +150,7 @@ export async function getLibrary(libName: string, libPath?: string): Promise<Lib
             if (targetLibraryRootDir) {
                 const result = {
                     ...targetLibraryRootDir,
-                    title: libraryName,
+                    libName: libraryName,
                     children: targetLibraryRootDir.children
                         .filter((val, ind) => ind < 10)
                         .map((v) => {
@@ -172,6 +172,7 @@ export async function getLibrary(libName: string, libPath?: string): Promise<Lib
         )
         if (targetLibraryRootDir) {
             const result = {
+                libName,
                 ...targetLibraryRootDir,
                 children: targetLibraryRootDir.children.map((v) => {
                     return { ...v, children: null }

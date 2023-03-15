@@ -3,34 +3,31 @@
 import { useGlobalStore, globalCache } from '@v/stores/global'
 import { storeToRefs } from 'pinia'
 const globalStore = useGlobalStore()
-const { isDesktop } = storeToRefs(globalStore)
+const { isDesktop, theme } = storeToRefs(globalStore)
 const menuOpenned = ref(false)
+const monitorOpenned = ref(false)
 
 const router = useRouter()
 
-const navTo = (e) => {
-    if (e.name) {
-        router.push({ name: e.name, params: { category: 'video' } })
-    } else router.push(e.path)
-}
-const nav = {
-    library: {
-        path: '',
-        icon: '',
-        name: 'library',
-        label: '库',
-    },
-    settings: {
-        path: '',
-        icon: '',
-        name: 'settings',
-        label: '设置',
-    },
-    test: {
-        name: 'test',
-        label: 'test',
-    },
-}
+// const objectToTree = (obj: { [key: string]: unknown }, label = 'tree') => {
+//     const res = {
+//         label,
+//         children: [] as { [key: string]: unknown }[],
+//     }
+//     for (const key in obj) {
+//         const val = obj[key]
+//         if (typeof val != 'object') {
+//             res.children.push({
+//                 label: key,
+//                 value: val,
+//             })
+//         } else {
+//             res.children.push(objectToTree(val, key))
+//         }
+//     }
+//     return res
+// }
+// const themeTree = objectToTree(theme.value)
 </script>
 
 <script lang="ts">
@@ -52,69 +49,112 @@ export default {
                             }); transform-origin:center;transition:transform 0.3s`"
                             @click="menuOpenned = !menuOpenned"
                         >
-                            <IEpExpand v-show="!menuOpenned" />
-                            <IEpFold v-show="menuOpenned" />
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke-width="1.5"
+                                stroke="currentColor"
+                                class="svg-icon"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                                />
+                            </svg>
                         </ElIcon>
                     </ElRow>
                 </ElCol>
-                <ElCol :span="16" class="headerCenter">
-                    <ElRow justify="start">
-                        <ElCol :span="8">
-                            <div>isDesktop:{{ isDesktop }}</div>
-                        </ElCol>
-                        <ElCol :span="16" style="height: 4em; overflow-y: scroll">
-                            <div v-for="msg in globalCache.serverLog.list">{{ msg }}</div>
-                        </ElCol>
-                    </ElRow>
-                </ElCol>
-                <ElCol :span="4" class="headerRight">
-                    <ElRow justify="end"> </ElRow>
-                </ElCol>
+                <div class="headerCenter">headerCenter</div>
+                <div class="header-monitor">
+                    <div @click="monitorOpenned = !monitorOpenned">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="1.5"
+                            stroke="currentColor"
+                            class="svg-icon"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L21.75 12l-4.179 2.25m0 0l4.179 2.25L12 21.75 2.25 16.5l4.179-2.25m11.142 0l-5.571 3-5.571-3"
+                            />
+                        </svg>
+                    </div>
+                    <div v-if="monitorOpenned" class="header-monitor-base col">
+                        <Monitor></Monitor>
+                    </div>
+                </div>
             </ElRow>
         </ElHeader>
         <ElContainer direction="horizontal" class="home-container">
-            <ElAside :class="!isDesktop ? 'overlay' : ''">
-                <ElRow class="menu" style="" :align="'middle'">
-                    <ElCol>
-                        <ElRow v-for="route in nav" class="menu-line" :align="'middle'">
-                            <Transition name="menu-icon">
-                                <ElCol
-                                    v-show="menuOpenned || isDesktop"
-                                    class="menu-icon"
-                                    :span="0.1"
-                                >
-                                    <ElIcon size="2em" @click="navTo(route)"
-                                        ><IMdiHomeOutline
-                                    /></ElIcon>
-                                </ElCol>
-                            </Transition>
-                            <Transition name="menu-title">
-                                <ElCol v-show="menuOpenned" class="menu-title" :span="0.1"
-                                    >{{ route.label }}
-                                </ElCol>
-                            </Transition>
-                        </ElRow>
-                    </ElCol>
-                </ElRow>
+            <ElAside :class="'overlay'">
+                <Transition name="home-navigation">
+                    <div v-show="menuOpenned" class="col home-navigation">
+                        <div class="row home-navigation-nav" @click="router.push({ name: 'home' })">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke-width="1.5"
+                                stroke="currentColor"
+                                class="home-navigation-nav-icon"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+                                />
+                            </svg>
+
+                            <div class="home-navigation-nav-label">主页</div>
+                        </div>
+                        <div
+                            class="row home-navigation-nav"
+                            @click="router.push({ name: 'settings' })"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke-width="1.5"
+                                stroke="currentColor"
+                                class="home-navigation-nav-icon"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"
+                                />
+                            </svg>
+                            <div class="home-navigation-nav-label">设置</div>
+                        </div>
+                    </div>
+                </Transition>
             </ElAside>
             <ElMain class="col">
-                <ElScrollbar>
-                    <RouterView v-slot="{ Component, route }">
-                        <template v-if="Component">
-                            <KeepAlive include="Library">
-                                <Suspense>
-                                    <template #default>
-                                        <Component
-                                            :is="Component"
-                                            :key="route.meta.usePathKey ? route.path : undefined"
-                                        />
-                                    </template>
-                                    <template #fallback> Loading... </template>
-                                </Suspense>
-                            </KeepAlive>
-                        </template>
-                    </RouterView>
-                </ElScrollbar>
+                <RouterView
+                    v-slot="{ Component, route }"
+                    class="home-router-view"
+                    :style="isDesktop ? 'padding: 2em' : 'padding: 1em'"
+                >
+                    <template v-if="Component">
+                        <KeepAlive include="Library">
+                            <Suspense>
+                                <template #default>
+                                    <Component
+                                        :is="Component"
+                                        :key="route.meta.usePathKey ? route.path : undefined"
+                                    />
+                                </template>
+                                <template #fallback> Loading... </template>
+                            </Suspense>
+                        </KeepAlive>
+                    </template>
+                </RouterView>
             </ElMain>
         </ElContainer>
     </ElContainer>
@@ -129,38 +169,39 @@ export default {
     .home-container {
         overflow: hidden;
         position: relative;
+
         .el-aside {
-            // color: var(--el-text-color-primary);
-            // position: absolute;
             background: var(--el-bg-color-page);
             width: auto;
-            // height: calc(100vh - 2em);
-            // z-index: 99;
-            // max-width: 30vw;
-            .menu {
+            .home-navigation {
+                width: 10em;
                 overflow: hidden;
-                white-space: nowrap;
-                .menu-title {
-                    width: 6em;
-                    // transform: scaleX(1);
-                    // transform-origin: left;
+                .home-navigation-nav {
+                    height: 4em;
+                    line-height: 2em;
+                    align-items: center;
+                    justify-content: center;
                 }
-                .menu-icon:extend(.menu-title) {
+                .home-navigation-nav-icon {
+                    width: 2em;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .home-navigation-nav-label {
                     width: 4em;
+                    overflow: hidden;
+                    flex-shrink: 0;
                 }
-                .menu-title-enter-active,
-                .menu-title-leave-active,
-                .menu-icon-enter-active,
-                .menu-icon-leave-active {
-                    transition:/*  transform 0.3s ease, */ width 0.3s;
-                }
-                .menu-title-enter-from,
-                .menu-title-leave-to,
-                .menu-icon-enter-from,
-                .menu-icon-leave-to {
-                    width: 0;
-                    // transform: scaleX(0);
-                }
+            }
+            .home-navigation-enter-active,
+            .home-navigation-leave-active {
+                transition:/*  transform 0.3s ease, */ width 0.3s;
+            }
+            .home-navigation-enter-from,
+            .home-navigation-leave-to {
+                width: 0;
+                // transform: scaleX(0);
             }
             &.overlay {
                 position: absolute;
@@ -173,16 +214,20 @@ export default {
             overflow-y: scroll;
             overflow-x: hidden;
         }
+        .home-router-view {
+            padding: 0 2em;
+        }
     }
     .el-header {
         position: relative;
         background-color: var(--el-bg-color-overlay);
-        // color: var(--el-text-color-primary);
         height: 4em;
         max-height: 15vh;
         min-height: 2em;
         padding: 0;
-        -webkit-app-region: drag;
+        .header-monitor {
+            margin: 0 1em;
+        }
     }
 
     .el-footer {

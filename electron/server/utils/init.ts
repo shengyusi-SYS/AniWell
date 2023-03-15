@@ -75,7 +75,7 @@ class Init {
                 let defaultFFmpegDirPath: string
                 if (this.osPlatform == 'win') {
                     defaultFFmpegDirPath =
-                        settings.server.DEV === true
+                        settings.server.dev === true
                             ? './thirdParty/win'
                             : path.resolve('./resources/thirdParty/win')
                 } else if (this.osPlatform == 'lin') {

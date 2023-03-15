@@ -1,5 +1,8 @@
 import { defineStore } from 'pinia'
 import { ReqLibrary, reqLibrary } from '@v/api'
+import { useGlobalStore } from './global'
+import { useWindowSize } from '@vueuse/core'
+const globalStore = useGlobalStore()
 
 //用于刮削判断层级(如需要回溯判断)和前端决定展示方法，不可留空
 export type resultType =
@@ -30,7 +33,7 @@ export interface MapResult extends ScraperResult {
 }
 
 export interface libraryData extends MapResult {
-    label: string
+    libName: string
     total?: number
     children?: libraryData[]
 }
@@ -41,7 +44,21 @@ export const useLibraryStore = defineStore('library', () => {
     const enterLibrary = async (params: ReqLibrary) => {
         const newData = await reqLibrary(params)
         libraryData.value = newData
+        globalStore.setLibraryTheme(newData.libName)
     }
 
-    return { libraryData, enterLibrary }
+    const currentTheme = computed(() => globalStore.theme.library[libraryData?.value.libName])
+
+    const boxTheme = computed({
+        get() {
+            return currentTheme.value[libraryData.value.result] || currentTheme.value.dir
+        },
+        set(val) {
+            if (currentTheme.value[libraryData.value.result]) {
+                globalStore.theme.library[libraryData.value.libName][libraryData.value.result] = val
+            }
+        },
+    })
+
+    return { libraryData, enterLibrary, currentTheme, boxTheme }
 })

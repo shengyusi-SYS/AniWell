@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { useWindowSize, useMediaQuery } from '@vueuse/core'
 import { useCssVar, UseCssVarOptions } from '@vueuse/core'
 import { Ref } from 'vue'
-import { boxLevel } from './library'
+import { boxLevel, resultType } from './library'
 import { LibQuery } from '@v/api'
 
 export interface LibraryConfig {
@@ -17,30 +17,26 @@ export interface sortConfig {
 }
 
 export interface CardTheme {
+    column: number
+    columnGutter: number
+    rowGutter: number
+    pageSize: number
+    shadow: string
+    shadowHover: string
+    fontSize: number
     fontSizeTitle: number
     fontSizeLabel: number
     fontColor: string
     fontColorTitle: string
     fontColorLabel: string
     aspectRatio: number
+    custom?: {
+        backgroundImage?: string
+    }
 }
 
-export interface LibraryTheme {
-    grid: {
-        width: number | Ref<number>
-        height: number | Ref<number>
-        column: number | Ref<number>
-        gutter: string | Ref<string>
-        pageSize: number | Ref<number>
-        shadow: string | Ref<string>
-        shadowHover: string | Ref<string>
-    }
-    dir: CardTheme
-    box0: CardTheme
-    box1: CardTheme
-    box2: CardTheme
-    box3: CardTheme
-    item: CardTheme
+export type LibraryTheme = {
+    [key in resultType]: CardTheme
 }
 
 export interface BaseTheme {
@@ -55,13 +51,10 @@ export interface BaseTheme {
 }
 
 export interface Theme {
-    windowsSize: {
-        width: Ref<number>
-        height: Ref<number>
-    }
     base: BaseTheme
-    current: LibraryTheme
-    [libName: string]: LibraryTheme | BaseTheme | object //to fix
+    library: {
+        [libName: string]: LibraryTheme
+    }
 }
 
 export const defaultLibraryConfig: LibraryConfig = {
@@ -97,66 +90,6 @@ export const defaultLibraryConfig: LibraryConfig = {
     },
 }
 
-const defaultLibraryTheme: LibraryTheme = {
-    grid: {
-        width: 1920,
-        height: 0,
-        column: 3,
-        gutter: '2em',
-        pageSize: 20,
-        shadow: '0 0 35px 5px rgb(0 0 0 / 40%)',
-        shadowHover: '0 0 35px 5px rgb(0 0 0 / 60%)',
-    },
-    dir: {
-        fontSizeTitle: 2,
-        fontSizeLabel: 1.5,
-        fontColor: '#999',
-        fontColorTitle: '#fff',
-        fontColorLabel: '#999',
-        aspectRatio: 3 / 4,
-    },
-    box0: {
-        fontSizeTitle: 2,
-        fontSizeLabel: 1.5,
-        fontColor: '#999',
-        fontColorTitle: '#fff',
-        fontColorLabel: '#999',
-        aspectRatio: 3 / 4,
-    },
-    box1: {
-        fontSizeTitle: 2,
-        fontSizeLabel: 1.5,
-        fontColor: '#999',
-        fontColorTitle: '#fff',
-        fontColorLabel: '#999',
-        aspectRatio: 3 / 4,
-    },
-    box2: {
-        fontSizeTitle: 2,
-        fontSizeLabel: 1.5,
-        fontColor: '#999',
-        fontColorTitle: '#fff',
-        fontColorLabel: '#999',
-        aspectRatio: 3 / 4,
-    },
-    box3: {
-        fontSizeTitle: 2,
-        fontSizeLabel: 1.5,
-        fontColor: '#999',
-        fontColorTitle: '#fff',
-        fontColorLabel: '#999',
-        aspectRatio: 3 / 4,
-    },
-    item: {
-        fontSizeTitle: 2,
-        fontSizeLabel: 1.5,
-        fontColor: '#999',
-        fontColorTitle: '#fff',
-        fontColorLabel: '#999',
-        aspectRatio: 16 / 9,
-    },
-}
-
 export const useGlobalStore = defineStore('global', () => {
     const clientState = reactive({
         minWidthCheck: useMediaQuery('(min-width: 426px)'),
@@ -166,10 +99,102 @@ export const useGlobalStore = defineStore('global', () => {
 
     const isDesktop = computed(() => clientState.minHeightCheck && clientState.minWidthCheck)
 
-    defaultLibraryTheme.grid.column = isDesktop.value ? 5 : 2
+    const def = <T>(a: T, b: T) => (isDesktop.value ? a : b)
+
+    const defaultLibraryTheme: LibraryTheme = {
+        dir: {
+            column: def(5, 1),
+            columnGutter: 2,
+            rowGutter: def(4, 8),
+            pageSize: 20,
+            shadow: '0 0 35px 5px rgb(0 0 0 / 40%)',
+            shadowHover: '0 0 35px 5px rgb(0 0 0 / 60%)',
+            fontSize: def(1, 0.8),
+            fontSizeTitle: 1.5,
+            fontSizeLabel: 1,
+            fontColor: '#999',
+            fontColorTitle: '#fff',
+            fontColorLabel: '#999',
+            aspectRatio: 3 / 4,
+        },
+        box0: {
+            column: def(5, 1),
+            columnGutter: 2,
+            rowGutter: def(4, 8),
+            pageSize: 20,
+            shadow: '0 0 35px 5px rgb(0 0 0 / 40%)',
+            shadowHover: '0 0 35px 5px rgb(0 0 0 / 60%)',
+            fontSize: def(1, 0.8),
+            fontSizeTitle: 1.5,
+            fontSizeLabel: 1,
+            fontColor: '#999',
+            fontColorTitle: '#fff',
+            fontColorLabel: '#999',
+            aspectRatio: 3 / 4,
+        },
+        box1: {
+            column: def(5, 1),
+            columnGutter: 2,
+            rowGutter: def(4, 8),
+            pageSize: 20,
+            shadow: '0 0 35px 5px rgb(0 0 0 / 40%)',
+            shadowHover: '0 0 35px 5px rgb(0 0 0 / 60%)',
+            fontSize: def(1, 0.8),
+            fontSizeTitle: 1.5,
+            fontSizeLabel: 1,
+            fontColor: '#999',
+            fontColorTitle: '#fff',
+            fontColorLabel: '#999',
+            aspectRatio: 3 / 4,
+        },
+        box2: {
+            column: def(5, 1),
+            columnGutter: 2,
+            rowGutter: def(4, 8),
+            pageSize: 20,
+            shadow: '0 0 35px 5px rgb(0 0 0 / 40%)',
+            shadowHover: '0 0 35px 5px rgb(0 0 0 / 60%)',
+            fontSize: def(1, 0.8),
+            fontSizeTitle: 1.5,
+            fontSizeLabel: 1,
+            fontColor: '#999',
+            fontColorTitle: '#fff',
+            fontColorLabel: '#999',
+            aspectRatio: 3 / 4,
+        },
+        box3: {
+            column: def(5, 1),
+            columnGutter: 2,
+            rowGutter: def(4, 8),
+            pageSize: 20,
+            shadow: '0 0 35px 5px rgb(0 0 0 / 40%)',
+            shadowHover: '0 0 35px 5px rgb(0 0 0 / 60%)',
+            fontSize: def(1, 0.8),
+            fontSizeTitle: 1.5,
+            fontSizeLabel: 1,
+            fontColor: '#999',
+            fontColorTitle: '#fff',
+            fontColorLabel: '#999',
+            aspectRatio: 3 / 4,
+        },
+        item: {
+            column: def(5, 2),
+            columnGutter: 2,
+            rowGutter: def(4, 8),
+            pageSize: 20,
+            shadow: '0 0 35px 5px rgb(0 0 0 / 40%)',
+            shadowHover: '0 0 35px 5px rgb(0 0 0 / 60%)',
+            fontSize: def(1, 0.8),
+            fontSizeTitle: 1.5,
+            fontSizeLabel: 1,
+            fontColor: '#999',
+            fontColorTitle: '#fff',
+            fontColorLabel: '#999',
+            aspectRatio: 16 / 9,
+        },
+    }
 
     const theme: Ref<Theme> = ref({
-        windowsSize: useWindowSize(),
         base: {
             backgroundColor: '#2a2a2a',
             backgroundColorL1: '#3a3a3a',
@@ -179,7 +204,7 @@ export const useGlobalStore = defineStore('global', () => {
             fontColorL1: '#fff',
             fontColorD1: '#666',
         },
-        current: defaultLibraryTheme,
+        library: {},
     })
 
     const baseThemeMap: { [varName: string]: string } = {
@@ -192,13 +217,16 @@ export const useGlobalStore = defineStore('global', () => {
         const savedGlobal = localStorage.getItem('global') || false
         const global = savedGlobal ? JSON.parse(savedGlobal) : false
         if (typeof global === 'object' && global.theme) {
-            const userTheme = global.theme.base as BaseTheme
-            if (userTheme) theme.value.base = userTheme
+            const userTheme = global.theme as Theme
+            if (userTheme) theme.value = userTheme
         } else return
     }
 
     const setLibraryTheme = (libName: any) => {
-        theme.value.current = (theme.value[libName] as LibraryTheme) || defaultLibraryTheme
+        if (libName && !theme.value.library[libName]) {
+            theme.value.library[libName] = defaultLibraryTheme
+            return
+        }
     }
 
     const libraryConfig: Ref<{
@@ -227,6 +255,15 @@ export const globalCache = {
                 this.list.pop()
             }
             this.list.unshift(log)
+        },
+    }),
+    serverDelay: reactive({
+        list: [] as Array<string | number>,
+        add(delay: number) {
+            if (this.list.length > 100) {
+                this.list.pop()
+            }
+            this.list.unshift(delay)
         },
     }),
 }

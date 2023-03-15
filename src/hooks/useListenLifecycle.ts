@@ -1,4 +1,5 @@
 export default function useListenLifecycle(name: string) {
+    const start = window.performance.now()
     console.log('useListenLifecycle~~~~~~~~~~~~~~~~~~~' + name)
     onBeforeMount(() => console.log(name + ' - onBeforeMount'))
     onMounted(() => console.log(name + ' - onMounted'))

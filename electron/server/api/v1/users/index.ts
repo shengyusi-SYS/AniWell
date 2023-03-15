@@ -43,7 +43,7 @@ router.post('/login', upload.none(), async (req, res, next) => {
                 res.cookie('refreshToken', signRefreshToken(user), {
                     maxAge: 1000 * 3600 * 24 * 30,
                     httpOnly: true,
-                    secure: !settings.server.DEV,
+                    secure: !settings.server.dev,
                 })
                 res.status(200).end()
                 return
@@ -115,7 +115,7 @@ if (users.first === true) {
                     res.cookie('refreshToken', signRefreshToken(user), {
                         maxAge: 1000 * 3600 * 24 * 30,
                         httpOnly: true,
-                        secure: !settings.server.DEV,
+                        secure: !settings.server.dev,
                     })
                         .status(200)
                         .end()

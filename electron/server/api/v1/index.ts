@@ -4,6 +4,7 @@ const router = express.Router()
 import users from './users'
 import library from './library'
 import video from './video'
+import settings from './settings'
 import auth from '@s/modules/auth'
 import { signAccessToken, verifyToken } from '@s/utils/jwt'
 import { users as usersStore } from '@s/store/users'
@@ -51,6 +52,8 @@ router.use('/server', async (req, res, next) => {
 router.use('/video', video)
 
 router.use('/library', library)
+
+router.use('/settings', settings)
 
 export default router
 
