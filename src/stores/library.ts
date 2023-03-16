@@ -51,7 +51,10 @@ export const useLibraryStore = defineStore('library', () => {
 
     const boxTheme = computed({
         get() {
-            return currentTheme.value[libraryData.value.result] || currentTheme.value.dir
+            if (currentTheme.value) {
+                return currentTheme.value[libraryData.value.result] || currentTheme.value.dir
+            }
+            return {}
         },
         set(val) {
             if (currentTheme.value[libraryData.value.result]) {

@@ -16,11 +16,14 @@ export default {
 
 <template>
     <div class="item-base">
-        <RouterView></RouterView>
+        <RouterView v-slot="{ Component, route }" class="item-router-view">
+            <Component :is="Component" :key="route.name || route.path" />
+        </RouterView>
     </div>
 </template>
 
 <style lang="less" scoped>
 .item-base {
+    height: 100%;
 }
 </style>

@@ -3,20 +3,25 @@ import { reqItemSrc, reqStopTranscode, VideoSrc, subInfo, fontInfo, chaptersInfo
 import { useVideoPlayerStore } from '@v/stores/videoPlayer'
 import { useElementSize } from '@vueuse/core'
 import useListenLifecycle from '@v/hooks/useListenLifecycle'
-import { storeToRefs } from 'pinia'
-import { reqLibrary } from '@v/api'
-import { Ref } from 'vue'
 import { libraryData } from '@v/stores/library'
 import { testVideoMime } from '@v/utils'
+
 import Hls from 'hls.js'
 import DPlayer from 'dplayer'
 import libassWorkerUrl from '@v/lib/ass/libassjs-worker.js?url'
 import libassLegacyWorkerUrl from '@v/lib/ass/libassjs-worker-legacy.js?url'
 import libassWASMUrl from '@v/lib/ass/subtitles-octopus-worker.wasm?url'
 import SubtitlesOctopus from '@v/lib/ass/subtitles-octopus'
+
+// const router = useRouter()
+// onBeforeRouteUpdate((to, from) => {
+//     console.log(to, from)
+// })
+
 const videoPlayerStore = useVideoPlayerStore()
 // const { videoSize } = storeToRefs(videoPlayerStore)
 // const controller = videoPlayerStore.controller
+
 const uuidReg =
     /(?<uuid>[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/
 const initialPlayer = ref()
@@ -175,7 +180,7 @@ useListenLifecycle('videoPlayer')
 onMounted(async () => {
     await controller.setPlaylist(videoPlayerStore.itemList)
     controller.setVideoElement(initialPlayer.value)
-    controller.autoPlay()
+    await controller.autoPlay()
 })
 
 onBeforeUnmount(() => {
@@ -200,7 +205,7 @@ export default {
 
 <template>
     <div ref="player" class="video-player-base">
-        {{ videoSize }}
+        <!-- {{ videoSize }} -->
         <div ref="initialPlayer"></div>
         <!-- <div class="video-player-overlay" @click="test">fawfewgserge</div> -->
     </div>

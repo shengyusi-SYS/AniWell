@@ -21,8 +21,7 @@ export const useItemStore = defineStore('item', () => {
         if (display === 'video') {
             try {
                 videoStore.itemList = items
-                router.push({ name: 'videoPlayer', query: router.currentRoute.value.query })
-                // await videoStore.controller.setPlaylist(items, libName)
+                await router.push({ name: 'videoPlayer', query: router.currentRoute.value.query })
             } catch (error) {
                 console.log(error)
             }

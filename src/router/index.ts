@@ -10,7 +10,7 @@ import { proxyGlobalData, globalCache } from '@v/stores/global'
 
 import { useSessionStorage } from '@vueuse/core'
 
-const routes = [
+const routes: VueRouter.RouterOptions['routes'] = [
     { path: '/', redirect: '/login' },
     {
         path: '/welcome',

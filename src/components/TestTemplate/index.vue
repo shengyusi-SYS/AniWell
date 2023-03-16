@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import useListenLifeCycle from '@v/hooks/useListenLifeCycle'
-useListenLifeCycle()
+useListenLifeCycle('test')
 </script>
 
 <script lang="ts">

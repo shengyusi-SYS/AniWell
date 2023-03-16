@@ -6,6 +6,7 @@ import { useItemStore } from '@v/stores/item'
 import { libraryData, useLibraryStore } from '@v/stores/library'
 import { useDraggable, useElementSize, useWindowSize } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
+import { ComputedRef } from 'vue'
 // import VideoPlayer from '@v/components/VideoPlayer/index.vue'
 // import { useElementSize } from '@v/hooks/useElementSize'
 // import isDesktop from '@h/useIsDesktop'
@@ -20,7 +21,6 @@ const { theme, libraryConfig } = storeToRefs(globalStore)
 const libraryStore = useLibraryStore()
 const { libraryData, currentTheme, boxTheme } = storeToRefs(libraryStore)
 const enterLibrary = libraryStore.enterLibrary
-await enterLibrary({ libName: '' })
 
 const itemStore = useItemStore()
 
@@ -62,16 +62,17 @@ let sortConfig: sortConfig = {
     sort: ['asc'],
     sortBy: ['title'],
 }
-let currentLibName = computed(() => libraryData.value.libName || currentLibName.value)
+let currentLibName: ComputedRef<string> = computed(
+    () => libraryData.value.libName || currentLibName.value,
+)
 async function openCard(libName: string, cardData: libraryData, index?: number) {
     openingCard = true
     if (cardData.result === 'item') {
         if (libraryData.value.children) {
             const cards = libraryData.value.children.filter((v) => v.display === cardData.display)
             if (typeof index === 'number') cards.push(...cards.splice(0, index))
-            router.push({ name: 'item', query: { title: cardData.title, display: 'video' } })
             await itemStore.setItemList(cards, {
-                libName: currentLibName,
+                libName: currentLibName.value,
                 display: cardData.display || 'file',
             })
         }
@@ -81,16 +82,16 @@ async function openCard(libName: string, cardData: libraryData, index?: number) 
             libraryConfig.value[libName] = defaultLibraryConfig
         }
         sortConfig = libraryConfig.value[libName]?.[boxLevel]
-        const pageSize = boxTheme.value.pageSize
+
         const query = {
             libName,
             path: cardData.path,
             ...sortConfig,
             result: cardData.result,
             start: 0,
-            end: pageSize,
+            end: theme.value.library[libName][cardData.result].pageSize || pageSize.value || 20,
         }
-        console.log(query)
+        // console.log(query)
 
         router.push({
             name: 'library',
@@ -99,7 +100,9 @@ async function openCard(libName: string, cardData: libraryData, index?: number) 
     }
 }
 
-onMounted(() => {})
+onMounted(() => {
+    enterLibrary({ libName: '' })
+})
 
 onBeforeRouteUpdate(async (to, from, next) => {
     // console.log(to.query)

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // import isDesktop from '@h/useIsDesktop'
+import useListenLifecycle from '@v/hooks/useListenLifecycle'
 import { useGlobalStore, globalCache } from '@v/stores/global'
 import { storeToRefs } from 'pinia'
 const globalStore = useGlobalStore()
@@ -28,6 +29,8 @@ const router = useRouter()
 //     return res
 // }
 // const themeTree = objectToTree(theme.value)
+
+// useListenLifecycle('Home')
 </script>
 
 <script lang="ts">
@@ -141,19 +144,13 @@ export default {
                     class="home-router-view"
                     :style="isDesktop ? 'padding: 2em' : 'padding: 1em'"
                 >
-                    <template v-if="Component">
-                        <KeepAlive include="Library">
-                            <Suspense>
-                                <template #default>
-                                    <Component
-                                        :is="Component"
-                                        :key="route.meta.usePathKey ? route.path : undefined"
-                                    />
-                                </template>
-                                <template #fallback> Loading... </template>
-                            </Suspense>
-                        </KeepAlive>
-                    </template>
+                    <KeepAlive include="Library">
+                        <Component
+                            :is="Component"
+                            v-if="route.name === 'library'"
+                            :key="route.name || route.path"
+                        />
+                    </KeepAlive>
                 </RouterView>
             </ElMain>
         </ElContainer>
