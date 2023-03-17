@@ -266,6 +266,8 @@ export const globalCache = {
             this.list.unshift(delay)
         },
     }),
+    appElement: ref(),
+    alertMessages: ref(''),
 }
 
 const globalData = {

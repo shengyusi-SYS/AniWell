@@ -5,7 +5,7 @@ import { storeToRefs } from 'pinia'
 import { useDark, useToggle } from '@vueuse/core'
 import { proxyGlobalData } from '@v/stores/global'
 import useListenLifecycle from './hooks/useListenLifecycle'
-
+// import { ElMessage } from 'element-plus'
 const isDark = useDark()
 const toggleDark = useToggle(isDark)
 toggleDark(true)
@@ -17,6 +17,16 @@ const { theme } = storeToRefs(store)
 store.$subscribe((mutation, state) => {
     // 每当状态发生变化时，将整个 state 持久化到本地存储。
     localStorage.setItem('global', JSON.stringify(state))
+})
+
+watch(globalCache.alertMessages, (val) => {
+    if (val) {
+        ElMessage.error({
+            message: val,
+            grouping: true,
+        })
+        globalCache.alertMessages.value = ''
+    }
 })
 
 onMounted(() => {

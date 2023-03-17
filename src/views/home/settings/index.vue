@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reqChangeSettings } from '@v/api'
 import useListenLifecycle from '@v/hooks/useListenLifecycle'
 import { useGlobalStore } from '@v/stores/global'
 import { useSettingsStore } from '@v/stores/settings'
@@ -9,6 +10,15 @@ const globalStore = useGlobalStore()
 const store = useSettingsStore()
 const { settings } = storeToRefs(store)
 store.getSettings()
+
+const changeSettings = async () => {
+    try {
+        await reqChangeSettings(settings.value)
+    } catch (error) {}
+    try {
+        await store.getSettings()
+    } catch (error) {}
+}
 
 const settingsTemplate = {
     server: {
@@ -196,7 +206,7 @@ export default {
                 </ElTabPane>
             </template>
         </ElTabs>
-        <ElButton type="primary" class="settings-save">保存</ElButton>
+        <ElButton type="primary" class="settings-save" @click="changeSettings">保存</ElButton>
     </div>
 </template>
 

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { globalCache } from '@v/stores/global'
+
 //配置项
 const requests = axios.create({
     baseURL:
@@ -27,6 +28,10 @@ requests.interceptors.response.use(
         } else return res.data
     },
     (error) => {
+        const errorData = error.response.data
+        if (errorData.alert) {
+            globalCache.alertMessages.value = errorData.error
+        }
         return Promise.reject(error)
     },
 )

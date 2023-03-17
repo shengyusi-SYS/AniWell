@@ -121,7 +121,7 @@ export const changeLevel = async (debug = false) => {
         }
     }
     log4js.configure(config)
-    logger.debug('changeLevel~~~~~~~~~~~~~~~~~~~~~~~~~~')
+    logger.info('changeLevel~~~~~~~~~~~~~~~~~~~~~~~~~~debug=' + debug)
 }
 export const syncLogger = {
     socket: undefined,

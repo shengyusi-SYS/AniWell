@@ -11,7 +11,6 @@ export const useSettingsStore = defineStore('settings', () => {
             cert: '',
             key: '',
             debug: false,
-            base: '',
         },
         transcode: {
             platform: 'nvidia',

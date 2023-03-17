@@ -45,6 +45,9 @@ export const useLibraryStore = defineStore('library', () => {
         const newData = await reqLibrary(params)
         libraryData.value = newData
         globalStore.setLibraryTheme(newData.libName)
+        if (newData.libName === 'overview') {
+            newData.children?.map((v) => v.libName).forEach(globalStore.setLibraryTheme)
+        }
     }
 
     const currentTheme = computed(() => globalStore.theme.library[libraryData?.value.libName])

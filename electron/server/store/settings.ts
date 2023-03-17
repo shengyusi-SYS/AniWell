@@ -2,8 +2,30 @@ import path, { resolve } from 'path'
 import paths from '@s/utils/envPath'
 import Store from 'electron-store'
 import throttle from 'lodash/throttle'
-import { changeLevel } from '@s/utils/logger'
+import { changeLevel, logger } from '@s/utils/logger'
+import { accessSync } from 'fs'
 const dev = Boolean(import.meta.env.DEV)
+
+export interface Settings {
+    server: {
+        serverPort: number
+        ffmpegPath: string
+        tempPath: string
+        cert: string
+        key: string
+        debug: boolean
+        dev: boolean
+    }
+    transcode: {
+        platform: string
+        bitrate: number
+        autoBitrate: boolean
+        advAccel: boolean
+        encode: string
+        customInputCommand: string
+        customOutputCommand: string
+    }
+}
 
 const store = new Store({
     name: 'settings',
@@ -17,7 +39,6 @@ const store = new Store({
             key: resolve(paths.data, 'ssl', 'domain.key'),
             debug: false,
             dev: dev,
-            base: dev ? resolve('.') : '../..',
         },
         transcode: {
             platform: 'nvidia',
@@ -31,13 +52,23 @@ const store = new Store({
     },
 })
 
+const accessPath = (path) => {
+    try {
+        accessSync(path)
+        return true
+    } catch (error) {
+        return false
+    }
+}
+
 const settingsChecker = {
     serverPort: (v) => typeof v === 'number',
-    ffmpegPath: (v) => typeof v === 'string',
-    tempPath: (v) => typeof v === 'string',
-    cert: (v) => typeof v === 'string',
-    key: (v) => typeof v === 'string',
+    ffmpegPath: (v) => accessPath(v),
+    tempPath: (v) => accessPath(v),
+    cert: (v) => accessPath(v),
+    key: (v) => accessPath(v),
     debug: (v) => typeof v === 'boolean',
+    dev: (v) => v === dev,
     platform: (v) => typeof v === 'string',
     bitrate: (v) => typeof v === 'number',
     autoBitrate: (v) => typeof v === 'boolean',
@@ -50,8 +81,8 @@ const settingsChecker = {
 const save = throttle(() => {
     store.clear()
     store.set(settings)
-    console.log('saved')
-}, 3000)
+    logger.debug('newSettings saved', settings)
+}, 500)
 
 const settings = new Proxy(store.store, {
     get(target, key) {
@@ -66,7 +97,7 @@ const settings = new Proxy(store.store, {
                 set(target, key, value, reciver) {
                     let res
                     if (settingsChecker[key] == undefined) {
-                        res = Reflect.set(target, key, value)
+                        res = false
                     } else if (typeof key === 'string' && settingsChecker[key](value)) {
                         if (key === 'dev') {
                             res = Reflect.set(target, key, dev)
@@ -77,6 +108,9 @@ const settings = new Proxy(store.store, {
                             changeLevel(value)
                         }
                     } else res = false
+                    if (res === false) {
+                        throw new TypeError('settings ' + key + ' error ' + value)
+                    }
                     if (res === true) save()
                     return res
                 },
@@ -84,6 +118,9 @@ const settings = new Proxy(store.store, {
         } else return Reflect.get(target, key)
     },
     set(target, key, value) {
+        if (!['server', 'transcode'].includes(key as string)) {
+            return true
+        }
         const res = Reflect.set(target, key, value)
         if (res === true) save()
         return res

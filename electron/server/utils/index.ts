@@ -225,38 +225,41 @@ const deepMerge: <T>(
     if (!(depthLimit == 0) && depth >= depthLimit) {
         return toB
     }
-    if (toB instanceof Object && addA instanceof Object) {
-        if (toB instanceof Array && addA instanceof Array) {
-            addA.forEach((v) => {
-                const addVal = v
-                let exist
-                if (keyword) {
-                    exist = toB.find((val) => val[keyword] === v[keyword])
-                } else exist = toB.find((val) => val === v)
-                if (!exist) {
-                    toB.push(addVal)
-                } else {
-                    if (typeof exist == 'object' && typeof addVal == 'object') {
-                        deepMerge(exist, addVal, { keyword, depth: depth + 1, depthLimit })
-                    }
+
+    if (toB instanceof Array && addA instanceof Array) {
+        addA.forEach((v) => {
+            const addVal = v
+            let exist
+            if (keyword) {
+                exist = toB.find((val) => val[keyword] === v[keyword])
+            } else exist = toB.find((val) => val === v)
+            if (!exist) {
+                toB.push(addVal)
+            } else {
+                if (typeof exist == 'object' && typeof addVal == 'object') {
+                    deepMerge(exist, addVal, { keyword, depth: depth + 1, depthLimit })
                 }
-            })
-        } else {
-            for (const key in addA) {
-                const exist = toB[key]
-                const addVal = addA[key]
-                if (!exist) {
+            }
+        })
+    } else if (
+        (toB instanceof Object && addA instanceof Object) ||
+        (typeof toB === 'object' && typeof addA === 'object')
+    ) {
+        for (const key in addA) {
+            const exist = toB[key]
+            const addVal = addA[key]
+            if (!exist) {
+                toB[key] = addVal
+            } else {
+                if (typeof exist == 'object' && typeof addVal == 'object') {
+                    deepMerge(exist, addVal, { keyword, depth: depth + 1, depthLimit })
+                } else if (exist !== addVal) {
                     toB[key] = addVal
-                } else {
-                    if (typeof exist == 'object' && typeof addVal == 'object') {
-                        deepMerge(exist, addVal, { keyword, depth: depth + 1, depthLimit })
-                    } else if (exist !== addVal) {
-                        toB[key] = addVal
-                    }
                 }
             }
         }
     }
+
     return toB
 }
 
@@ -272,12 +275,15 @@ async function copyFile(oldPath, newPath) {
 
 export function toNumber<T>(val): T | number {
     const reg = /^(-?\d*\.?\d*)$/g
+    if (val === '') {
+        return val
+    }
     if (typeof val === 'string' && reg.test(val)) {
         return Number(val)
     } else return val
 }
 
-export function toNumberDeep(obj, ignore: string[] = ['level']) {
+export function toNumberDeep<T>(obj: T, ignore: string[] = ['level']): T {
     if (obj instanceof Array) {
         obj.forEach((v, i, a) => {
             if (typeof v === 'object') {

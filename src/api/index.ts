@@ -199,8 +199,6 @@ export interface settings {
         cert: string
         key: string
         debug: boolean
-        dev: boolean
-        base: string
     }
     transcode: {
         platform: string
@@ -213,3 +211,6 @@ export interface settings {
     }
 }
 export const reqSettings = async (): Promise<settings> => requests.get(`/settings`)
+
+export const reqChangeSettings = async (newSettings: settings): Promise<settings> =>
+    requests.post(`/settings`, newSettings)

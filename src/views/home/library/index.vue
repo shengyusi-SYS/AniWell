@@ -94,9 +94,9 @@ async function openCard(libName: string, cardData: libraryData, index?: number) 
             libName,
             path: cardData.path,
             ...sortConfig,
-            result: cardData.result,
+            result: boxLevel,
             start: 0,
-            end: theme.value.library[libName][cardData.result].pageSize || pageSize.value || 20,
+            end: theme.value.library[libName][boxLevel].pageSize || pageSize.value || 20,
         }
         // console.log(query)
 
