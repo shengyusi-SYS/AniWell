@@ -36,22 +36,28 @@ let pageEnd = computed(() => pageStart.value + pageSize.value)
 let openingCard = false
 let changePagination = false
 let historyBack = false
-const paginationQuery = () => {
+const paginationQuery = (replace = false) => {
     if (openingCard === false && historyBack === false) {
         changePagination = true
-        router.push({
+        const opt = {
             ...currentRouter.value,
             query: { ...currentRouter.value.query, start: pageStart.value, end: pageEnd.value },
-        })
+        }
+        if (replace) {
+            router.replace(opt)
+        } else router.push(opt)
     }
 }
 
 const sizeChange = watch(pageSize, (newSize, oldSize) => {
+    console.log('sizeChange', newSize, oldSize)
+
     if (oldSize != undefined) {
-        paginationQuery()
+        paginationQuery(true)
     }
 })
 const pageChange = watch(currentPage, (newPage, oldPage) => {
+    console.log('pageChange', newPage, oldPage)
     pageStart.value = (newPage - 1) * pageSize.value || 0
     paginationQuery()
 })
@@ -75,6 +81,7 @@ async function openCard(libName: string, cardData: libraryData, index?: number) 
                 libName: currentLibName.value,
                 display: cardData.display || 'file',
             })
+            openingCard = false
         }
     } else {
         let boxLevel = cardData.result
@@ -102,6 +109,12 @@ async function openCard(libName: string, cardData: libraryData, index?: number) 
 
 onMounted(() => {
     enterLibrary({ libName: '' })
+})
+
+onActivated(() => {
+    if (currentRouter.value.query.libName == undefined) {
+        enterLibrary({ libName: '' })
+    }
 })
 
 onBeforeRouteUpdate(async (to, from, next) => {
@@ -179,7 +192,6 @@ export default {
                     <div>
                         <ElRow>
                             <ElCol
-                                :span="4"
                                 justify="start"
                                 class="library-overview-title"
                                 style="

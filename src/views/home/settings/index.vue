@@ -146,7 +146,7 @@ export default {
                 >
                     <template v-for="(optTemplate, optName) in tpl" :key="optName">
                         <div
-                            v-if="optName !== 'label'"
+                            v-if="typeof optTemplate === 'object'"
                             class="settings-tab-pane-line"
                             :class="globalStore.isDesktop ? 'row' : 'col'"
                         >
@@ -169,7 +169,6 @@ export default {
                                     />
                                 </svg>
                             </div>
-
                             <ElInput
                                 v-if="optTemplate.type === 'text' || optTemplate.type === 'number'"
                                 v-model="settings[tab][optName]"
@@ -179,10 +178,11 @@ export default {
                             >
                             </ElInput>
                             <ElSelect
-                                v-if="optTemplate.type === 'select'"
+                                v-else-if="optTemplate.type === 'select'"
+                                :key="optName"
                                 v-model="settings[tab][optName]"
                                 class="settings-tab-pane-input"
-                                :placeholder="optTemplate.selection[0].label"
+                                :placeholder="optTemplate.selection[0].label || ''"
                                 size="large"
                             >
                                 <ElOption

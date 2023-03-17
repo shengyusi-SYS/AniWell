@@ -94,49 +94,55 @@ export default {
             </ElRow>
         </ElHeader>
         <ElContainer direction="horizontal" class="home-container">
-            <ElAside :class="'overlay'">
-                <Transition name="home-navigation">
-                    <div v-show="menuOpenned" class="col home-navigation">
-                        <div class="row home-navigation-nav" @click="router.push({ name: 'home' })">
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke-width="1.5"
-                                stroke="currentColor"
-                                class="home-navigation-nav-icon"
+            <ElAside v-show="menuOpenned" :class="'overlay'">
+                <div class="row home-aside">
+                    <Transition name="home-navigation">
+                        <div v-show="menuOpenned" class="col home-navigation">
+                            <div
+                                class="row home-navigation-nav"
+                                @click="router.push({ name: 'home' })"
                             >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
-                                />
-                            </svg>
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke-width="1.5"
+                                    stroke="currentColor"
+                                    class="home-navigation-nav-icon"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+                                    />
+                                </svg>
 
-                            <div class="home-navigation-nav-label">主页</div>
-                        </div>
-                        <div
-                            class="row home-navigation-nav"
-                            @click="router.push({ name: 'settings' })"
-                        >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke-width="1.5"
-                                stroke="currentColor"
-                                class="home-navigation-nav-icon"
+                                <div class="home-navigation-nav-label">主页</div>
+                            </div>
+                            <div
+                                class="row home-navigation-nav"
+                                @click="router.push({ name: 'settings' })"
                             >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"
-                                />
-                            </svg>
-                            <div class="home-navigation-nav-label">设置</div>
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke-width="1.5"
+                                    stroke="currentColor"
+                                    class="home-navigation-nav-icon"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"
+                                    />
+                                </svg>
+                                <div class="home-navigation-nav-label">设置</div>
+                            </div>
                         </div>
-                    </div>
-                </Transition>
+                    </Transition>
+                    <div class="home-aside-mask" @click="menuOpenned = false"></div>
+                </div>
             </ElAside>
             <ElMain class="col">
                 <RouterView
@@ -147,7 +153,7 @@ export default {
                     <KeepAlive include="Library">
                         <Component
                             :is="Component"
-                            v-if="route.name === 'library'"
+                            v-if="['library', 'settings'].includes(route.name)"
                             :key="route.name || route.path"
                         />
                     </KeepAlive>
@@ -168,9 +174,17 @@ export default {
         position: relative;
 
         .el-aside {
-            background: var(--el-bg-color-page);
             width: auto;
+            height: 100%;
+            .home-aside {
+                height: 100%;
+            }
+            .home-aside-mask {
+                flex-grow: 1;
+                background-color: rgba(0, 0, 0, 0.2);
+            }
             .home-navigation {
+                background: var(--el-bg-color-page);
                 width: 10em;
                 overflow: hidden;
                 .home-navigation-nav {
@@ -204,6 +218,7 @@ export default {
                 position: absolute;
                 z-index: 100;
                 height: 100%;
+                width: 100%;
             }
         }
         .el-main {
