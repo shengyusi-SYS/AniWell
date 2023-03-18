@@ -11,6 +11,7 @@ import paths from '@s/utils/envPath'
 import library, { getLibrary, MapResult } from '@s/store/library'
 import shuffle from 'lodash/shuffle'
 import { orderBy } from 'lodash'
+import { ScraperConfig } from '@s/modules/scraper'
 
 const router = express.Router()
 
@@ -73,17 +74,7 @@ router.use('/poster', async (req, res, next) => {
     try {
         if ((await getFileType(filePath))?.type === 'image') {
             try {
-                //static自带了etag缓存
-                // const ifModifiedSince = req.headers['if-modified-since']
-                // const mtime = (await stat(filePath)).mtime.toUTCString()
-                // if (mtime === ifModifiedSince) {
-                //     res.status(304).end()
-                // } else {
-                res
-                    // .header('Cache-Control', `no-cache`)
-                    // .header('Last-Modified', mtime)
-                    .sendFile(path.resolve(filePath))
-                // }
+                res.sendFile(path.resolve(filePath))
                 return
             } catch (error) {
                 res.status(404).json({})
@@ -120,5 +111,34 @@ router.post('/item', async (req, res, next) => {
         logger.error('/library/item', error)
         res.status(500).json({ message: '处理失败', alert: true })
     }
+})
+
+router.get('/manager', async (req, res) => {
+    const libraryList = Object.values(library).map((v) => ({
+        name: v.name,
+        rootPath: v.rootPath,
+        mapFile: v.mapFile,
+        mapDir: v.mapDir,
+        config: v.config,
+    }))
+    res.json(libraryList)
+})
+
+router.post('/manager', async (req, res) => {
+    const scraperConfig: ScraperConfig = req.body
+    if (!scraperConfig.name || scraperConfig.name === 'overview') {
+        res.status(400).json({ error: '资源库名称错误', alert: true })
+        return
+    }
+    if (!['anime', 'video'].includes(scraperConfig.category)) {
+        res.status(400).json({ error: '此类别无可用刮削器', alert: true })
+    }
+    try {
+        await access(scraperConfig.rootPath)
+    } catch (error) {
+        res.status(400).json({ error: '根路径错误', alert: true })
+    }
+    console.log(scraperConfig)
+    res.end()
 })
 export default router

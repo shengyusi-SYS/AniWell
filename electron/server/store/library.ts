@@ -29,6 +29,7 @@ export interface Ilibrary {
     [libraryName: string]: {
         name: string //库名，唯一
         rootPath: string //库根路径，为用户添加库时选定的路径
+        category: 'video' | 'anime'
         flatFile: {
             //扁平化存储，方便刮削时发请求、以及库的查询与更新
             [path: string]: FileMetadata
@@ -103,15 +104,18 @@ export interface MapResult extends ScraperResult {
     title: string
     path: string
     result: resultType
-    order: number
+    order?: number //用于排序
     locked?: boolean //用于防止覆写用户设定
 }
 
-export type MapRule = { [key in MapResult as string]: string } & MapResult
+export interface MapRule {
+    [key: keyof MapResult]: string
+}
 
 export interface LibraryTree extends MapResult {
     //前端参考基准
     libName: string
+    label: string
     children?: Array<LibraryTree>
 }
 
@@ -136,7 +140,7 @@ const library: Ilibrary = shallowProxy(store.store, (method, { target, key }) =>
 
 export default library
 
-export async function getLibrary(libName: string, libPath?: string): Promise<LibraryTree> {
+export async function getLibrary(libName?: string, libPath?: string): Promise<LibraryTree> {
     if (!libName) {
         const overview = {
             libName: 'overview',

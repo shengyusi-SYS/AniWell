@@ -1,6 +1,6 @@
 import requests from './request'
 import bcrypt from 'bcryptjs'
-import { libraryData } from '@v/stores/library'
+import { libraryData, resultType } from '@v/stores/library'
 import { globalCache, proxyGlobalData } from '@v/stores/global'
 import { io } from 'socket.io-client'
 
@@ -212,5 +212,49 @@ export interface settings {
 }
 export const reqSettings = async (): Promise<settings> => requests.get(`/settings`)
 
-export const reqChangeSettings = async (newSettings: settings): Promise<settings> =>
+export const reqChangeSettings = async (newSettings: settings): Promise<void> =>
     requests.post(`/settings`, newSettings)
+
+export interface libraryInfo {
+    name: string
+    rootPath: string
+    mapFile: object
+    mapDir: object
+    config: object
+}
+export const reqLibraryList = async (): Promise<libraryInfo[]> => requests.get(`/library/manager`)
+
+export interface ScraperResult {
+    title?: string //前端展示的名称，刮削时产生，默认为不带后缀的文件名或文件夹名
+    result?: resultType
+    display?: string //result为item时必要，与前端展示功能对应，当前可用:"video"
+    poster?: string //海报图绝对路径
+    parentTitle?: string //用于判断box类的title
+    [key: string]: unknown //预留，用于不同result时的附加刮削信息，具体展示由前端决定
+}
+export interface MapResult extends ScraperResult {
+    title: string
+    path: string
+    result: resultType
+    order: number
+    locked?: boolean //用于防止覆写用户设定
+}
+export interface MapRule {
+    [key: keyof MapResult]: string
+}
+export interface libraryConfig {
+    library: {}
+    [scraperName: string]: {
+        overwrite?: boolean
+    }
+}
+export interface ScraperConfig {
+    rootPath: string
+    name: string
+    category: 'video' | 'anime'
+    mapFile?: MapRule
+    mapDir?: MapRule
+    config?: libraryConfig
+}
+export const reqAddLibrary = async (scraperConfig: ScraperConfig): Promise<void> =>
+    requests.post(`/library/manager`, scraperConfig)

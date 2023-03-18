@@ -65,6 +65,11 @@ const routes: VueRouter.RouterOptions['routes'] = [
                 name: 'settings',
                 component: () => import('@v/views/home/settings/index.vue'),
             },
+            {
+                path: 'libraryManager',
+                name: 'libraryManager',
+                component: () => import('@v/views/home/libraryManager/index.vue'),
+            },
         ],
     },
 

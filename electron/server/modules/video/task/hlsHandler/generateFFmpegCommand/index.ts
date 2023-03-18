@@ -350,7 +350,7 @@ export default function generateFfmpegCommand(videoInfo: VideoInfo) {
             }"`
         }
         // }
-        if ((videoInfo.codec == 'h264' && notSupport) || !advAccel) {
+        if (notSupport || !advAccel) {
             // filter = `-vf "format=yuv420p"`
             filter = ''
             // hwaccelParams=[]

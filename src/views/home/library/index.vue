@@ -19,7 +19,7 @@ const globalStore = useGlobalStore()
 const { theme, libraryConfig } = storeToRefs(globalStore)
 
 const libraryStore = useLibraryStore()
-const { libraryData, currentTheme, boxTheme } = storeToRefs(libraryStore)
+const { libraryData, currentTheme, boxTheme, themeHelper } = storeToRefs(libraryStore)
 const enterLibrary = libraryStore.enterLibrary
 
 const itemStore = useItemStore()
@@ -180,13 +180,12 @@ export default {
     <div ref="library" class="library-base col">
         <ElScrollbar>
             <!-- <div>{{ fontSize }}</div> -->
-            <ElSlider
-                v-if="false"
-                v-model="boxTheme.column"
-                :max="10"
-                :min="1"
-                style="width: 80%"
-            />
+            <div v-if="themeHelper && libraryData.result" class="row library-themeHelper">
+                <div class="library-result">
+                    {{ libraryData.result }}
+                </div>
+                <ElSlider v-model="boxTheme.column" :max="10" :min="1" style="width: 80%" />
+            </div>
             <div v-if="libraryData.libName === 'overview'" class="library-overview col">
                 <template v-for="lib in libraryData.children" :key="lib.path">
                     <div>
@@ -334,6 +333,16 @@ export default {
     font-size: v-bind('boxTheme.fontSizeTitle');
     display: flex;
     flex-direction: column;
+    .library-themeHelper {
+        height: 4em;
+        justify-content: space-evenly;
+        align-items: center;
+        .library-result {
+            height: 1.5em;
+            padding: 0.1em 0.3em;
+            background-color: var(--el-color-primary);
+        }
+    }
     .library-pagination {
         position: fixed;
         bottom: 2em;

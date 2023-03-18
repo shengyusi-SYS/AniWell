@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import { libraryData, useLibraryStore } from '@v/stores/library'
 
 const libraryStore = useLibraryStore()
-const { libraryData } = storeToRefs(libraryStore)
+const { libraryData, themeHelper } = storeToRefs(libraryStore)
 const currentTheme = ref({})
 onMounted(() => {
     currentTheme.value = theme.value.library[libraryData?.value.libName]
@@ -23,6 +23,10 @@ export default {
     <div class="monitor-base">
         <ElTabs type="border-card" class="header-monitor-tabs">
             <ElTabPane label="样式" class="col header-monitor-tab-pane" style="text-align: left">
+                <div class="row">
+                    <div>helper</div>
+                    <ElSwitch v-model="themeHelper" />
+                </div>
                 <div>
                     base
                     <template v-for="(item, name) in theme.base" :key="name">

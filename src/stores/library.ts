@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ReqLibrary, reqLibrary } from '@v/api'
-import { useGlobalStore } from './global'
+import { CardTheme, useGlobalStore } from './global'
 import { useWindowSize } from '@vueuse/core'
+import { WritableComputedRef } from 'vue'
 const globalStore = useGlobalStore()
 
 //用于刮削判断层级(如需要回溯判断)和前端决定展示方法，不可留空
@@ -52,7 +53,7 @@ export const useLibraryStore = defineStore('library', () => {
 
     const currentTheme = computed(() => globalStore.theme.library[libraryData?.value.libName])
 
-    const boxTheme = computed({
+    const boxTheme: WritableComputedRef<CardTheme> = computed({
         get() {
             if (currentTheme.value) {
                 return currentTheme.value[libraryData.value.result] || currentTheme.value.dir
@@ -66,5 +67,7 @@ export const useLibraryStore = defineStore('library', () => {
         },
     })
 
-    return { libraryData, enterLibrary, currentTheme, boxTheme }
+    const themeHelper = ref(false)
+
+    return { libraryData, enterLibrary, currentTheme, boxTheme, themeHelper }
 })

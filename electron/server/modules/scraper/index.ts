@@ -15,6 +15,14 @@ import { scrapeLogger } from '@s/utils/logger'
 import { throttle } from 'lodash'
 
 type FilterAndAppend = (filePath: string) => Promise<object | undefined>
+export interface ScraperConfig {
+    rootPath: string
+    name: string
+    category: 'video' | 'anime'
+    mapFile?: MapRule
+    mapDir?: MapRule
+    config?: libraryConfig
+}
 
 //需要模块化的地方暂时用动态导入替代
 export default class Scraper {
@@ -61,29 +69,16 @@ export default class Scraper {
     /**
      * build
      */
-    public async build({
-        rootPath,
-        name,
-        mapFile,
-        mapDir,
-        config,
-        category,
-    }: {
-        rootPath: string
-        name: string
-        category: 'video' | 'anime'
-        mapFile?: MapRule
-        mapDir?: MapRule
-        config?: libraryConfig
-    }) {
+    public async build({ rootPath, name, category, mapFile, mapDir, config }: ScraperConfig) {
         if (library[name]) {
             return Promise.reject('资源库不可重名')
         }
         this.library = {
+            rootPath: resolve(rootPath),
             name,
+            category: category || 'anime',
             flatFile: {},
             flatDir: {},
-            rootPath: resolve(rootPath),
             mapFile: mapFile || {
                 path: 'baseInfo.path',
                 result: 'baseInfo.result',
@@ -95,6 +90,7 @@ export default class Scraper {
                 parentTitle: 'scraperInfo.dandan.animeTitle',
             },
             mapDir: mapDir || {
+                order: '',
                 path: 'baseInfo.path',
                 title: 'scraperInfo.children.title',
                 result: 'baseInfo.result',
@@ -102,6 +98,13 @@ export default class Scraper {
             },
             config: config || {
                 library: {},
+            },
+            tree: {
+                libName: name,
+                label: '',
+                title: '',
+                path: resolve(rootPath),
+                result: 'dir',
             },
             progress: {
                 step: '',
@@ -339,8 +342,8 @@ export default class Scraper {
         try {
             this.setProgress([, 'flatToTree-start'])
             const nodeList: MapResult[] = [
-                ...Object.values(vs.library.flatDir).map((v) => v.scraperInfo?.mapResult),
-                ...Object.values(vs.library.flatFile).map((v) => v.scraperInfo?.mapResult),
+                ...Object.values(this.library.flatDir).map((v) => v.scraperInfo?.mapResult),
+                ...Object.values(this.library.flatFile).map((v) => v.scraperInfo?.mapResult),
             ]
             const tree: Tree = {}
             const branches = []

@@ -179,13 +179,13 @@ async function appedDirTree(dirPath = '', dirTree: Tree = {}, append = defaultAp
 //根据给定路径搜索dirTree中的信息
 function searchLeaf(dirTree: Tree, targetPath = ''): Tree | false {
     try {
-        if (dirTree.path == targetPath) {
+        if (dirTree.path === targetPath) {
             return dirTree
         }
         while (!dirTree.path) {
             let rootLeaf = false
             dirTree = dirTree.children.find((v) => {
-                if (v.path == targetPath) {
+                if (v.path === targetPath) {
                     rootLeaf = true
                     return true
                 } else return targetPath.includes(v.path)
@@ -203,7 +203,7 @@ function searchLeaf(dirTree: Tree, targetPath = ''): Tree | false {
         let leaf = dirTree
         for (let index = 0; index < branch.length; index++) {
             const label = branch[index]
-            leaf = leaf.children.find((v) => v.label == label)
+            leaf = leaf.children.find((v) => v.label === label)
             if (!leaf) {
                 return false
             }

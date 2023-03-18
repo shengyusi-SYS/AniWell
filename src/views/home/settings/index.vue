@@ -17,6 +17,7 @@ const changeSettings = async () => {
     } catch (error) {}
     try {
         await store.getSettings()
+        ElMessage.success('保存成功')
     } catch (error) {}
 }
 

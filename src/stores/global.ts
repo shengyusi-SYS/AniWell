@@ -30,6 +30,7 @@ export interface CardTheme {
     fontColorTitle: string
     fontColorLabel: string
     aspectRatio: number
+    textAlign: string
     custom?: {
         backgroundImage?: string
     }
@@ -116,6 +117,7 @@ export const useGlobalStore = defineStore('global', () => {
             fontColorTitle: '#fff',
             fontColorLabel: '#999',
             aspectRatio: 3 / 4,
+            textAlign: 'center',
         },
         box0: {
             column: def(5, 1),
@@ -131,6 +133,7 @@ export const useGlobalStore = defineStore('global', () => {
             fontColorTitle: '#fff',
             fontColorLabel: '#999',
             aspectRatio: 3 / 4,
+            textAlign: 'center',
         },
         box1: {
             column: def(5, 1),
@@ -146,6 +149,7 @@ export const useGlobalStore = defineStore('global', () => {
             fontColorTitle: '#fff',
             fontColorLabel: '#999',
             aspectRatio: 3 / 4,
+            textAlign: 'center',
         },
         box2: {
             column: def(5, 1),
@@ -161,6 +165,7 @@ export const useGlobalStore = defineStore('global', () => {
             fontColorTitle: '#fff',
             fontColorLabel: '#999',
             aspectRatio: 3 / 4,
+            textAlign: 'center',
         },
         box3: {
             column: def(5, 1),
@@ -176,6 +181,7 @@ export const useGlobalStore = defineStore('global', () => {
             fontColorTitle: '#fff',
             fontColorLabel: '#999',
             aspectRatio: 3 / 4,
+            textAlign: 'center',
         },
         item: {
             column: def(5, 2),
@@ -185,12 +191,13 @@ export const useGlobalStore = defineStore('global', () => {
             shadow: '0 0 35px 5px rgb(0 0 0 / 40%)',
             shadowHover: '0 0 35px 5px rgb(0 0 0 / 60%)',
             fontSize: def(1, 0.8),
-            fontSizeTitle: 1.5,
-            fontSizeLabel: 1,
+            fontSizeTitle: def(1.2, 1.5),
+            fontSizeLabel: def(0.8, 1),
             fontColor: '#999',
             fontColorTitle: '#fff',
             fontColorLabel: '#999',
             aspectRatio: 16 / 9,
+            textAlign: 'center',
         },
     }
 
