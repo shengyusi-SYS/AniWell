@@ -71,6 +71,26 @@ export default {
                     </div>
                 </div></ElTabPane
             >
+            <ElTabPane label="任务" class="col header-monitor-tab-pane"
+                ><div class="col" style="width: 100%">
+                    <template v-for="progress in globalCache.serverTaskProgress.list">
+                        <div
+                            style="
+                                height: 4em;
+                                flex-grow: 1;
+                                border: 1px solid var(--el-border-color);
+                                justify-content: space-evenly;
+                                align-items: center;
+                            "
+                            class="row"
+                        >
+                            <div v-for="(value, key) in progress" :key="key">
+                                {{ key }}:{{ value }}
+                            </div>
+                        </div>
+                    </template>
+                </div></ElTabPane
+            >
             <ElTabPane label="消息" class="col header-monitor-tab-pane"><div>消息</div></ElTabPane>
             <ElTabPane label="延迟" class="col header-monitor-tab-pane"><div>延迟</div></ElTabPane>
         </ElTabs>

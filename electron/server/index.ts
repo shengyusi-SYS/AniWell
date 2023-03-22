@@ -18,6 +18,7 @@ import { Server } from 'socket.io'
 import router from '@s/api'
 import users from '@s/store/users'
 import { verifyToken } from '@s/utils/jwt'
+import Io from './api/v1/socket'
 // import { MongoClient } from 'mongodb'
 // const url = 'mongodb://localhost:27017/fs'
 
@@ -73,40 +74,12 @@ try {
                 }`,
             )
         })
-        var io = new Server(httpServer)
-    } else io = new Server(httpsServer)
+
+        Io.init(httpServer)
+    } else Io.init(httpsServer)
 } catch (error) {
     logger.error('start server', error)
 }
-
-io.engine.on('initial_headers', (headers, req) => {
-    headers['test'] = 'test'
-})
-
-io.on('connection', async (socket) => {
-    const token = socket.handshake.headers.cookie.match(/refreshToken=(?<token>[^;]*)(;|$)/).groups
-        .token
-    const info = verifyToken(token)
-    if (info) {
-        const user = users.getUser(info)
-        socket.user = user
-        if (!user) {
-            socket.disconnect()
-            return
-        } else if (user.administrator) {
-            syncLogger.init(socket)
-            syncLogger.info('开始同步日志')
-            socket.on('clientLog', (...args) => {
-                clientLogger.info(args.join(' '))
-            })
-        }
-    } else return socket.disconnect()
-    socket.emit('data', 'init')
-})
-
-setInterval(() => {
-    io.emit('time', Date.now())
-}, 1000)
 
 import('./modules/scraper')
     .then((result) => {

@@ -125,16 +125,19 @@ const store = new Store({
     defaults: {},
 })
 
-const save = throttle(() => {
-    store.clear()
-    store.set(library)
-    console.log('saved')
-}, 3000)
+const save = throttle(
+    () => {
+        store.clear()
+        store.set(library)
+        console.log('saved')
+    },
+    3000,
+    { leading: false },
+)
 const library: Ilibrary = shallowProxy(store.store, (method, { target, key }) => {
-    // if (method === 'delete') {
-    //     console.log(method, key)
-    // store.delete()
-    // }
+    if (method === 'delete') {
+        // save.flush()
+    }
     save()
 })
 
@@ -155,8 +158,8 @@ export async function getLibrary(libName?: string, libPath?: string): Promise<Li
                 const result = {
                     ...targetLibraryRootDir,
                     libName: libraryName,
-                    children: targetLibraryRootDir.children
-                        .filter((val, ind) => ind < 10)
+                    children: targetLibraryRootDir?.children
+                        ?.filter((val, ind) => ind < 10)
                         .map((v) => {
                             return { ...v, children: null }
                         }),

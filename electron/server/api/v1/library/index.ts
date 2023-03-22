@@ -11,7 +11,7 @@ import paths from '@s/utils/envPath'
 import library, { getLibrary, MapResult } from '@s/store/library'
 import shuffle from 'lodash/shuffle'
 import { orderBy } from 'lodash'
-import { ScraperConfig } from '@s/modules/scraper'
+import ScraperCenter, { Scraper, ScraperConfig } from '@s/modules/scraper'
 
 const router = express.Router()
 
@@ -117,6 +117,7 @@ router.get('/manager', async (req, res) => {
     const libraryList = Object.values(library).map((v) => ({
         name: v.name,
         rootPath: v.rootPath,
+        category: v.category,
         mapFile: v.mapFile,
         mapDir: v.mapDir,
         config: v.config,
@@ -138,7 +139,15 @@ router.post('/manager', async (req, res) => {
     } catch (error) {
         res.status(400).json({ error: '根路径错误', alert: true })
     }
-    console.log(scraperConfig)
+    ScraperCenter.task(() => new Scraper().build(scraperConfig))
+    res.end()
+})
+
+router.delete('/manager', async (req, res) => {
+    const libName = req.body.libName
+    delete library[libName]
+    // console.log(libName, library[libName])
+
     res.end()
 })
 export default router

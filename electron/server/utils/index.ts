@@ -322,7 +322,7 @@ export async function filterDirFile(filterDirPath, { fileList, dirList }) {
     if (fileList.length % 100 === 0) {
         console.warn(fileList.length)
     }
-    return Promise.allSettled(nextDirList.map((v) => this.filterDirFile(v, { fileList, dirList })))
+    return Promise.allSettled(nextDirList.map((v) => filterDirFile(v, { fileList, dirList })))
 }
 
 export const dotGet = (obj, key) => {

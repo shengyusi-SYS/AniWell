@@ -9,10 +9,11 @@ import library, {
     LibraryTree,
     MapResult,
 } from '@s/store/library'
-import { filterDirFile, dotGet, Tree } from '@s/utils'
+import { filterDirFile, dotGet, Tree, TaskPool } from '@s/utils'
 import { treeMerger } from '@s/utils/tree'
 import { scrapeLogger } from '@s/utils/logger'
 import { throttle } from 'lodash'
+import { scraperEvents } from '@s/modules/events'
 
 type FilterAndAppend = (filePath: string) => Promise<object | undefined>
 export interface ScraperConfig {
@@ -24,15 +25,36 @@ export interface ScraperConfig {
     config?: libraryConfig
 }
 
-//需要模块化的地方暂时用动态导入替代
-export default class Scraper {
+const defaultProgress = () =>
+    new Proxy(
+        {
+            current: 0,
+            step: '',
+            target: '',
+            total: 0,
+        },
+        {
+            get(target, key) {
+                return Reflect.get(target, key)
+            },
+            set(target, key, value) {
+                scraperEvents.emitProgress(target)
+                return Reflect.set(target, key, value)
+            },
+        },
+    )
+
+//需要插件化的地方暂时用动态导入替代
+export class Scraper {
     public dirAndFile: { fileList: string[]; dirList: string[] }
     public library: Ilibrary['']
-    public progressTimer
-    constructor() {
-        this.progressTimer = setInterval(() => {
+    public saveTimer
+    constructor() {}
+
+    setSaveTimer() {
+        this.saveTimer = setInterval(() => {
             this.save()
-        }, 2000)
+        }, 10000)
     }
 
     setProgress = throttle(
@@ -47,6 +69,13 @@ export default class Scraper {
         }.bind(this),
         2000,
     )
+
+    /**
+     * getProgress
+     */
+    public async getProgress() {
+        return this.library.progress
+    }
 
     /**
      * countDirAndFile
@@ -106,13 +135,9 @@ export default class Scraper {
                 path: resolve(rootPath),
                 result: 'dir',
             },
-            progress: {
-                step: '',
-                target: '',
-                current: 0,
-                total: 0,
-            },
+            progress: defaultProgress(),
         }
+        this.setSaveTimer()
         //统计库根路径下的所有文件与文件夹
         await this.countDirAndFile()
         //过滤出所需类型的文件并附加相关信息
@@ -134,6 +159,7 @@ export default class Scraper {
         await this.mapDirResult()
         this.save()
         this.flatToTree()
+        clearInterval(this.saveTimer)
     }
 
     /**
@@ -145,12 +171,7 @@ export default class Scraper {
         }
 
         this.library = library[libName]
-        this.library.progress = {
-            step: '',
-            target: '',
-            current: 0,
-            total: 0,
-        }
+        this.library.progress = defaultProgress()
     }
 
     /**
@@ -384,6 +405,7 @@ export default class Scraper {
      * allUpdate
      */
     public async allUpdate() {
+        this.setSaveTimer()
         //调用刮削器对单文件进行刮削
         await this.scrapeFlatFile()
         this.save()
@@ -397,10 +419,19 @@ export default class Scraper {
         await this.mapDirResult()
         this.save()
         this.flatToTree()
-        clearInterval(this.progressTimer)
+        clearInterval(this.saveTimer)
         console.log('~~~~~~~~~~~~~~~done')
     }
+
+    async close() {
+        delete this.library.progress
+        clearInterval(this.saveTimer)
+    }
 }
+
+class ScraperCenter extends TaskPool {}
+
+export default new ScraperCenter(1)
 
 // setTimeout(() => {
 // const vs = new Scraper()

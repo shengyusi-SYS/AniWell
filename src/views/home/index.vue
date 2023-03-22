@@ -61,7 +61,7 @@ export default {
                         ></Bars3Icon>
                     </div>
                 </ElCol>
-                <div class="headerCenter">headerCenter</div>
+                <div class="headerCenter"></div>
                 <div class="header-monitor">
                     <div @click="monitorOpenned = !monitorOpenned">
                         <Square3Stack3DIcon class="svg-icon"></Square3Stack3DIcon>

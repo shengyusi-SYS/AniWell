@@ -251,17 +251,45 @@ export const useGlobalStore = defineStore('global', () => {
     }
 })
 
+export interface Progress {
+    current: number
+    step: string
+    target: string
+    total: number
+}
+
 export const globalCache = {
     loggedIn: false,
     electronEnv: Boolean(window.electronAPI),
     serverPort: window.electronAPI ? await window.electronAPI.getServerPort() : undefined,
     serverLog: reactive({
-        list: [] as Array<string | number>,
-        info(log: string | number) {
+        list: [] as Array<string>,
+        info(log: string) {
             if (this.list.length > 100) {
                 this.list.pop()
             }
             this.list.unshift(log)
+        },
+    }),
+    serverMessage: reactive({
+        list: [] as Array<string>,
+        add(message: string) {
+            if (this.list.length > 100) {
+                this.list.pop()
+            }
+            this.list.unshift(message)
+        },
+    }),
+    serverTaskProgress: reactive({
+        list: [] as Array<Progress>,
+        add(progress: Progress) {
+            if (this.list[0]) {
+                this.list[0] = progress
+            } else this.list.push(progress)
+            // if (this.list.length > 100) {
+            //     this.list.pop()
+            // }
+            // this.list.unshift(progress)
         },
     }),
     serverDelay: reactive({
@@ -288,7 +316,6 @@ export const proxyGlobalData = new Proxy(globalData, {
         if (inited) {
             return Reflect.get(target, key)
         }
-
         try {
             const local = JSON.parse(localStorage.getItem('globalData'))
             Reflect.set(target, key, local)

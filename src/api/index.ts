@@ -19,8 +19,17 @@ socket.on('time', (time) => {
 socket.on('log', (log) => {
     globalCache.serverLog.info(log)
 })
+socket.on('progress', (msg) => {
+    globalCache.serverMessage.add(msg)
+})
+socket.on('progress', (progress) => {
+    globalCache.serverTaskProgress.add(progress)
+})
 
-export const clientLog = (...args: any[]) => socket.emit('clientLog', args.join(' '))
+export const clientLog = (...args: any[]) => {
+    console.log('clientLog', args.join(' '))
+    socket.emit('clientLog', args.join(' '))
+}
 
 export const reqSalt = (username: string): Promise<{ salt: string } | Error> =>
     requests.get('/users/salt?username=' + username)
@@ -218,6 +227,7 @@ export const reqChangeSettings = async (newSettings: settings): Promise<void> =>
 export interface libraryInfo {
     name: string
     rootPath: string
+    category: string
     mapFile: object
     mapDir: object
     config: object
@@ -258,3 +268,6 @@ export interface ScraperConfig {
 }
 export const reqAddLibrary = async (scraperConfig: ScraperConfig): Promise<void> =>
     requests.post(`/library/manager`, scraperConfig)
+
+export const reqDeleteLibrary = async (libName: string): Promise<void> =>
+    requests.delete(`/library/manager?libName=${libName}`, { data: { libName } })

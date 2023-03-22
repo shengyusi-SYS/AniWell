@@ -26,8 +26,6 @@ export function shallowProxy(obj, cb) {
                 return Reflect.get(target, key, receiver)
             },
             deleteProperty(target, key) {
-                console.log('dddddddddd')
-
                 cb('delete', { target, key })
                 return Reflect.deleteProperty(target, key)
             },
