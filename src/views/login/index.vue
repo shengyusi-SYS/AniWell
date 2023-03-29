@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { reqLogin, reqIsFirst } from '@v/api'
+import { reqLogin, reqIsFirst, reqDebug } from '@v/api'
 import useListenLifecycle from '@v/hooks/useListenLifecycle'
 import { proxyGlobalData } from '@v/stores/global'
 const router = useRouter()
 
-const loginUser = reactive({ username: '', password: '' })
+const loginUser = ref({ username: '', password: '' })
 const login = async () => {
-    const res = await reqLogin(loginUser.username, loginUser.password)
+    const res = await reqLogin(...Object.values(loginUser.value))
     console.log('login', proxyGlobalData.first, res)
 
     if (res) {
@@ -63,7 +63,7 @@ export default {
             />
         </div>
         <div>
-            <ElButton size="large" @click="login(false)">登录</ElButton>
+            <ElButton size="large" @click="login">登录</ElButton>
         </div>
     </div>
 </template>

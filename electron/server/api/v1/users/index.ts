@@ -15,13 +15,22 @@ router.get('/salt', async (req, res, next) => {
     if (typeof username === 'string') {
         const user = users.getUser({ username })
         if (user === false) {
-            res.status(404).json({ error: '用户名不存在' })
+            res.status(404).json({ error: '用户名不存在', alert: true })
         } else {
             const salt = user.salt
             res.json({ salt })
         }
     } else {
-        res.status(400).json({ error: '请求错误' })
+        res.status(400).json({ error: '请求错误', alert: true })
+    }
+})
+
+router.get('/logout', async (req, res) => {
+    try {
+        bannedToken.add(req.cookies.refreshToken)
+        res.end()
+    } catch (error) {
+        res.status(400).json({ error: '令牌错误', alert: true })
     }
 })
 

@@ -1,5 +1,5 @@
 import { AppendedMetadata } from './filterAndAppend'
-import { ScraperResult, FileMetadata, Ilibrary } from '@s/store/library'
+import { ScraperResult, FileMetadata, LibraryStore } from '@s/store/library'
 import { vidoeHash, getFileType } from '@s/utils'
 import { scrapeLogger } from '@s/utils/logger'
 import path, { basename } from 'path'
@@ -7,7 +7,7 @@ import fs from 'fs'
 import got from 'got'
 import settings from '@s/store/settings'
 import init from '@s/utils/init'
-import Scraper from '..'
+import Scraper, { TaskProgressController } from '..'
 
 type fileMetadata = FileMetadata & {
     baseInfo: AppendedMetadata
@@ -82,18 +82,21 @@ export async function match(fileMetadata: fileMetadata): Promise<ScraperResult> 
     }
 }
 
-export default async function scraper(library: Ilibrary['']) {
-    const setProgress: Scraper['setProgress'] = this.setProgress
-    if (setProgress) {
-        setProgress([, 'fileSraper', , Object.keys(library.flatFile).length])
+export default async function scraper(library: LibraryStore['']) {
+    const progressController: TaskProgressController = this.progressController
+    if (progressController) {
+        progressController.setStage({
+            stageName: 'fileSraper',
+            stageTotal: Object.keys(library.flatFile).length,
+        })
     }
     const flatFile = library.flatFile
     const queryList = []
     let i = 0
     for (const filePath in flatFile) {
         try {
-            if (setProgress) {
-                setProgress([i++, , filePath])
+            if (progressController) {
+                progressController.setCurrent({ currentId: i++, currentName: filePath })
             }
             if (queryList.length >= 32) {
                 await Promise.allSettled(queryList)

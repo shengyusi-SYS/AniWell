@@ -25,7 +25,7 @@ export interface libraryConfig {
     }
 }
 
-export interface Ilibrary {
+export interface LibraryStore {
     [libraryName: string]: {
         name: string //库名，唯一
         rootPath: string //库根路径，为用户添加库时选定的路径
@@ -134,7 +134,7 @@ const save = throttle(
     3000,
     { leading: false },
 )
-const library: Ilibrary = shallowProxy(store.store, (method, { target, key }) => {
+const library: LibraryStore = shallowProxy(store.store, (method, { target, key }) => {
     if (method === 'delete') {
         // save.flush()
     }

@@ -1,7 +1,7 @@
-import { Ilibrary } from '@s/store/library'
+import { LibraryStore } from '@s/store/library'
 import { access } from 'fs/promises'
 import { resolve } from 'path'
-export default async function (library: Ilibrary['']) {
+export default async function (library: LibraryStore['']) {
     const flatDir = library.flatDir
     const posterNameList = ['folder.jpg', 'poster.jpg']
     for (const dirPath in flatDir) {

@@ -1,6 +1,6 @@
-import { Ilibrary } from '@s/store/library'
+import { LibraryStore } from '@s/store/library'
 
-export default async function (library: Ilibrary['']) {
+export default async function (library: LibraryStore['']) {
     const flatFile = library.flatFile
     const flatDir = library.flatDir
     const boxLevel = ['box0', 'box1', 'box2', 'box3']

@@ -1,7 +1,7 @@
 import path, { basename, dirname, extname, resolve } from 'path'
 import { readFile, readdir, stat, writeFile } from 'fs/promises'
 import library, {
-    Ilibrary,
+    LibraryStore,
     resultType,
     boxLevel,
     MapRule,
@@ -14,6 +14,8 @@ import { treeMerger } from '@s/utils/tree'
 import { scrapeLogger } from '@s/utils/logger'
 import { throttle } from 'lodash'
 import { scraperEvents } from '@s/modules/events'
+import { Worker } from 'worker_threads'
+import { v4 as uuidv4 } from 'uuid'
 
 type FilterAndAppend = (filePath: string) => Promise<object | undefined>
 export interface ScraperConfig {
@@ -25,56 +27,101 @@ export interface ScraperConfig {
     config?: libraryConfig
 }
 
-const defaultProgress = () =>
-    new Proxy(
-        {
-            current: 0,
-            step: '',
-            target: '',
-            total: 0,
-        },
-        {
-            get(target, key) {
-                return Reflect.get(target, key)
+interface SetProgress {
+    total?: number
+    stageName?: string
+    stageId?: number
+    stageTotal?: number
+    currentName?: string
+    currentId?: number
+}
+
+export interface TaskProgress extends SetProgress {
+    state: 'pending' | 'fulfilled' | 'rejected'
+    name: string
+    uuid: string
+}
+
+const emitProgress = throttle(
+    (progress: TaskProgress) => scraperEvents.emitProgress(progress),
+    1000,
+    {
+        leading: false,
+    },
+)
+
+export class TaskProgressController {
+    progress: TaskProgress
+    constructor(name: string) {
+        this.progress = this.initProgress(name)
+    }
+    initProgress(name) {
+        return new Proxy(
+            {
+                state: 'pending',
+                name: name,
+                uuid: uuidv4(),
+            } as TaskProgress,
+            {
+                get(target, key) {
+                    return Reflect.get(target, key)
+                },
+                set(target, key, value) {
+                    emitProgress(target)
+                    return Reflect.set(target, key, value)
+                },
             },
-            set(target, key, value) {
-                scraperEvents.emitProgress(target)
-                return Reflect.set(target, key, value)
-            },
-        },
-    )
+        )
+    }
+    setTotal(total: number) {
+        this.progress.total = total
+    }
+    setStage(stage: {
+        stageName?: string
+        stageId?: number
+        stageTotal?: number
+        currentName?: string
+        currentId?: number
+    }) {
+        ;['stageName', 'stageId', 'stageTotal', 'currentName', 'currentId'].forEach(
+            (key) => delete this.progress[key],
+        )
+        Object.assign(this.progress, stage)
+    }
+    setCurrent(current: { currentName?: string; currentId?: number }) {
+        ;['currentName', 'currentId'].forEach((key) => delete this.progress[key])
+        Object.assign(this.progress, current)
+    }
+    end() {
+        emitProgress({
+            state: 'fulfilled',
+            name: this.progress.name,
+            uuid: this.progress.uuid,
+        })
+        this.progress = {}
+    }
+    reject() {
+        emitProgress({
+            state: 'rejected',
+            name: this.progress.name,
+            uuid: this.progress.uuid,
+        })
+        this.progress = {}
+    }
+}
 
 //需要插件化的地方暂时用动态导入替代
 export class Scraper {
     public dirAndFile: { fileList: string[]; dirList: string[] }
-    public library: Ilibrary['']
+    public library: LibraryStore['']
     public saveTimer
+    public progressController: TaskProgressController
     constructor() {}
 
     setSaveTimer() {
         this.saveTimer = setInterval(() => {
             this.save()
         }, 10000)
-    }
-
-    setProgress = throttle(
-        function ([current, step, target, total]: [number?, string?, string?, number?] = []) {
-            const progress = this.library?.progress
-            if (progress) {
-                if (current) progress.current = current
-                if (step) progress.step = step
-                if (target) progress.target = target
-                if (total) progress.total = total
-            }
-        }.bind(this),
-        2000,
-    )
-
-    /**
-     * getProgress
-     */
-    public async getProgress() {
-        return this.library.progress
     }
 
     /**
@@ -96,88 +143,100 @@ export class Scraper {
     }
 
     /**
+     * load
+     */
+    public async load(scraperName: string, scraperConfig: object) {}
+
+    /**
      * build
      */
     public async build({ rootPath, name, category, mapFile, mapDir, config }: ScraperConfig) {
-        if (library[name]) {
-            return Promise.reject('资源库不可重名')
+        try {
+            if (library[name]) {
+                return Promise.reject('资源库不可重名')
+            }
+            this.progressController = new TaskProgressController(name)
+            this.library = {
+                rootPath: resolve(rootPath),
+                name,
+                category: category || 'anime',
+                flatFile: {},
+                flatDir: {},
+                mapFile: mapFile || {
+                    path: 'baseInfo.path',
+                    result: 'baseInfo.result',
+                    display: 'baseInfo.display',
+                    mime: 'baseInfo.mime',
+                    poster: 'scraperInfo.extPic.poster',
+                    title: 'scraperInfo.dandan.title',
+                    order: 'scraperInfo.dandan.episode',
+                    parentTitle: 'scraperInfo.dandan.animeTitle',
+                },
+                mapDir: mapDir || {
+                    order: '',
+                    path: 'baseInfo.path',
+                    title: 'scraperInfo.children.title',
+                    result: 'baseInfo.result',
+                    poster: 'scraperInfo.local.poster',
+                },
+                config: config || {
+                    library: {},
+                },
+                tree: {
+                    libName: name,
+                    label: '',
+                    title: '',
+                    path: resolve(rootPath),
+                    result: 'dir',
+                },
+            }
+            this.setSaveTimer()
+            //统计库根路径下的所有文件与文件夹
+            await this.countDirAndFile()
+            //过滤出所需类型的文件并附加相关信息
+            await this.filterFileType()
+            this.save()
+            //仅通过层级关系初始化文件夹box类型及基础信息
+            await this.initDirLevel(true)
+            this.save()
+            //调用刮削器对单文件进行刮削
+            await this.scrapeFlatFile()
+            this.save()
+            //映射出文件的最终刮削结果
+            await this.mapFileResult()
+            this.save()
+            //对文件夹进行刮削
+            await this.scrapeFlatDir()
+            this.save()
+            //映射文件夹的最终刮削结果
+            await this.mapDirResult()
+            this.save()
+            this.flatToTree()
+            this.progressController.end()
+        } catch (error) {
+            this.progressController.reject()
+            scrapeLogger.error('build', error)
         }
-        this.library = {
-            rootPath: resolve(rootPath),
-            name,
-            category: category || 'anime',
-            flatFile: {},
-            flatDir: {},
-            mapFile: mapFile || {
-                path: 'baseInfo.path',
-                result: 'baseInfo.result',
-                display: 'baseInfo.display',
-                mime: 'baseInfo.mime',
-                poster: 'scraperInfo.extPic.poster',
-                title: 'scraperInfo.dandan.title',
-                order: 'scraperInfo.dandan.episode',
-                parentTitle: 'scraperInfo.dandan.animeTitle',
-            },
-            mapDir: mapDir || {
-                order: '',
-                path: 'baseInfo.path',
-                title: 'scraperInfo.children.title',
-                result: 'baseInfo.result',
-                poster: 'scraperInfo.local.poster',
-            },
-            config: config || {
-                library: {},
-            },
-            tree: {
-                libName: name,
-                label: '',
-                title: '',
-                path: resolve(rootPath),
-                result: 'dir',
-            },
-            progress: defaultProgress(),
-        }
-        this.setSaveTimer()
-        //统计库根路径下的所有文件与文件夹
-        await this.countDirAndFile()
-        //过滤出所需类型的文件并附加相关信息
-        await this.filterFileType()
-        this.save()
-        //仅通过层级关系初始化文件夹box类型及基础信息
-        await this.initDirLevel(true)
-        this.save()
-        //调用刮削器对单文件进行刮削
-        await this.scrapeFlatFile()
-        this.save()
-        //映射出文件的最终刮削结果
-        await this.mapFileResult()
-        this.save()
-        //对文件夹进行刮削
-        await this.scrapeFlatDir()
-        this.save()
-        //映射文件夹的最终刮削结果
-        await this.mapDirResult()
-        this.save()
-        this.flatToTree()
         clearInterval(this.saveTimer)
     }
 
     /**
-     * load
+     * mount
      */
-    public async load(libName: string) {
+    public async mount(libName: string) {
         if (!library[libName]) {
             return Promise.reject('不存在')
         }
 
         this.library = library[libName]
-        this.library.progress = defaultProgress()
+        this.progressController = new TaskProgressController(libName)
     }
 
     /**
      * filterFileType
      */
     public async filterFileType() {
+        this.progressController.setStage({ stageName: 'filterFileType' })
         this.library.flatFile = {}
         const filterAndAppend = (await import('./video/filterAndAppend')).default
         for (let index = 0; index < this.dirAndFile.fileList.length; index++) {
@@ -185,6 +244,7 @@ export class Scraper {
                 const filePath = this.dirAndFile.fileList[index]
                 const baseInfo = await this.singleUpdata(filePath, filterAndAppend)
                 console.log(index, '/', this.dirAndFile.fileList.length - 1)
+                this.progressController.setCurrent({ currentId: index, currentName: filePath })
             } catch (error) {
                 console.log(error)
             }
@@ -324,13 +384,13 @@ export class Scraper {
      * scrapeFlatDir
      */
     public async scrapeFlatDir() {
-        this.setProgress([, 'scrapeFlatDir start'])
+        this.progressController.setStage({ stageName: 'scrapeFlatDir' })
         const scrapers = [
             (await import('./video/boxTitleScraper')).default,
             (await import('./video/appendDir')).default,
         ]
         for (let index = 0; index < scrapers.length; index++) {
-            this.setProgress([index, 'scrapeFlatDir'])
+            this.progressController.setCurrent({ currentId: index })
             const scraper = scrapers[index]
             await scraper(this.library)
         }
@@ -340,11 +400,16 @@ export class Scraper {
      * appendDirResult
      */
     public async mapDirResult() {
-        this.setProgress([, 'mapDirResult start', , Object.values(this.library.flatDir).length])
+        this.progressController.setStage({
+            stageName: 'mapDirResult',
+            stageTotal: Object.values(this.library.flatDir).length,
+        })
         const libMap = this.library.mapDir
         const mapFilter = (await import('./video/mapFilter')).default
-        Object.values(this.library.flatDir).forEach((dirMetadata, ind, arr) => {
-            this.setProgress([ind])
+        const dirList = Object.values(this.library.flatDir)
+        for (let ind = 0; ind < dirList.length; ind++) {
+            const dirMetadata = dirList[ind]
+            await this.progressController.setCurrent({ currentId: ind })
             const mapData = (dirMetadata.scraperInfo.mapResult = {})
             for (const mapName in libMap) {
                 const mapTarget = libMap[mapName]
@@ -353,7 +418,7 @@ export class Scraper {
                     mapData[mapName] = res
                 }
             }
-        })
+        }
     }
 
     /**
@@ -361,7 +426,7 @@ export class Scraper {
      */
     public flatToTree() {
         try {
-            this.setProgress([, 'flatToTree-start'])
+            this.progressController.setStage({ stageName: 'flatToTree-start' })
             const nodeList: MapResult[] = [
                 ...Object.values(this.library.flatDir).map((v) => v.scraperInfo?.mapResult),
                 ...Object.values(this.library.flatFile).map((v) => v.scraperInfo?.mapResult),
@@ -369,7 +434,6 @@ export class Scraper {
             const tree: Tree = {}
             const branches = []
             for (let index = 0; index < nodeList.length; index++) {
-                // this.setProgress([index])
                 const node = nodeList[index]
                 try {
                     delete node.children
@@ -394,7 +458,7 @@ export class Scraper {
             treeMerger(tree, branches)
             this.library.tree = tree
             this.save()
-            this.setProgress([, 'flatToTree-end'])
+            this.progressController.setStage({ stageName: 'flatToTree-end' })
             return tree
         } catch (error) {
             scrapeLogger.error('flatToTree', error)
@@ -424,41 +488,63 @@ export class Scraper {
     }
 
     async close() {
-        delete this.library.progress
         clearInterval(this.saveTimer)
     }
 }
 
-class ScraperCenter extends TaskPool {}
+export class Scrapers {
+    worker: Worker
+    name: string
+    /**
+     * init
+     */
+    public async init() {
+        this.worker
+    }
+    /**
+     * getDefaultConfig
+     */
+    public async getDefaultConfig() {
+        return new Promise<void>((resolve, reject) => {
+            this.worker.postMessage({ method: 'defaultConfig' })
+            this.worker.on('message', (msg) => {
+                if (msg.error || msg instanceof Error) reject(msg.error ?? msg)
+                if (msg.method === 'defaultConfig') resolve(msg.result)
+                setTimeout(() => {
+                    this.worker.postMessage({ method: 'exit' })
+                    reject(this.name + 'defaultConfig no result')
+                }, 2000)
+            })
+        })
+    }
+}
 
-export default new ScraperCenter(1)
+class ScraperCenter {
+    taskPool = new TaskPool(1)
+    scraperList: {
+        [scraperName: string]: () => Scraper
+    }
+    /**
+     * updateScraperList
+     */
+    public async updateScraperList() {}
+    /**
+     * getScraperDefaultConfig
+     */
+    public async getScraperDefaultConfig(scraperName: string) {
+        const scraper = this.scraperList[scraperName]()
+        try {
+            await scraper.init()
+            return await scraper.getDefaultConfig()
+        } catch (error) {}
+    }
 
-// setTimeout(() => {
-// const vs = new Scraper()
-// vs.load('anime')
-// vs.build({
-//     rootPath: 'D:/test',
-//     name: 'anime',
-//     mapFile: {
-//         path: 'baseInfo.path',
-//         result: 'baseInfo.result',
-//         display: 'baseInfo.display',
-//         mime: 'baseInfo.mime',
-//         poster: 'scraperInfo.extPic.poster',
-//         title: 'scraperInfo.dandan.title',
-//         order: 'scraperInfo.dandan.episode',
-//         parentTitle: 'scraperInfo.dandan.animeTitle',
-//     },
-//     mapDir: {
-//         path: 'baseInfo.path',
-//         title: 'scraperInfo.children.title',
-//         result: 'baseInfo.result',
-//         poster: 'scraperInfo.local.poster',
-//     },
-// })
+    /**
+     * postScraperConfig
+     */
+    public async postScraperConfig(scraper: Worker) {
+        scraper.postMessage({ method: 'setConfig' })
+    }
+}
 
-// .then(async (result) => {})
-// .catch((err) => {
-//     console.log(err)
-// })
-// }, 3000)
+export default new TaskPool(1)

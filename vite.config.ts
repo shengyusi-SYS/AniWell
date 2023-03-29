@@ -4,7 +4,7 @@ import vue from '@vitejs/plugin-vue'
 import electron from 'vite-plugin-electron'
 import pkg from './package.json'
 import { fileURLToPath, URL } from 'url'
-import path from 'path'
+import path, { resolve } from 'path'
 // import postcsspxtoviewport from 'postcss-px-to-viewport-8-plugin'
 
 import AutoImport from 'unplugin-auto-import/vite'
@@ -15,6 +15,7 @@ import IconsResolver from 'unplugin-icons/resolver'
 import Icons from 'unplugin-icons/vite'
 import wasm from 'vite-plugin-wasm'
 import topLevelAwait from 'vite-plugin-top-level-await'
+import webWorkerLoader from 'rollup-plugin-web-worker-loader'
 
 rmSync('dist-electron', { recursive: true, force: true })
 const sourcemap = !!process.env.VSCODE_DEBUG
@@ -75,10 +76,21 @@ export const config = {
                         minify: isBuild,
                         outDir: 'dist-electron/main',
                         rollupOptions: {
-                            external: Object.keys(pkg.dependencies).filter((name) => {
-                                const pureEsm = ['env-paths', 'file-type']
-                                return !pureEsm.includes(name)
-                            }),
+                            external: [
+                                ...Object.keys(pkg.dependencies).filter((name) => {
+                                    const pureEsm = ['env-paths', 'file-type']
+                                    return !pureEsm.includes(name)
+                                }),
+                                'videoScraper.ts',
+                            ],
+                            plugins: [
+                                webWorkerLoader({
+                                    inline: false,
+                                    loadPath: '../FileServer-for-qBittorrent/dist-electron/main',
+                                    extensions: ['.js', '.ts'],
+                                    targetPlatform: 'node',
+                                }),
+                            ],
                         },
                     },
                     resolve: {
@@ -88,6 +100,16 @@ export const config = {
                         conditions: ['node'],
                     },
                     base: './',
+                    worker: {
+                        plugins: [
+                            webWorkerLoader({
+                                inline: false,
+                                loadPath: '../FileServer-for-qBittorrent/dist-electron/main',
+                                extensions: ['.js', '.ts'],
+                                targetPlatform: 'node',
+                            }),
+                        ],
+                    },
                 },
             },
             {

@@ -10,6 +10,11 @@ import { signAccessToken, verifyToken } from '@s/utils/jwt'
 import { users as usersStore } from '@s/store/users'
 import path from 'path'
 
+// router.post('/debug', (req, res) => {
+//     logger.debug('!!!!!!!!!!!!!debug', req.body)
+//     res.end()
+// })
+
 router.use('/', async (req, res, next) => {
     if (/^\/users\/(login|salt|first)/.test(req.path)) {
         next()

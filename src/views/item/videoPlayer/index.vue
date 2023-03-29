@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { reqItemSrc, reqStopTranscode, VideoSrc, subInfo, fontInfo, chaptersInfo } from '@v/api'
+import {
+    reqItemSrc,
+    reqStopTranscode,
+    VideoSrc,
+    subInfo,
+    fontInfo,
+    chaptersInfo,
+    clientLog,
+} from '@v/api'
 import { useVideoPlayerStore } from '@v/stores/videoPlayer'
 import { useElementSize } from '@vueuse/core'
 import useListenLifecycle from '@v/hooks/useListenLifecycle'
@@ -12,6 +20,7 @@ import libassWorkerUrl from '@v/lib/ass/libassjs-worker.js?url'
 import libassLegacyWorkerUrl from '@v/lib/ass/libassjs-worker-legacy.js?url'
 import libassWASMUrl from '@v/lib/ass/subtitles-octopus-worker.wasm?url'
 import SubtitlesOctopus from '@v/lib/ass/subtitles-octopus'
+import { globalCache } from '@v/stores/global'
 
 // const router = useRouter()
 // onBeforeRouteUpdate((to, from) => {
@@ -51,7 +60,7 @@ const controller = {
             const item = itemList[index]
             try {
                 const method = (await testVideoMime(item.mime)) ? 'direct' : 'transcode'
-                console.log(item.mime, method, item.title)
+                clientLog(item.mime, method, item.title)
                 const srcQueryTask = () => {
                     return reqItemSrc({
                         filePath: item.path,

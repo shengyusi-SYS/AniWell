@@ -3,8 +3,10 @@ import bcrypt from 'bcryptjs'
 import { libraryData, resultType } from '@v/stores/library'
 import { globalCache, proxyGlobalData } from '@v/stores/global'
 import { io } from 'socket.io-client'
+import { UAParser } from 'ua-parser-js'
 
 export const socket = io()
+const ua = new UAParser().getResult()
 
 socket.on('connect', () => {
     console.log(socket.id)
@@ -19,19 +21,42 @@ socket.on('time', (time) => {
 socket.on('log', (log) => {
     globalCache.serverLog.info(log)
 })
-socket.on('progress', (msg) => {
-    globalCache.serverMessage.add(msg)
-})
-socket.on('progress', (progress) => {
-    globalCache.serverTaskProgress.add(progress)
+
+export interface TaskProgress {
+    state: 'pending' | 'fulfilled' | 'rejected'
+    name: string
+    uuid: string
+    total?: number
+    percentage?: number //computed
+    stageName?: string
+    stageId?: number
+    stageTotal?: number
+    stagePercentage?: number //computed
+    currentName?: string
+    currentId?: number
+}
+socket.on('progress', (taskProgress: TaskProgress) => {
+    globalCache.serverTaskProgress.add(taskProgress)
 })
 
 export const clientLog = (...args: any[]) => {
-    console.log('clientLog', args.join(' '))
-    socket.emit('clientLog', args.join(' '))
+    const msg = args
+        .map((v) => (v && typeof v === 'object' ? JSON.stringify(v, null, '\t') : v.toString()))
+        .join(' ')
+    console.log('clientLog', msg)
+    socket.emit('clientLog', msg)
+}
+clientLog(ua)
+
+export const reqDebug = (...args: any[]) => {
+    const msg = args
+        .map((v) => (v && typeof v === 'object' ? JSON.stringify(v, null, '\t') : v))
+        .join(' ')
+
+    return requests.post('/debug', msg)
 }
 
-export const reqSalt = (username: string): Promise<{ salt: string } | Error> =>
+export const reqSalt = (username: string): Promise<{ salt: string }> =>
     requests.get('/users/salt?username=' + username)
 
 const checkToken = () => {
@@ -57,11 +82,14 @@ export const reqLogin = async (username?: string, password?: string): Promise<bo
         //请求用户名对应的salt,如果本地存储有salt则尝试以本地salt登录
         let salt = proxyGlobalData.salt
         if (!salt) {
-            const data = await reqSalt(username)
-            if (!(data instanceof Error)) {
+            if (username == undefined) return false
+            try {
+                const data = await reqSalt(username)
                 salt = data.salt
                 proxyGlobalData.salt = salt
-            } else return false
+            } catch (error) {
+                return false
+            }
         }
         //根据现有用户名及密码尝试登录
         const passwordHash = bcrypt.hashSync(password, salt)
@@ -84,11 +112,13 @@ export const reqLogin = async (username?: string, password?: string): Promise<bo
         }
     } catch (error) {
         //用户名对应的salt不存在
-        console.log('reqLogin', error)
+        console.log('reqLogin error', error)
         globalCache.loggedIn = false
         return false
     }
 }
+
+export const reqLogout = (): Promise<void> => requests.get('/users/logout')
 
 export const reqModify = async (
     username: string,

@@ -3,7 +3,7 @@ import { useWindowSize, useMediaQuery } from '@vueuse/core'
 import { useCssVar, UseCssVarOptions } from '@vueuse/core'
 import { Ref } from 'vue'
 import { boxLevel, resultType } from './library'
-import { LibQuery } from '@v/api'
+import { LibQuery, TaskProgress } from '@v/api'
 
 export interface LibraryConfig {
     [boxLevel: string]: sortConfig & {}
@@ -251,17 +251,15 @@ export const useGlobalStore = defineStore('global', () => {
     }
 })
 
-export interface Progress {
-    current: number
-    step: string
-    target: string
-    total: number
-}
+let serverPort
+try {
+    serverPort = await window.electronAPI.getServerPort()
+} catch (error) {}
 
 export const globalCache = {
     loggedIn: false,
     electronEnv: Boolean(window.electronAPI),
-    serverPort: window.electronAPI ? await window.electronAPI.getServerPort() : undefined,
+    serverPort,
     serverLog: reactive({
         list: [] as Array<string>,
         info(log: string) {
@@ -280,18 +278,32 @@ export const globalCache = {
             this.list.unshift(message)
         },
     }),
-    serverTaskProgress: reactive({
-        list: [] as Array<Progress>,
-        add(progress: Progress) {
-            if (this.list[0]) {
-                this.list[0] = progress
-            } else this.list.push(progress)
-            // if (this.list.length > 100) {
-            //     this.list.pop()
-            // }
-            // this.list.unshift(progress)
+    serverTaskProgress: {
+        list: ref([
+            {
+                state: 'rejected',
+                name: 'test',
+                uuid: 'uuu',
+                total: 100,
+                stageName: 'ssss',
+                stageId: 1,
+                stageTotal: 500,
+                currentName: 'cccc',
+                currentId: 2,
+            },
+        ]) as Ref<Array<TaskProgress>>,
+        add(progress: TaskProgress) {
+            const existIndex = this.list.value.findIndex((v) => v.uuid === progress.uuid)
+            if (existIndex >= 0) {
+                this.list.value[existIndex] = progress
+                return
+            }
+            if (this.list.value.length > 100) {
+                this.list.value.pop()
+            }
+            this.list.value.unshift(progress)
         },
-    }),
+    },
     serverDelay: reactive({
         list: [] as Array<string | number>,
         add(delay: number) {
@@ -310,15 +322,18 @@ const globalData = {
     salt: '',
     username: '',
 }
-const inited = false
+
+let inited = false
 export const proxyGlobalData = new Proxy(globalData, {
     get(target, key) {
-        if (inited) {
-            return Reflect.get(target, key)
-        }
+        if (inited) return Reflect.get(target, key)
+
         try {
-            const local = JSON.parse(localStorage.getItem('globalData'))
-            Reflect.set(target, key, local)
+            const local: object = JSON.parse(localStorage.getItem('globalData') as string)
+            for (const [key, value] of Object.entries(local)) {
+                Reflect.set(target, key, value)
+            }
+            inited = true
             return Reflect.get(local, key)
         } catch (error) {
             localStorage.setItem('globalData', JSON.stringify(target))
@@ -343,7 +358,8 @@ export const proxyGlobalData = new Proxy(globalData, {
                 }
                 break
         }
-        localStorage.setItem('globalData', JSON.stringify(target))
-        return Reflect.set(target, key, value)
+        const res = Reflect.set(target, key, value)
+        if (res) localStorage.setItem('globalData', JSON.stringify(target))
+        return res
     },
 })

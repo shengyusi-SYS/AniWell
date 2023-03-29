@@ -13,8 +13,10 @@ class Io {
         })
 
         this.io.on('connection', async (socket) => {
-            const token = socket.handshake.headers.cookie.match(/refreshToken=(?<token>[^;]*)(;|$)/)
-                .groups.token
+            const token = socket.handshake.headers?.cookie?.match(
+                /refreshToken=(?<token>[^;]*)(;|$)/,
+            ).groups.token
+            if (token == undefined) return socket.disconnect()
             const info = verifyToken(token)
             if (info) {
                 const user = users.getUser(info)

@@ -7,6 +7,7 @@ import { libraryData, useLibraryStore } from '@v/stores/library'
 import { useDraggable, useElementSize, useWindowSize } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { ComputedRef } from 'vue'
+import { ChevronRightIcon } from '@heroicons/vue/24/outline'
 // import VideoPlayer from '@v/components/VideoPlayer/index.vue'
 // import { useElementSize } from '@v/hooks/useElementSize'
 // import isDesktop from '@h/useIsDesktop'
@@ -193,38 +194,13 @@ export default {
                             <ElCol
                                 justify="start"
                                 class="library-overview-title"
-                                style="
-                                    font-size: 2em;
-                                    line-height: 2;
-                                    text-align: left;
-                                    padding-left: 2em;
-                                    font-weight: bold;
-                                "
-                                @click.left="
-                                    () => {
-                                        openCard(lib.libName, lib)
-                                    }
-                                "
+                                @click.left="() => openCard(lib.libName, lib)"
                             >
-                                <ElRow>
+                                <ElRow style="flex-wrap: nowrap">
                                     <div>
                                         {{ lib.libName }}
                                     </div>
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke-width="1.5"
-                                        stroke="currentColor"
-                                        class="w-6 h-6"
-                                        style="width: 1em"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            d="M8.25 4.5l7.5 7.5-7.5 7.5"
-                                        />
-                                    </svg>
+                                    <ChevronRightIcon style="width: 1em"></ChevronRightIcon>
                                 </ElRow>
                             </ElCol>
                         </ElRow>
@@ -237,11 +213,7 @@ export default {
                                     :data="cardData"
                                     class="library-item"
                                     style="width: 16em; margin: 2em; flex-shrink: 0"
-                                    @click.left="
-                                        () => {
-                                            openCard(lib.libName, cardData, cardIndex)
-                                        }
-                                    "
+                                    @click.left="() => openCard(lib.libName, cardData, cardIndex)"
                                 />
                             </template>
                         </div>
@@ -333,6 +305,13 @@ export default {
     font-size: v-bind('boxTheme.fontSizeTitle');
     display: flex;
     flex-direction: column;
+    .library-overview-title {
+        font-size: 2em;
+        line-height: 2;
+        text-align: left;
+        padding-left: 2em;
+        font-weight: bold;
+    }
     .library-themeHelper {
         height: 4em;
         justify-content: space-evenly;
