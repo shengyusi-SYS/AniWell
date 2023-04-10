@@ -84,6 +84,7 @@ export interface DirMetadata {
         mapResult: MapResult & {
             children: string[]
         }
+        children?: ScraperResult //来自item的信息，反推用
         [scraperName: string]: ScraperResult
     }
     userInfo: {
@@ -109,7 +110,7 @@ export interface MapResult extends ScraperResult {
 }
 
 export interface MapRule {
-    [key: keyof MapResult]: string
+    [key: keyof MapResult]: string | string[]
 }
 
 export interface LibraryTree extends MapResult {

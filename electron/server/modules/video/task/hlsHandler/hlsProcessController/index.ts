@@ -1,4 +1,3 @@
-import { logger, transcodeLogger } from '@s/utils/logger'
 import { access } from 'fs/promises'
 import path from 'path'
 import init from '@s/utils/init'
@@ -9,22 +8,31 @@ import { spawn } from 'child_process'
 import { debounce } from 'lodash'
 import fs from 'fs'
 import { VideoInfo } from '../../getVideoInfo'
-//转码串流的核心，进程控制系统，测试感觉挺完善了（删）
+import { transcodeLogger } from '@s/utils/logger'
+
+//转码串流的核心，进程控制系统
 class hlsProcessController {
     videoInfo
     commandTemplate
     currentProcess
     processList = []
     transState = 'init'
+    taskId: string
     async init(videoInfo: VideoInfo, commandTemplate: Function) {
-        logger.info('hlsProcessController init start')
+        transcodeLogger.info('hlsProcessController init start')
         this.videoInfo = videoInfo
+        this.taskId = videoInfo.taskId
         this.commandTemplate = commandTemplate
-        logger.info('hlsProcessController init end')
+        transcodeLogger.info('hlsProcessController init end')
     }
     async generateHlsProcess(segment) {
         try {
-            logger.info('hlsProcessController', 'generateHlsProcess 1', 'start', segment)
+            transcodeLogger.info(
+                'hlsProcessController generateHlsProcess 1 start',
+                segment,
+                this.taskId,
+            )
+            const _this = this
             await this.killCurrentProcess()
             const videoIndex = this.videoInfo.videoIndex
             const params = this.commandTemplate(videoIndex[segment].start, segment)
@@ -35,29 +43,28 @@ class hlsProcessController {
                 return
             }
 
-            logger.debug(
+            transcodeLogger.debug(
                 'hlsProcessController',
                 'generateHlsProcess 2',
                 'ffmpegPath',
                 path.resolve(settings.server.ffmpegPath, `ffmpeg${ffmpegSuffix}`),
             )
-            const ffmpeg = spawn(
+            const ffmpeg = (this.currentProcess = spawn(
                 settings.server.ffmpegPath
                     ? `"${path.resolve(settings.server.ffmpegPath, `ffmpeg${ffmpegSuffix}`)}"`
                     : 'ffmpeg',
                 params,
                 { shell: true },
-            )
-            ffmpeg.id = initSegmentId
-            this.currentProcess = ffmpeg
+            ))
             this.processList.push(ffmpeg)
+            ffmpeg.id = initSegmentId
             ffmpeg.queue = []
-            logger.info(
+            transcodeLogger.info(
                 'hlsProcessController',
                 'generateHlsProcess 3',
                 'start------------------------' + segment,
             )
-            logger.info('hlsProcessController', 'generateHlsProcess 4', [params.join(' ')])
+            transcodeLogger.info('hlsProcessController', 'generateHlsProcess 4', [params.join(' ')])
             transcodeLogger.info('transcode', [params.join(' ')])
             // let lastWriteId
             ffmpeg.stderr.on('data', async function (stderrLine) {
@@ -89,16 +96,16 @@ class hlsProcessController {
                                 )
                                 videoIndex[lastWriteSegment].state = 'done'
                                 ffmpeg.queue.push(lastWriteSegment)
-                                logger.info(
-                                    'hlsProcessController',
-                                    'generateHlsProcess 5',
+                                transcodeLogger.info(
+                                    'hlsProcessController generateHlsProcess 5',
                                     lastWriteSegment,
                                     'done',
+                                    _this.taskId,
                                 )
                             } catch (error) {
                                 if (videoIndex[lastWriteSegment].state != 'init') {
                                     videoIndex[lastWriteSegment].state = 'err'
-                                    logger.error(
+                                    transcodeLogger.error(
                                         'hlsProcessController',
                                         'generateHlsProcess 5',
                                         'lost',
@@ -110,7 +117,7 @@ class hlsProcessController {
                     }
 
                     if (writingSegmentId == Object.keys(videoIndex).length - 1) {
-                        logger.info(
+                        transcodeLogger.info(
                             'hlsProcessController',
                             'generateHlsProcess 5',
                             'end',
@@ -125,7 +132,7 @@ class hlsProcessController {
                         videoIndex[writingSegment].state == 'done' &&
                         this.transState != 'changing'
                     ) {
-                        logger.info(
+                        transcodeLogger.info(
                             'hlsProcessController',
                             'generateHlsProcess 6',
                             'break------------------------',
@@ -137,7 +144,7 @@ class hlsProcessController {
                         if (videoIndex[`index${nextProcessId}`]) {
                             while (videoIndex[`index${nextProcessId}`].state == 'done') {
                                 if (nextProcessId >= Object.keys(videoIndex).length - 1) {
-                                    logger.info(
+                                    transcodeLogger.info(
                                         'hlsProcessController',
                                         'generateHlsProcess 7',
                                         'end-------------------',
@@ -148,7 +155,7 @@ class hlsProcessController {
                                     nextProcessId++
                                 }
                             }
-                            logger.info(
+                            transcodeLogger.info(
                                 'hlsProcessController',
                                 'generateHlsProcess 7',
                                 'continue-------------------',
@@ -157,7 +164,7 @@ class hlsProcessController {
                             this.transState = 'changing'
                             await this.generateHlsProcess(`index${nextProcessId}`)
                         } else {
-                            logger.info(
+                            transcodeLogger.info(
                                 'hlsProcessController',
                                 'generateHlsProcess 7',
                                 'end-------------------',
@@ -168,51 +175,83 @@ class hlsProcessController {
                 }
             })
         } catch (error) {
-            logger.error('hlsProcessController', 'generateHlsProcess', error)
+            transcodeLogger.error('hlsProcessController', 'generateHlsProcess', error)
         }
         return this
     }
-    async killCurrentProcess() {
-        try {
-            logger.info('hlsProcessController', 'killCurrentProcess', 'init')
+    async killCurrentProcess(fromUser?: boolean /* 调用是否来自用户操作 */) {
+        const _this = this
+        transcodeLogger.info('hlsProcessController killCurrentProcess init', this.taskId, fromUser)
+        if (fromUser) {
+            return new Promise<void>((resolve, reject) => {
+                const i = setInterval(async () => {
+                    try {
+                        await _this.killCurrentProcess()
+                        clearInterval(i)
+                        clearTimeout(t)
+                        resolve()
+                    } catch (error) {}
+                }, 500)
+                const t = setTimeout(() => {
+                    clearInterval(i)
+                    clearTimeout(t)
+                    reject()
+                }, 5000)
+            })
+        } else {
             if (
                 !this.currentProcess ||
-                this.currentProcess.exitCode == 0 ||
-                this.currentProcess.exitCode == 1 ||
-                this.transState == 'changing'
+                this.transState === 'init' ||
+                this.currentProcess.exitCode === 0 ||
+                this.currentProcess.exitCode === 1 ||
+                this.transState === 'changing'
             ) {
+                transcodeLogger.info(
+                    'hlsProcessController killCurrentProcess reject',
+                    this.taskId,
+                    Boolean(this.currentProcess),
+                    this.transState,
+                )
                 return this
-            } else {
-                logger.info('hlsProcessController', 'killCurrentProcess', 'start')
-                this.transState = 'changing'
-                await new Promise((r, j) => {
-                    logger.info('hlsProcessController', 'kill', 'start')
-                    // let tempProcessList = JSON.parse(JSON.stringify(this.processList))
-                    if (this.currentProcess) {
-                        this.currentProcess.on('close', (code) => {
-                            logger.info('hlsProcessController', 'killCurrentProcess', 'close', code)
-                            return r()
-                        })
-                        // this.currentProcess.on('exit', () => {
-                        //     logger.info('hlsProcessController','killCurrentProcess', 'exit');
-                        //     return r()
-                        // })
-                        this.currentProcess.on('error', (err) => {
-                            logger.error('hlsProcessController', 'killCurrentProcess', 'error', err)
-                            return r(err)
-                        })
-                        kill(this.currentProcess.pid, 'SIGKILL')
-                    } else {
-                        return r()
-                    }
-                })
-                this.transState = 'stopped'
             }
-
-            logger.info('hlsProcessController', 'killCurrentProcess', 'end')
-            return this
+        }
+        transcodeLogger.info('hlsProcessController', 'killCurrentProcess', 'start')
+        this.transState = 'changing'
+        try {
+            await new Promise<void>((r, j) => {
+                transcodeLogger.info('hlsProcessController', 'kill', 'start')
+                if (this.currentProcess) {
+                    kill(this.currentProcess.pid, 'SIGKILL', (err) => {
+                        if (err) {
+                            transcodeLogger.error(
+                                'hlsProcessController',
+                                'killCurrentProcess',
+                                'error',
+                                err,
+                            )
+                            j(err)
+                        } else {
+                            transcodeLogger.info(
+                                'hlsProcessController killCurrentProcess close',
+                                this.taskId,
+                            )
+                            r()
+                        }
+                    })
+                } else {
+                    return r()
+                }
+            })
+            this.transState = 'stopped'
+            transcodeLogger.info('hlsProcessController', 'killCurrentProcess', 'end')
         } catch (error) {
-            logger.error('hlsProcessController', ' killCurrentProcess', error)
+            this.transState = 'stop err'
+            transcodeLogger.error(
+                'hlsProcessController killCurrentProcess err',
+                this.taskId,
+                Boolean(this.currentProcess),
+                this.transState,
+            )
         }
     }
 }

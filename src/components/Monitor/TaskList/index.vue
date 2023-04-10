@@ -12,13 +12,14 @@ const taskProgressList = computed(() =>
         if (task.stageName) res.stageName = task.stageName
         if (task.stageId) {
             res.stageId = task.stageId
-            if (task.total) res.percentage = (task.stageId / task.total) * 100
+            if (task.total) res.percentage = Math.floor((task.stageId / task.total) * 100)
         }
 
         if (task.currentName) res.currentName = task.currentName
         if (task.currentId) {
             res.currentId = task.currentId
-            if (task.stageTotal) res.stagePercentage = (task.currentId / task.stageTotal) * 100
+            if (task.stageTotal)
+                res.stagePercentage = Math.floor((task.currentId / task.stageTotal) * 100)
         }
         return res
     }),

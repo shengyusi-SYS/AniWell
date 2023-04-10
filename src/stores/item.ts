@@ -18,6 +18,9 @@ export const useItemStore = defineStore('item', () => {
             start?: number
         },
     ) {
+        if (items.length <= 0) {
+            return
+        }
         if (display === 'video') {
             try {
                 videoStore.itemList = items

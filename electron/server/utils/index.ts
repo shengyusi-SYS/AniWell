@@ -11,6 +11,7 @@ import { readdir, mkdir, rename } from 'fs/promises'
 import crypto from 'crypto'
 import fs from 'fs'
 import { fileTypeFromFile } from 'file-type'
+import { Readable } from 'stream'
 
 //清理空字符串和数组（ffmpeg指令用）
 export function clearEmpty(arr: Array<string | Function>) {
@@ -325,12 +326,20 @@ export async function filterDirFile(filterDirPath, { fileList, dirList }) {
     return Promise.allSettled(nextDirList.map((v) => filterDirFile(v, { fileList, dirList })))
 }
 
-export const dotGet = (obj, key) => {
+export const dotGet = (obj: object, key: string) => {
     const args = key.split('.')
     return args.reduce((pre, val, ind, arr) => {
         if (pre == undefined) return pre
         return pre[val]
     }, obj)
+}
+
+export const bufferToStream = (buffer: Buffer) => {
+    const stream = new Readable()
+    stream._read = () => {}
+    stream.push(buffer)
+    stream.push(null)
+    return stream
 }
 
 export {

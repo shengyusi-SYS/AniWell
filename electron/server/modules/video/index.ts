@@ -32,10 +32,16 @@ class VideoTaskCenter {
      * stopSingleTask
      */
     public async stopSingleTask(taskId: string) {
-        const taskIndex = this.taskQueue.findIndex((v) => v.taskId === taskId)
-        const targetTask = this.taskQueue[taskIndex]
-        this.taskQueue.splice(taskIndex, 1)
-        await targetTask.stop()
+        try {
+            const taskIndex = this.taskQueue.findIndex((v) => v.taskId === taskId)
+            const targetTask = this.taskQueue[taskIndex]
+            this.taskQueue.splice(taskIndex, 1)
+            if (targetTask?.stop) {
+                await targetTask.stop()
+            }
+        } catch (error) {
+            logger.error('video stopSingleTask', error)
+        }
     }
     /**
      * stopAllTask

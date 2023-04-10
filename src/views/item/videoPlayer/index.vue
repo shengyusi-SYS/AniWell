@@ -9,7 +9,7 @@ import {
     clientLog,
 } from '@v/api'
 import { useVideoPlayerStore } from '@v/stores/videoPlayer'
-import { useElementSize } from '@vueuse/core'
+import { isFunction, useElementSize } from '@vueuse/core'
 import useListenLifecycle from '@v/hooks/useListenLifecycle'
 import { libraryData } from '@v/stores/library'
 import { testVideoMime } from '@v/utils'
@@ -41,7 +41,7 @@ const controller = {
     currentIndex: -1,
     player: {} as DPlayer,
     videoElement: {} as HTMLElement,
-    assInstance: {},
+    assInstance: {} as SubtitlesOctopus,
     libName: '',
     videoOptions: {
         method: '',
@@ -50,6 +50,7 @@ const controller = {
         bitrate: 5,
     },
     taskId: '' as string | undefined,
+    hlsInstance: {} as Hls,
 
     async setPlaylist(itemList: libraryData[], libName?: string) {
         this.playlist.length = 0
@@ -143,15 +144,16 @@ const controller = {
                 //无字幕
             }
         } else {
-            //transcode(hls)
+            const _this = this
             this.playerOptions = {
                 container: this.videoElement,
                 video: {
                     url: src.url,
                     type: 'customHls',
                     customType: {
-                        customHls: function (video: HTMLMediaElement, player) {
+                        customHls: function (video: HTMLMediaElement /* , player */) {
                             const hls = new Hls()
+                            _this.hlsInstance = hls
                             hls.loadSource(video.src)
                             hls.attachMedia(video)
                         },
@@ -177,27 +179,51 @@ const controller = {
         await this.setPlayerOptions({ index: this.currentIndex + 1 })
         await this.setPlayer()
         await this.setVideoElement(this.player.container)
-        this.bindEvents()
+        this.player.play()
         console.log(this.player)
 
-        this.player.play()
+        await new Promise<void>((resolve, reject) => {
+            this.player.on('ended', resolve)
+        })
+
+        this.autoPlay()
     },
 }
 
 useListenLifecycle('videoPlayer')
 
 onMounted(async () => {
+    // try {
+
     await controller.setPlaylist(videoPlayerStore.itemList)
     controller.setVideoElement(initialPlayer.value)
     await controller.autoPlay()
+    // } catch (error) {
+    //     clientLog('videoPlayer onMounted error', error)
+    // }
 })
 
 onBeforeUnmount(() => {
+    // if (controller.taskId) {
+    //     reqStopTranscode(controller.taskId)
+    // }
+    // if (controller.assInstance?.dispose) {
+    //     controller.assInstance.dispose()
+    // }
+})
+
+onBeforeRouteLeave((to, from) => {
     if (controller.taskId) {
         reqStopTranscode(controller.taskId)
-    }
+    } else return false //！重要，避免用户操作过快漏掉停止转码的请求
     if (controller.assInstance?.dispose) {
         controller.assInstance.dispose()
+    }
+    if (controller.player) {
+        controller.player.destroy()
+    }
+    if (isFunction(controller.hlsInstance.destroy)) {
+        controller.hlsInstance.destroy()
     }
 })
 

@@ -1,4 +1,4 @@
-import { logger } from '@s/utils/logger'
+import { logger, transcodeLogger } from '@s/utils/logger'
 import getVideoInfo, { VideoInfo } from './getVideoInfo'
 import handleSubtitles, { subInfo } from './handleSubtitles'
 import selectMethod from './selectMethod'
@@ -101,7 +101,9 @@ export default class VideoTask implements IVideoTask {
      * stop
      */
     public async stop() {
-        return this.handler.stop()
+        transcodeLogger.log('task stop..............', this.taskId)
+        await this.handler.stop()
+        return
     }
     /**
      * handleRequest

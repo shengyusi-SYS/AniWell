@@ -8,6 +8,8 @@ import library, {
     libraryConfig,
     LibraryTree,
     MapResult,
+    DirMetadata,
+    FileMetadata,
 } from '@s/store/library'
 import { filterDirFile, dotGet, Tree, TaskPool } from '@s/utils'
 import { treeMerger } from '@s/utils/tree'
@@ -173,9 +175,9 @@ export class Scraper {
                     parentTitle: 'scraperInfo.dandan.animeTitle',
                 },
                 mapDir: mapDir || {
-                    order: '',
+                    // order: '',
                     path: 'baseInfo.path',
-                    title: 'scraperInfo.children.title',
+                    title: ['scraperInfo.dandan.animeTitle', 'scraperInfo.children.title'],
                     result: 'baseInfo.result',
                     poster: 'scraperInfo.local.poster',
                 },
@@ -368,10 +370,11 @@ export class Scraper {
         const mapFilter = (await import('./video/mapFilter')).default
         Object.values(this.library.flatFile).forEach((fileMetaData, ind, arr) => {
             // fileMetaData.scraperInfo = fileMetaData.scraperInfo || {}
-            const mapData = (fileMetaData.scraperInfo.mapResult = {})
+            const mapData = (fileMetaData.scraperInfo.mapResult =
+                {} as FileMetadata['scraperInfo']['mapResult'])
             for (const mapName in libMap) {
                 const mapTarget = libMap[mapName]
-                const res = mapFilter(fileMetaData, mapName, mapTarget)
+                const res = mapFilter(fileMetaData, mapTarget)
                 if (res) {
                     mapData[mapName] = res
                 }
@@ -386,13 +389,17 @@ export class Scraper {
     public async scrapeFlatDir() {
         this.progressController.setStage({ stageName: 'scrapeFlatDir' })
         const scrapers = [
-            (await import('./video/boxTitleScraper')).default,
-            (await import('./video/appendDir')).default,
+            (await import('./video/boxTitleScraper')).default.bind(this),
+            (await import('./video/appendDir')).default.bind(this),
         ]
-        for (let index = 0; index < scrapers.length; index++) {
-            this.progressController.setCurrent({ currentId: index })
-            const scraper = scrapers[index]
-            await scraper(this.library)
+        const boxLevel: boxLevel[] = ['box0', 'box1', 'box2', 'box3']
+        for (let index = 0; index < boxLevel.length; index++) {
+            const level = boxLevel[index]
+            for (let ind = 0; ind < scrapers.length; ind++) {
+                this.progressController.setCurrent({ currentId: ind })
+                const scraper = scrapers[ind]
+                await scraper(this.library, level)
+            }
         }
     }
 
@@ -409,11 +416,12 @@ export class Scraper {
         const dirList = Object.values(this.library.flatDir)
         for (let ind = 0; ind < dirList.length; ind++) {
             const dirMetadata = dirList[ind]
-            await this.progressController.setCurrent({ currentId: ind })
-            const mapData = (dirMetadata.scraperInfo.mapResult = {})
+            this.progressController.setCurrent({ currentId: ind })
+            const mapData = (dirMetadata.scraperInfo.mapResult =
+                {} as DirMetadata['scraperInfo']['mapResult'])
             for (const mapName in libMap) {
                 const mapTarget = libMap[mapName]
-                const res = mapFilter(dirMetadata, mapName, mapTarget)
+                const res = mapFilter(dirMetadata, mapTarget)
                 if (res) {
                     mapData[mapName] = res
                 }

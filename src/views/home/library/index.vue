@@ -75,14 +75,21 @@ let currentLibName: ComputedRef<string> = computed(
 async function openCard(libName: string, cardData: libraryData, index?: number) {
     openingCard = true
     if (cardData.result === 'item') {
-        if (libraryData.value.children) {
-            const cards = libraryData.value.children.filter((v) => v.display === cardData.display)
+        const targetLibrary =
+            libraryData.value.libName === libName
+                ? libraryData.value
+                : libraryData.value.children?.find((v) => v.libName === libName)
+        if (targetLibrary) {
+            const cards = targetLibrary.children?.filter((v) => v.display === cardData.display)
+            if (cards == undefined) return
+
             if (typeof index === 'number') cards.push(...cards.splice(0, index))
             await itemStore.setItemList(cards, {
-                libName: currentLibName.value,
+                libName,
                 display: cardData.display || 'file',
             })
             openingCard = false
+        } else {
         }
     } else {
         let boxLevel = cardData.result

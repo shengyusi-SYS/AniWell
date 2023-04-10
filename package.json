@@ -69,6 +69,7 @@
         "@iconify-json/mdi": "^1.1.38",
         "@tsconfig/recommended": "^1.0.1",
         "@types/bcryptjs": "^2.4.2",
+        "@types/diff": "^5.0.3",
         "@types/dplayer": "^1.25.2",
         "@types/express": "^4.17.14",
         "@types/jsonwebtoken": "^9.0.0",

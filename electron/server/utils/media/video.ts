@@ -21,7 +21,7 @@ export async function extractPicture({
     } catch (error) {}
     try {
         const duration = (await getMediaInfo(inputPath)).format.duration
-        if (!duration) return undefined
+        if (duration == undefined) return undefined
         return await new Promise((resolve, reject) => {
             scrapeLogger.debug('pictureExtractor start', inputPath, duration)
             const task = spawn(
@@ -40,21 +40,21 @@ export async function extractPicture({
                     '-compression_level 6',
                     '-hide_banner',
                     '-y',
-                    path.resolve(outputPath),
+                    `"${path.resolve(outputPath)}"`,
                 ],
                 { shell: true },
             )
             task.on('exit', (code) => {
                 if (code === 0) {
-                    scrapeLogger.debug('pictureExtractor end', inputPath)
+                    scrapeLogger.debug('pictureExtractor task end', inputPath)
                     resolve(outputPath)
                 } else {
-                    scrapeLogger.error('pictureExtractor exit err', inputPath)
+                    scrapeLogger.error('pictureExtractor task exit err', inputPath)
                     reject(code)
                 }
             })
             task.on('error', (err) => {
-                scrapeLogger.error('pictureExtractor error', inputPath, err)
+                scrapeLogger.error('pictureExtractor task error', inputPath, err)
                 reject(err)
             })
         })

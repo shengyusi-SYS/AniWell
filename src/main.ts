@@ -12,7 +12,7 @@ import { clientLog } from './api'
 const app = createApp(App)
 
 app.config.errorHandler = (err, instance, info) => {
-    clientLog('globalError', err, instance, info)
+    clientLog('globalError', err, 'instance\r', instance, 'info\r', info, '\r')
 }
 
 const pinia = createPinia()

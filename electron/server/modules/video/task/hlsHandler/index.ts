@@ -47,6 +47,9 @@ export default class HlsHandler implements VideoHandler {
         return this.requestHandler.handler(req, res)
     }
     public async stop() {
-        await this.requestHandler.clearVideoTemp()
+        this.handle = async (req, res) => {
+            res.status(400).json({ error: 'task stopped' })
+        }
+        await this.requestHandler.clearVideoTemp(true)
     }
 }
