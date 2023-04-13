@@ -39,18 +39,18 @@ export default async function getVideoInfo(filePath: string, libName?: string): 
     try {
         logger.debug('getVideoInfo', 'start')
         let metadata: ScreenedMediaInfo
-        if (libName) {
-            try {
-                const savedMetadata = (await getItem(libName, filePath)).baseInfo
-                if (
-                    savedMetadata.audioStreams &&
-                    savedMetadata.format &&
-                    savedMetadata.vidoeStream
-                ) {
-                    metadata = savedMetadata
-                }
-            } catch (error) {}
-        }
+        // if (libName) {
+        //     try {
+        //         const savedMetadata = (await getItem(libName, filePath)).baseInfo
+        //         if (
+        //             savedMetadata.audioStreams &&
+        //             savedMetadata.format &&
+        //             savedMetadata.vidoeStream
+        //         ) {
+        //             metadata = savedMetadata
+        //         }
+        //     } catch (error) {}
+        // }
         if (metadata == undefined) {
             metadata = await getScreenedMediaInfo(filePath)
         }

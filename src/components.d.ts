@@ -26,6 +26,8 @@ declare module '@vue/runtime-core' {
     ElSwitch: typeof import('element-plus/es')['ElSwitch']
     ElTabPane: typeof import('element-plus/es')['ElTabPane']
     ElTabs: typeof import('element-plus/es')['ElTabs']
+    FloatMenu: typeof import('./components/FloatMenu/index.vue')['default']
+    Indev: typeof import('./components/FloatMenu/index.vue')['default']
     Monitor: typeof import('./components/Monitor/index.vue')['default']
     OInput: typeof import('./components/OInput/index.vue')['default']
     ProgressCard: typeof import('./components/ProgressCard/index.vue')['default']

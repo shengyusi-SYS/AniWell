@@ -41,7 +41,27 @@ socket.on('progress', (taskProgress: TaskProgress) => {
 
 export const clientLog = (...args: any[]) => {
     const msg = args
-        .map((v) => (v && typeof v === 'object' ? JSON.stringify(v, null, '\t') : v.toString()))
+        .map((v) => {
+            if (v == undefined) {
+                return v
+            } else if (typeof v === 'object') {
+                try {
+                    const res = JSON.stringify(v, null, '\t')
+                    return res
+                } catch (error) {
+                    console.log(v, error)
+                    return v
+                }
+            } else {
+                try {
+                    const res = v.toString()
+                    return res
+                } catch (error) {
+                    console.log(v, error)
+                    return v
+                }
+            }
+        })
         .join(' ')
     console.log('clientLog', msg)
     socket.emit('clientLog', msg)
@@ -300,4 +320,10 @@ export const reqAddLibrary = async (scraperConfig: ScraperConfig): Promise<void>
     requests.post(`/library/manager`, scraperConfig)
 
 export const reqDeleteLibrary = async (libName: string): Promise<void> =>
-    requests.delete(`/library/manager?libName=${libName}`, { data: { libName } })
+    requests.delete(`/library/manager`, { data: { libName } })
+
+export const reqUpdateLibrary = async (libName: string, targetPath: string): Promise<void> =>
+    requests.patch(`/library/manager`, { libName, targetPath })
+
+export const reqReapirLibrary = async (libName: string): Promise<void> =>
+    requests.put(`/library/manager`, { libName })

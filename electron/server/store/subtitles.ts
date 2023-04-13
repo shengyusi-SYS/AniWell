@@ -4,6 +4,8 @@ import { resolve } from 'path'
 import { readFile } from 'fs/promises'
 import { test } from '@s/test'
 import { toWebvtt, extractSub } from '@s/utils/media'
+import { logger } from '@s/utils/logger'
+import { subInfo } from '@s/modules/video/task/handleSubtitles'
 
 const store = new Store({
     name: 'subtitles',
@@ -24,21 +26,33 @@ class Subtitles {
     /**
      * get
      */
-    public async get({ id, targetCodec, index }) {
-        const sub = this.store.get(id)
-        const subCodec = sub.codec
-        const subPath = resolve(sub.path)
-        if (sub.source === 'out') {
-            if (targetCodec === subCodec) {
-                return readFile(subPath)
-            } else if (!targetCodec || targetCodec === 'webvtt') {
-                const src = await toWebvtt(subPath)
-                return src
+    public async get({
+        id,
+        targetCodec,
+        index,
+    }: {
+        id: string
+        targetCodec: string
+        index: number
+    }) {
+        try {
+            const sub = this.store.get(id) as subInfo
+            const subCodec = sub.codec
+            const subPath = resolve(sub.path)
+            if (sub.source === 'out') {
+                if (targetCodec === subCodec) {
+                    return await readFile(subPath)
+                } else if (!targetCodec || targetCodec === 'webvtt') {
+                    const src = await toWebvtt(subPath)
+                    return src
+                } else {
+                    return await readFile(subPath)
+                }
             } else {
-                return readFile(subPath)
+                return await extractSub({ targetCodec, subPath, subIndex: index })
             }
-        } else {
-            return await extractSub({ targetCodec, subPath })
+        } catch (error) {
+            logger.error('get sub error', error)
         }
     }
     /**

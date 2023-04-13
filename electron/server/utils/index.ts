@@ -12,6 +12,7 @@ import crypto from 'crypto'
 import fs from 'fs'
 import { fileTypeFromFile } from 'file-type'
 import { Readable } from 'stream'
+import { TaskProgressController } from '@s/modules/scraper'
 
 //清理空字符串和数组（ffmpeg指令用）
 export function clearEmpty(arr: Array<string | Function>) {
@@ -309,6 +310,8 @@ export function toNumberDeep<T>(obj: T, ignore: string[] = ['level']): T {
 }
 
 export async function filterDirFile(filterDirPath, { fileList, dirList }) {
+    logger.debug('filterDirFile start', filterDirPath)
+    const progressController: TaskProgressController = this.progressController
     const curList = (await readdir(filterDirPath)).map((v) => path.resolve(filterDirPath, v))
     const typeResult = await Promise.allSettled(curList.map((v) => readdir(v)))
     const nextDirList = []
@@ -320,10 +323,16 @@ export async function filterDirFile(filterDirPath, { fileList, dirList }) {
               })()
             : fileList.push(curList[i])
     })
-    if (fileList.length % 100 === 0) {
-        console.warn(fileList.length)
+
+    if (progressController) {
+        progressController.setCurrent({ currentName: filterDirPath, currentId: fileList.length })
+    } else if (fileList.length % 10 === 0) {
+        logger.debug(fileList.length)
     }
-    return Promise.allSettled(nextDirList.map((v) => filterDirFile(v, { fileList, dirList })))
+
+    return Promise.allSettled(
+        nextDirList.map((v) => filterDirFile.call(this, v, { fileList, dirList })),
+    )
 }
 
 export const dotGet = (obj: object, key: string) => {

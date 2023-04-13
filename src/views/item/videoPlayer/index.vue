@@ -71,7 +71,9 @@ const controller = {
                     })
                 }
                 this.playlist.push({ title: item.title, srcTask: srcQueryTask })
-            } catch (error) {}
+            } catch (error) {
+                clientLog(error)
+            }
         }
     },
     setVideoElement(el: HTMLElement) {
@@ -104,6 +106,11 @@ const controller = {
                 const assSub = src.subtitleList.find((v) => v.codec === 'ass')
                 //ass字幕
                 if (assSub) {
+                    // const workerUrl = URL.createObjectURL(
+                    //     await (await fetch(libassWorkerUrl)).blob(),
+                    // )
+                    // const wasmUrl = URL.createObjectURL(await (await fetch(libassWASMUrl)).blob())
+                    // const subUrl = URL.createObjectURL(await (await fetch(assSub.url)).blob())
                     const fontsList = src.fontsList
                     const availableFonts = {}
                     const fontsUrl: string[] = []
@@ -135,7 +142,7 @@ const controller = {
                     //普通字幕
                     const sub = src.subtitleList[0]
                     this.playerOptions.subtitle = {
-                        url: sub ? sub.url : '',
+                        url: sub ? sub.url + '&acceptCodec=webvtt' : '',
                         type: 'webvtt',
                         fontSize: '36px',
                     }
@@ -169,24 +176,29 @@ const controller = {
     },
     bindEvents() {
         console.log('~~~~~~~~~~~~~~bindEvents')
-        this.player.on('ended', this.autoPlay.bind(controller))
     },
-    async autoPlay() {
-        console.log('~~~~~~~~~~~~~~autoplay')
-        if (this.assInstance?.dispose) {
-            // this.assInstance.dispose()
+    async autoPlay(): Promise<() => {}> {
+        try {
+            console.log('~~~~~~~~~~~~~~autoplay')
+            if (this.assInstance?.dispose) {
+                try {
+                    this.assInstance.dispose()
+                } catch (error) {}
+            }
+            await this.setPlayerOptions({ index: this.currentIndex + 1 })
+            await this.setPlayer()
+            await this.setVideoElement(this.player.container)
+            this.player.play()
+            // console.log(this.player)
+
+            //！重要，移动端自动连播需要以尾递归循环
+            await new Promise<void>((resolve, reject) => {
+                this.player.on('ended', resolve)
+            })
+            return this.autoPlay()
+        } catch (error) {
+            clientLog('autoPlay error', error)
         }
-        await this.setPlayerOptions({ index: this.currentIndex + 1 })
-        await this.setPlayer()
-        await this.setVideoElement(this.player.container)
-        this.player.play()
-        console.log(this.player)
-
-        await new Promise<void>((resolve, reject) => {
-            this.player.on('ended', resolve)
-        })
-
-        this.autoPlay()
     },
 }
 
@@ -217,13 +229,19 @@ onBeforeRouteLeave((to, from) => {
         reqStopTranscode(controller.taskId)
     } else return false //！重要，避免用户操作过快漏掉停止转码的请求
     if (controller.assInstance?.dispose) {
-        controller.assInstance.dispose()
+        try {
+            controller.assInstance.dispose()
+        } catch (error) {}
     }
     if (controller.player) {
-        controller.player.destroy()
+        try {
+            controller.player.destroy()
+        } catch (error) {}
     }
     if (isFunction(controller.hlsInstance.destroy)) {
-        controller.hlsInstance.destroy()
+        try {
+            controller.hlsInstance.destroy()
+        } catch (error) {}
     }
 })
 

@@ -13,7 +13,7 @@ import library, {
 } from '@s/store/library'
 import { filterDirFile, dotGet, Tree, TaskPool } from '@s/utils'
 import { treeMerger } from '@s/utils/tree'
-import { scrapeLogger } from '@s/utils/logger'
+import { logger, scrapeLogger } from '@s/utils/logger'
 import { throttle } from 'lodash'
 import { scraperEvents } from '@s/modules/events'
 import { Worker } from 'worker_threads'
@@ -54,6 +54,7 @@ const emitProgress = throttle(
 
 export class TaskProgressController {
     progress: TaskProgress
+    count = 0
     constructor(name: string) {
         this.progress = this.initProgress(name)
     }
@@ -70,6 +71,9 @@ export class TaskProgressController {
                 },
                 set(target, key, value) {
                     emitProgress(target)
+                    if (this.count++ % 10 === 0) {
+                        logger.debug('progress', target)
+                    }
                     return Reflect.set(target, key, value)
                 },
             },
@@ -77,6 +81,7 @@ export class TaskProgressController {
     }
     setTotal(total: number) {
         this.progress.total = total
+        return this
     }
     setStage(stage: {
         stageName?: string
@@ -89,10 +94,12 @@ export class TaskProgressController {
             (key) => delete this.progress[key],
         )
         Object.assign(this.progress, stage)
+        return this
     }
     setCurrent(current: { currentName?: string; currentId?: number }) {
         ;['currentName', 'currentId'].forEach((key) => delete this.progress[key])
         Object.assign(this.progress, current)
+        return this
     }
     end() {
         emitProgress({
@@ -100,7 +107,7 @@ export class TaskProgressController {
             name: this.progress.name,
             uuid: this.progress.uuid,
         })
-        this.progress = {}
+        this.progress = this.initProgress(this.progress.name)
     }
     reject() {
         emitProgress({
@@ -108,7 +115,7 @@ export class TaskProgressController {
             name: this.progress.name,
             uuid: this.progress.uuid,
         })
-        this.progress = {}
+        this.progress = this.initProgress(this.progress.name)
     }
 }
 
@@ -130,10 +137,11 @@ export class Scraper {
      * countDirAndFile
      */
     public async countDirAndFile() {
+        this.progressController.setStage({ stageName: 'countDirAndFile' })
         const fileList = []
         const dirList = []
 
-        await filterDirFile(this.library.rootPath, { fileList, dirList })
+        await filterDirFile.call(this, this.library.rootPath, { fileList, dirList })
         this.dirAndFile = { fileList, dirList }
     }
 
@@ -154,10 +162,12 @@ export class Scraper {
      */
     public async build({ rootPath, name, category, mapFile, mapDir, config }: ScraperConfig) {
         try {
+            logger.debug('build', rootPath, name, category, mapFile, mapDir, config)
             if (library[name]) {
                 return Promise.reject('资源库不可重名')
             }
             this.progressController = new TaskProgressController(name)
+            this.progressController.setStage({ stageName: 'start build' + rootPath })
             this.library = {
                 rootPath: resolve(rootPath),
                 name,
@@ -194,30 +204,38 @@ export class Scraper {
             }
             this.setSaveTimer()
             //统计库根路径下的所有文件与文件夹
+            logger.debug('build countDirAndFile')
             await this.countDirAndFile()
             //过滤出所需类型的文件并附加相关信息
+            logger.debug('build filterFileType')
             await this.filterFileType()
             this.save()
             //仅通过层级关系初始化文件夹box类型及基础信息
+            logger.debug('build initDirLevel')
             await this.initDirLevel(true)
             this.save()
             //调用刮削器对单文件进行刮削
+            logger.debug('build scrapeFlatFile')
             await this.scrapeFlatFile()
             this.save()
             //映射出文件的最终刮削结果
+            logger.debug('build mapFileResult')
             await this.mapFileResult()
             this.save()
             //对文件夹进行刮削
+            logger.debug('build scrapeFlatDir')
             await this.scrapeFlatDir()
             this.save()
             //映射文件夹的最终刮削结果
+            logger.debug('build mapDirResult')
             await this.mapDirResult()
             this.save()
+            logger.debug('build flatToTree')
             this.flatToTree()
             this.progressController.end()
         } catch (error) {
+            logger.error('build', error)
             this.progressController.reject()
-            scrapeLogger.error('build', error)
         }
         clearInterval(this.saveTimer)
     }
@@ -225,20 +243,24 @@ export class Scraper {
     /**
      * mount
      */
-    public async mount(libName: string) {
+    public mount(libName: string) {
         if (!library[libName]) {
-            return Promise.reject('不存在')
+            throw new Error('不存在')
         }
-
         this.library = library[libName]
         this.progressController = new TaskProgressController(libName)
+        return this
     }
 
     /**
-     * filterFileType
+     * filterFileTypefilestat
      */
     public async filterFileType() {
-        this.progressController.setStage({ stageName: 'filterFileType' })
+        this.progressController.setStage({
+            stageName: 'filterFileType',
+            stageTotal: this.dirAndFile.fileList.length,
+            currentId: this.progressController.progress.currentId,
+        })
         this.library.flatFile = {}
         const filterAndAppend = (await import('./video/filterAndAppend')).default
         for (let index = 0; index < this.dirAndFile.fileList.length; index++) {
@@ -261,19 +283,30 @@ export class Scraper {
         filterAndAppend: FilterAndAppend = () => Promise.resolve({}),
     ) {
         const flat = this.library.flatFile
+
+        const exist = ['path', 'title', 'result', 'display', 'mime', 'hash'].reduce((pre, cur) => {
+            if (pre === false) {
+                return false
+            }
+            if (flat[filePath]?.[cur] != undefined) {
+                return true
+            } else return false
+        }, true)
+        if (exist) return
+
         const filetrResult = await filterAndAppend(filePath)
         if (filetrResult) {
-            const filestat = await stat(filePath)
+            const fileStat = await stat(filePath)
             const baseInfo = {
                 path: filePath,
                 title: basename(filePath).replace(extname(filePath), ''),
                 result: 'item' as const,
                 display: 'video',
-                size: filestat.size,
-                atime: filestat.atime,
-                mtime: filestat.mtime,
-                ctime: filestat.ctime,
-                birthtime: filestat.birthtime,
+                size: fileStat.size,
+                atime: fileStat.atime,
+                mtime: fileStat.mtime,
+                ctime: fileStat.ctime,
+                birthtime: fileStat.birthtime,
                 ...filetrResult,
             }
             flat[filePath] = { ...flat[filePath], baseInfo }
@@ -476,21 +509,45 @@ export class Scraper {
     /**
      * allUpdate
      */
-    public async allUpdate() {
-        this.setSaveTimer()
-        //调用刮削器对单文件进行刮削
-        await this.scrapeFlatFile()
-        this.save()
-        //映射出文件的最终刮削结果
-        await this.mapFileResult()
-        this.save()
-        //对文件夹进行刮削
-        await this.scrapeFlatDir()
-        this.save()
-        //映射文件夹的最终刮削结果
-        await this.mapDirResult()
-        this.save()
-        this.flatToTree()
+    public async repair() {
+        try {
+            scrapeLogger.info('repair start', this.library.name, this.library.rootPath)
+            this.setSaveTimer()
+
+            let fileList = this.dirAndFile?.fileList
+            let dirList = this.dirAndFile?.dirList
+            let flatFileList = Object.keys(this.library?.flatFile)
+            const flatDirList = Object.keys(this.library?.flatDir)
+            if (!(dirList?.length > 0 && fileList?.length > 0)) {
+                await this.countDirAndFile()
+                fileList = this.dirAndFile?.fileList
+                dirList = this.dirAndFile?.dirList
+                this.save()
+            }
+            if (flatFileList?.length < fileList?.length) {
+                await this.filterFileType()
+                flatFileList = Object.keys(this.library?.flatFile)
+                this.save()
+            }
+            //调用刮削器对单文件进行刮削
+            await this.scrapeFlatFile()
+            this.save()
+            //映射出文件的最终刮削结果
+            await this.mapFileResult()
+            this.save()
+            //对文件夹进行刮削
+            await this.scrapeFlatDir()
+            this.save()
+            //映射文件夹的最终刮削结果
+            await this.mapDirResult()
+            this.save()
+            this.flatToTree()
+            this.save()
+            this.progressController.end()
+        } catch (error) {
+            this.progressController.reject()
+            scrapeLogger.error('repair error', error)
+        }
         clearInterval(this.saveTimer)
         console.log('~~~~~~~~~~~~~~~done')
     }

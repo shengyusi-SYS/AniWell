@@ -6,6 +6,7 @@ import { createReadStream, createWriteStream, ReadStream } from 'fs'
 // import { Transform } from 'stream'
 import init from '@s/utils/init'
 import { readFile } from 'fs/promises'
+import { logger } from '../logger'
 
 //ass转vtt
 export async function toWebvtt(input: string | ReadStream): Promise<Buffer> {
@@ -51,14 +52,15 @@ export async function extractSub({
     subPath: string
     subIndex?: number
 }): Promise<Buffer> {
-    const ffmpegPath = settings.server.ffmpegPath
-        ? `"${path.resolve(settings.server.ffmpegPath, `ffmpeg${init.ffmpegSuffix}`)}"`
-        : 'ffmpeg'
+    logger.debug('extractSub', [targetCodec, subPath, subIndex])
     const result = []
     const subIn = createReadStream(subPath)
+    if (targetCodec === 'subrip') {
+        targetCodec = 'srt'
+    }
     return new Promise((resolve, reject) => {
         const pro = spawn(
-            ffmpegPath,
+            init.ffmpegPath,
             ['-i -', '-hide_banner', `-map 0:s:${subIndex}`, `-f ${targetCodec}`, '-'],
             {
                 shell: true,
@@ -68,9 +70,10 @@ export async function extractSub({
             result.push(data)
         })
         pro.stderr.on('data', (data) => {
-            // console.log('info----------------', data.toString())
+            logger.debug('extractSub----------------', data.toString())
         })
         pro.on('error', (err) => {
+            logger.error('extractSub error', err)
             // console.log(err)
         })
         pro.on('exit', (code, sig, c) => {
@@ -81,7 +84,11 @@ export async function extractSub({
                 reject({ code, sig, c })
             }
         })
-        subIn.pipe(pro.stdin)
+        try {
+            subIn.pipe(pro.stdin)
+        } catch (error) {
+            logger.error('extractSub error', error)
+        }
     })
 }
 

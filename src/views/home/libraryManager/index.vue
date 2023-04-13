@@ -1,8 +1,16 @@
 <script setup lang="ts">
-import { libraryInfo, reqAddLibrary, reqDeleteLibrary, reqLibraryList, ScraperConfig } from '@v/api'
+import {
+    clientLog,
+    libraryInfo,
+    reqAddLibrary,
+    reqDeleteLibrary,
+    reqLibraryList,
+    reqReapirLibrary,
+    reqUpdateLibrary,
+    ScraperConfig,
+} from '@v/api'
 import useListenLifecycle from '@v/hooks/useListenLifecycle'
 import { Ref } from 'vue'
-
 const libraryList: Ref<libraryInfo[]> = ref([])
 
 const update = async () => {
@@ -37,28 +45,50 @@ const defaultScraperConfig: ScraperConfig = {
 }
 
 const newConfig = ref(JSON.parse(JSON.stringify(defaultScraperConfig)))
-
+const formOpenned = ref(false)
 const addLibrary = async () => {
     console.log('addLibrary', newConfig.value)
     try {
         await reqAddLibrary(newConfig.value)
         newConfig.value = JSON.parse(JSON.stringify(defaultScraperConfig))
         formOpenned.value = false
+        update()
     } catch (error) {}
 }
 
-const formOpenned = ref(false)
-
-const warningDelete = ref(false)
-
-const queryDelte: Ref<libraryInfo> = ref({})
-
-const confirmDelete = async (libName: string) => {
+type manageMethods = 'update' | 'repair' | 'delete'
+const dialogOpen = ref(false)
+const targetLibrary: Ref<libraryInfo | undefined> = ref(undefined)
+const manageMethod: Ref<manageMethods | undefined> = ref(undefined)
+const queryManage = (library: libraryInfo, method: manageMethods) => {
+    dialogOpen.value = true
+    targetLibrary.value = library
+    manageMethod.value = method
+}
+const cleanQueryManage = () => {
+    dialogOpen.value = false
+    targetLibrary.value = undefined
+    manageMethod.value = undefined
+    update()
+}
+const manageLibrary = async () => {
+    const method = manageMethod.value
+    const target = targetLibrary.value
+    if (target == undefined) return
     try {
-        await reqDeleteLibrary(libName)
-        warningDelete.value = false
-        update()
-    } catch (error) {}
+        console.log(method)
+
+        if (method === 'update') {
+            await reqUpdateLibrary(target.name, target.rootPath)
+        } else if (method === 'repair') {
+            await reqReapirLibrary(target.name)
+        } else if (method === 'delete') {
+            await reqDeleteLibrary(target.name)
+        }
+    } catch (error) {
+        clientLog('manageLibrary error', error)
+    }
+    cleanQueryManage()
 }
 
 useListenLifecycle('LibraryManager')
@@ -72,8 +102,8 @@ export default {
 
 <template>
     <div class="libraryManager-base col">
-        <div class="col">
-            <div v-for="library in libraryList">
+        <div class="row">
+            <template v-for="library in libraryList" :key="library.libName">
                 <div
                     class="col"
                     style="
@@ -88,31 +118,55 @@ export default {
                     </div>
                     <div class="libraryManager-card-label">路径：{{ library.rootPath }}</div>
                     <div class="libraryManager-card-label">类型：{{ library.category }}</div>
-                    <ElButton
-                        type="danger"
-                        class="libraryManager-delete"
-                        @click="
-                            () => {
-                                warningDelete = true
-                                queryDelte = library
-                            }
-                        "
-                        >删除</ElButton
-                    >
+                    <div class="row">
+                        <ElButton
+                            type="primary"
+                            class="libraryManager-update"
+                            @click="() => queryManage(library, 'update')"
+                            >更新</ElButton
+                        >
+                        <ElButton
+                            type="warning"
+                            class="libraryManager-repair"
+                            @click="() => queryManage(library, 'repair')"
+                            >修复</ElButton
+                        >
+                        <ElButton
+                            type="danger"
+                            class="libraryManager-delete"
+                            @click="() => queryManage(library, 'delete')"
+                            >删除</ElButton
+                        >
+                    </div>
                 </div>
-            </div>
+            </template>
         </div>
-        <ElDialog v-model="warningDelete" title="确定删除?" width="30%" align-center>
+        <ElDialog
+            v-model="dialogOpen"
+            :title="
+                (manageMethod === 'delete' ? '删除' : manageMethod === 'repair' ? '修复' : '更新') +
+                '?'
+            "
+            width="30%"
+            align-center
+            @closed="cleanQueryManage"
+        >
             <div class="col" style="justify-content: center; align-items: center">
                 <div class="libraryManager-card-label" style="font-size: 1.5em">
-                    {{ queryDelte.name }}
+                    {{ targetLibrary?.name }}
                 </div>
-                <div class="libraryManager-card-label">位于{{ queryDelte.rootPath }}</div>
+                <div class="libraryManager-card-label">位于{{ targetLibrary?.rootPath }}</div>
                 <ElButton
-                    type="danger"
+                    :type="
+                        manageMethod === 'delete'
+                            ? 'danger'
+                            : manageMethod === 'repair'
+                            ? 'warning'
+                            : 'primary'
+                    "
                     class="libraryManager-delete"
-                    @click="confirmDelete(queryDelte.name)"
-                    >删除</ElButton
+                    @click="manageLibrary"
+                    >确定</ElButton
                 >
             </div>
         </ElDialog>
@@ -160,6 +214,8 @@ export default {
         }
     }
     .libraryManager-save,
+    .libraryManager-update,
+    .libraryManager-repair,
     .libraryManager-delete {
         font-size: 1.2em;
         margin: 1em;

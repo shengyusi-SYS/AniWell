@@ -118,4 +118,7 @@ body {
 .svg-icon {
     width: 2em;
 }
+.svg-icon-w1 {
+    width: 1em;
+}
 </style>

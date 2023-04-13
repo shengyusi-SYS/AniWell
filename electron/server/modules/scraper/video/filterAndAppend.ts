@@ -18,7 +18,8 @@ export default async function filterAndAppend(filePath: string) {
         if (!typeFilter) {
             return
         }
-        const mediaInfo = (await getScreenedMediaInfo(filePath)) as AppendedMetadata
+        // const mediaInfo = (await getScreenedMediaInfo(filePath)) as AppendedMetadata
+        const mediaInfo = { hash: '', mime: '' }
         if (mediaInfo) {
             try {
                 mediaInfo.hash = await vidoeHash(filePath)

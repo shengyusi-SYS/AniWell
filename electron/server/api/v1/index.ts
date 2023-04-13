@@ -9,6 +9,7 @@ import auth from '@s/modules/auth'
 import { signAccessToken, verifyToken } from '@s/utils/jwt'
 import { users as usersStore } from '@s/store/users'
 import path from 'path'
+import { access, readdir } from 'fs/promises'
 
 // router.post('/debug', (req, res) => {
 //     logger.debug('!!!!!!!!!!!!!debug', req.body)
@@ -59,6 +60,24 @@ router.use('/video', video)
 router.use('/library', library)
 
 router.use('/settings', settings)
+
+router.get('/disk', async (req, res) => {
+    const targetPath = req.query.targetPath
+    if (typeof targetPath === 'string') {
+        const contentList = []
+        const targetPathContent = await readdir(targetPath)
+        for (let index = 0; index < targetPathContent.length; index++) {
+            const itemPath = targetPathContent[index]
+            try {
+                await readdir(itemPath)
+                contentList.push({ path: itemPath, result: 'dir' })
+            } catch (error) {
+                contentList.push({ path: itemPath, result: 'file' })
+            }
+        }
+        res.json(contentList)
+    }
+})
 
 export default router
 

@@ -139,6 +139,7 @@ router.post('/manager', async (req, res) => {
     } catch (error) {
         res.status(400).json({ error: '根路径错误', alert: true })
     }
+    logger.info(scraperConfig, 'req build library by ', req.user)
     ScraperCenter.task(() => new Scraper().build(scraperConfig))
     res.end()
 })
@@ -146,8 +147,20 @@ router.post('/manager', async (req, res) => {
 router.delete('/manager', async (req, res) => {
     const libName = req.body.libName
     delete library[libName]
-    // console.log(libName, library[libName])
-
+    logger.warn('!!!', req.user, 'deleted', libName)
     res.end()
 })
+
+router.patch('/manager', async (req, res) => {
+    const { libName, targetPath } = req.body
+    console.log(libName, targetPath)
+    res.end()
+})
+
+router.put('/manager', async (req, res) => {
+    const { libName } = req.body
+    ScraperCenter.task(() => new Scraper().mount(libName).repair())
+    res.end()
+})
+
 export default router

@@ -17,26 +17,6 @@ const monitorOpenned = ref(false)
 
 const router = useRouter()
 
-// const objectToTree = (obj: { [key: string]: unknown }, label = 'tree') => {
-//     const res = {
-//         label,
-//         children: [] as { [key: string]: unknown }[],
-//     }
-//     for (const key in obj) {
-//         const val = obj[key]
-//         if (typeof val != 'object') {
-//             res.children.push({
-//                 label: key,
-//                 value: val,
-//             })
-//         } else {
-//             res.children.push(objectToTree(val, key))
-//         }
-//     }
-//     return res
-// }
-// const themeTree = objectToTree(theme.value)
-
 // useListenLifecycle('Home')
 </script>
 
@@ -110,19 +90,21 @@ export default {
                 </div>
             </ElAside>
             <ElMain class="col">
-                <RouterView
-                    v-slot="{ Component, route }"
-                    class="home-router-view"
-                    :style="isDesktop ? 'padding: 2em' : 'padding: 1em'"
-                >
-                    <KeepAlive include="Library">
-                        <Component
-                            :is="Component"
-                            v-if="/^\/home\//.test(route.path)"
-                            :key="route.name || route.path"
-                        />
-                    </KeepAlive>
-                </RouterView>
+                <ElScrollbar>
+                    <RouterView
+                        v-slot="{ Component, route }"
+                        class="home-router-view"
+                        :style="isDesktop ? 'padding: 0 2em' : 'padding:0 1em'"
+                    >
+                        <KeepAlive include="Library">
+                            <Component
+                                :is="Component"
+                                v-if="/^\/home\//.test(route.path)"
+                                :key="route.name || route.path"
+                            />
+                        </KeepAlive>
+                    </RouterView>
+                </ElScrollbar>
             </ElMain>
         </ElContainer>
     </ElContainer>
@@ -181,7 +163,7 @@ export default {
         .el-main {
             padding: 0;
             overflow-y: scroll;
-            overflow-x: hidden;
+            // overflow-x: hidden;
         }
         .home-router-view {
             padding: 0 2em;

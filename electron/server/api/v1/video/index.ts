@@ -6,6 +6,7 @@ import path from 'path'
 import zlib from 'zlib'
 import { createReadStream } from 'fs'
 import compression from 'compression'
+import { logger } from '@s/utils/logger'
 const compressionMw = compression()
 
 const router = express.Router()
@@ -21,37 +22,28 @@ router.get('/clearVideoTemp', async (req, res) => {
     return
 })
 
-router.use('/sub', compressionMw, async (req, res) => {
-    const { id, codec, index } = req.query
-    if (id) {
+router.get('/sub', compressionMw, async (req, res) => {
+    const { id, codec, index, acceptCodec } = req.query
+    if (id && typeof id === 'string') {
         try {
+            const targetCodec =
+                (typeof acceptCodec === 'string' && acceptCodec) ||
+                (typeof codec === 'string' && codec) ||
+                'webvtt'
             const sub = await subtitles.get({
                 id,
-                targetCodec: codec || 'webvtt',
-                index: index || null,
+                targetCodec,
+                index: Number(index) || 0,
             })
-
-            res.header('Content-Type', 'text/plain')
-                // .header('Content-Encoding', 'br')
-                .send(
-                    // zlib.brotliCompressSync(sub)
-                    sub,
-                )
+            res.header('Content-Type', 'text/plain').send(sub)
         } catch (error) {
-            res.status(404).json({ message: '字幕错误' })
+            logger.error('sub error', id, codec, index)
+            res.status(404).json({ message: '字幕错误', alert: true })
         }
-    } else res.status(404).json({ message: '字幕不存在' })
+    } else res.status(404).json({ message: '字幕不存在', alert: true })
 })
 // router.use('/clearVideoTemp', hlsRequestHandler.clearVideoTemp)
 
-router.use(
-    '/font',
-    compressionMw,
-    (req, res, next) => {
-        res.header('Cache-Control', `max-age=${3600 * 24 * 30},public,immutable`)
-        next()
-    },
-    express.static(path.resolve(paths.temp, 'fonts')),
-)
+router.use('/font', express.static(path.resolve(paths.temp, 'fonts')))
 
 export default router
