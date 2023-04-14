@@ -9,12 +9,12 @@ const props = defineProps<{
 }>()
 const { result } = props.data
 const poster: string = props.data.poster
-    ? `'/api/v1//library/poster?path=${encodeURIComponent(props.data.poster)}'`
+    ? '/api/v1//library/poster?path=' + encodeURIComponent(props.data.poster).replace(/\'/g, "\\'")
     : ''
 
 const libraryStore = useLibraryStore()
 const { libraryData, currentTheme, boxTheme, themeHelper } = storeToRefs(libraryStore)
-const cardTheme = currentTheme.value[result]
+const cardTheme = result ? currentTheme.value[result] : currentTheme.value['dir']
 
 // const globalStore = useGlobalStore()
 // const {} = storeToRefs(globalStore)

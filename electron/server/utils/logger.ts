@@ -94,7 +94,7 @@ const config = {
             level: 'info',
         },
         scrape: {
-            appenders: ['scrape'],
+            appenders: ['scrape', 'console'],
             level: 'info',
         },
         client: {
@@ -105,8 +105,8 @@ const config = {
 }
 export const log4js = logForjs.configure(config)
 export const logger = log4js.getLogger('default')
-export const transcodeLogger = log4js.getLogger('maxTranscode')
-export const scrapeLogger = log4js.getLogger('maxScrape')
+export const transcodeLogger = log4js.getLogger('transcode')
+export const scrapeLogger = log4js.getLogger('scrape')
 export const httpLogger = log4js.getLogger('http')
 export const clientLogger = log4js.getLogger('client')
 export const changeLevel = async (debug = false) => {

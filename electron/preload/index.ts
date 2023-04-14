@@ -99,4 +99,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
     test1: () => ipcRenderer.invoke('test1'),
     test2: (callback) => ipcRenderer.on('test2', callback),
     getServerPort: () => ipcRenderer.invoke('getServerPort'),
+    openLocalFolder: (targetPath) => ipcRenderer.send('openLocalFolder', targetPath),
 })

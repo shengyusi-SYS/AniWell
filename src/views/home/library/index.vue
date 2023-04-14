@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reqDeleteLibrary, ReqLibrary, reqLibrary, reqUpdateLibrary } from '@v/api'
 import useListenLifecycle from '@v/hooks/useListenLifecycle'
-import { sortConfig, useGlobalStore, defaultLibraryConfig } from '@v/stores/global'
+import { sortConfig, useGlobalStore, defaultLibraryConfig, globalCache } from '@v/stores/global'
 import { useItemStore } from '@v/stores/item'
 import { libraryData, useLibraryStore } from '@v/stores/library'
 import { useDraggable, useElementSize, useWindowSize } from '@vueuse/core'
@@ -27,7 +27,7 @@ const globalStore = useGlobalStore()
 const { theme, libraryConfig, isDesktop } = storeToRefs(globalStore)
 
 const libraryStore = useLibraryStore()
-const { libraryData, currentTheme, boxTheme, themeHelper } = storeToRefs(libraryStore)
+const { libraryData, currentTheme, boxTheme, themeHelper, boxInfo } = storeToRefs(libraryStore)
 const enterLibrary = libraryStore.enterLibrary
 
 const itemStore = useItemStore()
@@ -99,7 +99,7 @@ async function openCard(libName: string, cardData: libraryData, index?: number) 
         } else {
         }
     } else {
-        let boxLevel = cardData.result
+        let boxLevel = cardData.result || 'dir'
         if (libraryConfig.value[libName] == undefined) {
             libraryConfig.value[libName] = defaultLibraryConfig
         }
@@ -113,7 +113,14 @@ async function openCard(libName: string, cardData: libraryData, index?: number) 
             start: 0,
             end: theme.value.library[libName][boxLevel].pageSize || pageSize.value || 20,
         }
-        // console.log(query)
+        if (['box0', 'box1', 'box2', 'box3'].includes(boxLevel)) {
+            query.sortBy = ['add', 'order', 'title']
+            query.sort = ['desc', 'asc', 'asc']
+        } else {
+            query.sortBy = ['change', 'add', 'order', 'title']
+            query.sort = ['desc', 'desc', 'asc', 'asc']
+        }
+        console.log(query)
 
         router.push({
             name: 'library',
@@ -126,11 +133,20 @@ const floatMenuCoordinate = ref({ x: 0, y: 0 })
 const floatMenuOpen = ref(false)
 const selectedCard: Ref<libraryData | undefined> = ref(undefined)
 async function clickCard(e: PointerEvent, cardData: libraryData) {
-    console.log(e.x, e.y, cardData.path)
+    // console.log(cardData)
     selectedCard.value = cardData
+    if (selectedCard?.value && selectedCard?.value.path == undefined) {
+        selectedCard.value.path = libraryData.value.path + '/' + selectedCard?.value?.label
+    }
     floatMenuCoordinate.value.x = e.x
     floatMenuCoordinate.value.y = e.y
     floatMenuOpen.value = true
+}
+
+async function openLocalFolder() {
+    if (window.electronAPI?.openLocalFolder) {
+        window.electronAPI.openLocalFolder(selectedCard.value?.path)
+    }
 }
 
 const queryUpdateDialogOpen = ref(false)
@@ -276,7 +292,7 @@ export default {
         </div>
 
         <div v-else class="library-cards col">
-            <div v-show="true" class="library-info col">
+            <div v-show="boxInfo" class="library-info col">
                 <div class="library-info-head row" @click="libraryInfoOpen = !libraryInfoOpen">
                     <div class="library-info-libName van-ellipsis" style="font-weight: 600">
                         {{ libraryData.title ?? libraryData.path }}
@@ -379,15 +395,25 @@ export default {
                 :is-show="floatMenuOpen"
                 :click-away="() => (floatMenuOpen = false)"
             >
-                <div class="col floatMenu-slot">
+                <div class="floatMenu-slot">
                     <div class="row floatMenu-item" @click="queryUpdatePath">
-                        <ArrowPathIcon class="svg-icon-w1"></ArrowPathIcon> 更新
+                        <ArrowPathIcon class="svg-icon-w1"></ArrowPathIcon>
+                        <div class="floatMenu-text">更新</div>
                     </div>
                     <!-- <div class="row floatMenu-item">
                         <EllipsisHorizontalIcon class="svg-icon-w1"></EllipsisHorizontalIcon>详情
                     </div> -->
+                    <div
+                        v-if="globalCache.electronEnv"
+                        class="row floatMenu-item"
+                        @click="openLocalFolder"
+                    >
+                        <div class="floatMenu-text">本地文件夹</div>
+                    </div>
                     <div class="row floatMenu-item" @click="floatMenuOpen = false">
-                        <XMarkIcon class="svg-icon-w1"></XMarkIcon> 关闭
+                        <div class="floatMenu-text">
+                            <XMarkIcon class="svg-icon-w1"></XMarkIcon>关闭
+                        </div>
                     </div>
                 </div>
             </FloatMenu>
@@ -425,6 +451,7 @@ export default {
 }
 .library-cards {
     overflow: visible;
+    padding: 1rem 0 1rem 0;
     .library-info {
         // position: sticky;
         // top: 0;
@@ -464,11 +491,15 @@ export default {
         background-color: v-bind('theme.base.backgroundColorD1');
         align-items: center;
         justify-content: center;
+        display: block;
         .floatMenu-item {
             padding: 0.5em 1em;
             flex-shrink: 0;
             &:hover {
                 background-color: v-bind('theme.base.backgroundColorL1');
+            }
+            .floatMenu-text {
+                flex-grow: 1;
             }
         }
     }

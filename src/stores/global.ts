@@ -280,17 +280,17 @@ export const globalCache = {
     }),
     serverTaskProgress: {
         list: ref([
-            {
-                state: 'rejected',
-                name: 'test',
-                uuid: 'uuu',
-                total: 100,
-                stageName: 'ssss',
-                stageId: 1,
-                stageTotal: 500,
-                currentName: 'cccc',
-                currentId: 2,
-            },
+            // {
+            //     state: 'rejected',
+            //     name: 'test',
+            //     uuid: 'uuu',
+            //     total: 100,
+            //     stageName: 'ssss',
+            //     stageId: 1,
+            //     stageTotal: 500,
+            //     currentName: 'cccc',
+            //     currentId: 2,
+            // },
         ]) as Ref<Array<TaskProgress>>,
         add(progress: TaskProgress) {
             const existIndex = this.list.value.findIndex((v) => v.uuid === progress.uuid)

@@ -351,6 +351,30 @@ export const bufferToStream = (buffer: Buffer) => {
     return stream
 }
 
+export const screenObject = <T extends Object>(target: T, ref: string[] | undefined) => {
+    return ref == undefined
+        ? target
+        : new Proxy(target, {
+              get(target, key) {
+                  if (typeof key === 'string') {
+                      if (ref.includes(key)) {
+                          return Reflect.get(target, key)
+                      } else return undefined
+                  } else return Reflect.get(target, key)
+              },
+              set(target, key, value) {
+                  if (typeof key === 'string') {
+                      if (ref.includes(key)) {
+                          return Reflect.set(target, key, value)
+                      } else return true
+                  } else return Reflect.set(target, key, value)
+              },
+              ownKeys(target) {
+                  return ref
+              },
+          })
+}
+
 export {
     generatePictureUrl,
     mediaContentType,

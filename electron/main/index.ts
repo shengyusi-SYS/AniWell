@@ -119,6 +119,10 @@ app.whenReady()
         //electron环境下获取服务器端口号
         ipcMain.handle('getServerPort', () => settings.server.serverPort)
 
+        ipcMain.on('openLocalFolder', (event, targetPath) => {
+            shell.openPath(resolve(targetPath))
+        })
+
         ipcMain.on('test', async (event, data) => {
             console.log(data)
             // const { test } = await import('@s/test')

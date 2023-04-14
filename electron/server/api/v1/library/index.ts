@@ -1,5 +1,5 @@
 import express from 'express'
-import fs from 'fs'
+import fs, { accessSync } from 'fs'
 import path, { join, resolve } from 'path'
 import { getFileType, searchLeaf } from '@s/utils'
 import { encode, decode } from 'js-base64'
@@ -8,7 +8,7 @@ import videoHandler from './handler/video'
 import compression from 'compression'
 import { logger } from '@s/utils/logger'
 import paths from '@s/utils/envPath'
-import library, { getLibrary, MapResult } from '@s/store/library'
+import library, { getLibrary, MapResult, MapRule } from '@s/store/library'
 import shuffle from 'lodash/shuffle'
 import { orderBy } from 'lodash'
 import ScraperCenter, { Scraper, ScraperConfig } from '@s/modules/scraper'
@@ -20,8 +20,19 @@ router.use('/', async (req, res, next) => {
     next()
 })
 
-type sortBy = 'path' | 'title' | 'id' | 'order' | 'rank' | 'like'
-interface LibQuery {
+export type sortBy =
+    | 'path'
+    | 'title'
+    | 'id'
+    | 'order'
+    | 'rank'
+    | 'like'
+    | 'add'
+    | 'air'
+    | 'creat'
+    | 'update'
+    | 'change'
+export interface LibQuery {
     libName?: string
     path?: string
     sort?: Array<'asc' | 'desc'>
@@ -32,7 +43,16 @@ router.get('/lib', compression(), async (req, res, next) => {
     const { libName, sort, sortBy, range = '0,20', path } = req.query as unknown as LibQuery
 
     const lib = await getLibrary(libName, path)
-    logger.debug('/lib', lib)
+    logger.debug([
+        '/lib',
+        lib,
+        libName,
+        sort,
+        sortBy,
+        sortBy instanceof Array && sort instanceof Array,
+        range,
+        path,
+    ])
     if (!lib) {
         res.status(404).json({ message: '未建立媒体库', alert: true })
         return
@@ -42,9 +62,9 @@ router.get('/lib', compression(), async (req, res, next) => {
 
     if (sortBy) {
         if (sortBy instanceof Array && sort instanceof Array) {
-            orderBy(lib.children, sortBy, sort)
+            lib.children = orderBy(lib.children, sortBy, sort)
         } else if (sortBy === 'random') {
-            shuffle(lib.children)
+            lib.children = shuffle(lib.children)
         } else {
             res.status(400).json({ message: '参数错误', alert: true })
             return
@@ -59,6 +79,21 @@ router.get('/lib', compression(), async (req, res, next) => {
             lib.children = content
         }
     }
+
+    // console.log(
+    //     lib.children.map((v) => {
+    //         try {
+    //             if (v.poster) {
+    //                 accessSync(v.poster)
+    //                 return '+++' + v.poster
+    //             }
+    //             return '000' + v.poster
+    //         } catch (error) {
+    //             return '---' + v.poster
+    //         }
+    //     }),
+    // )
+
     res.json(lib)
 })
 
@@ -151,15 +186,39 @@ router.delete('/manager', async (req, res) => {
     res.end()
 })
 
+//更新library，可选定更新范围
 router.patch('/manager', async (req, res) => {
-    const { libName, targetPath } = req.body
+    const { libName, targetPath }: { libName: string; targetPath: string } = req.body
     console.log(libName, targetPath)
+    ScraperCenter.task(() => new Scraper().update(libName, targetPath))
     res.end()
 })
 
+//修复library，建立出错时使用
 router.put('/manager', async (req, res) => {
     const { libName } = req.body
     ScraperCenter.task(() => new Scraper().mount(libName).repair())
+    res.end()
+})
+
+interface reqEditMapRule {
+    libName: string
+    mapFile?: MapRule
+    mapDir?: MapRule
+}
+router.put('/mapRule', async (req, res) => {
+    const { libName, mapFile, mapDir } = req.body as reqEditMapRule
+    console.log([libName, mapFile, mapDir])
+
+    if (library[libName] == undefined) {
+        res.status(400).json({ error: '资源库不存在', alert: true })
+    }
+    if (mapFile && library[libName]?.mapFile) {
+        library[libName].mapFile = mapFile
+    }
+    if (mapDir && library[libName]?.mapDir) {
+        library[libName].mapDir = mapDir
+    }
     res.end()
 })
 

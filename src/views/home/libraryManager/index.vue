@@ -4,6 +4,7 @@ import {
     libraryInfo,
     reqAddLibrary,
     reqDeleteLibrary,
+    reqEditMapRule,
     reqLibraryList,
     reqReapirLibrary,
     reqUpdateLibrary,
@@ -36,11 +37,18 @@ const defaultScraperConfig: ScraperConfig = {
         parentTitle: 'scraperInfo.dandan.animeTitle',
     },
     mapDir: {
-        order: '',
+        order: 'scraperInfo.dandan.animeId',
         path: 'baseInfo.path',
-        title: 'scraperInfo.children.title',
+        title: ['scraperInfo.dandan.animeTitle', 'scraperInfo.children.title'],
         result: 'baseInfo.result',
         poster: 'scraperInfo.local.poster',
+        create: 'baseInfo.birthtime',
+        add: 'baseInfo.add',
+        update: 'baseInfo.update',
+        change: 'baseInfo.mtime',
+        air: 'scraperInfo.dandan.startDate',
+        rank: 'scraperInfo.dandan.rating',
+        like: 'scraperInfo.dandan.isFavorited',
     },
 }
 
@@ -75,12 +83,17 @@ const manageLibrary = async () => {
     const method = manageMethod.value
     const target = targetLibrary.value
     if (target == undefined) return
-    try {
-        console.log(method)
+    // console.log(target)
 
+    try {
         if (method === 'update') {
             await reqUpdateLibrary(target.name, target.rootPath)
         } else if (method === 'repair') {
+            await reqEditMapRule(
+                Object.assign(JSON.parse(JSON.stringify(defaultScraperConfig)), {
+                    libName: target.name,
+                }),
+            )
             await reqReapirLibrary(target.name)
         } else if (method === 'delete') {
             await reqDeleteLibrary(target.name)
@@ -104,15 +117,7 @@ export default {
     <div class="libraryManager-base col">
         <div class="row">
             <template v-for="library in libraryList" :key="library.libName">
-                <div
-                    class="col"
-                    style="
-                        width: 20em;
-                        min-height: 10em;
-                        border: 1px solid var(--el-border-color);
-                        margin: 1em 0;
-                    "
-                >
+                <div class="col libraryManager-card">
                     <div class="libraryManager-card-label" style="font-weight: 600">
                         名称： {{ library.name }}
                     </div>
@@ -213,6 +218,13 @@ export default {
             height: 2.5em;
         }
     }
+    .libraryManager-card {
+        width: 20em;
+        min-height: 10em;
+        border: 1px solid var(--el-border-color);
+        margin: 1em 1em;
+    }
+
     .libraryManager-save,
     .libraryManager-update,
     .libraryManager-repair,

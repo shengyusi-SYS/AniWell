@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import { libraryData, useLibraryStore } from '@v/stores/library'
 
 const libraryStore = useLibraryStore()
-const { libraryData, themeHelper } = storeToRefs(libraryStore)
+const { libraryData, themeHelper, boxInfo } = storeToRefs(libraryStore)
 const currentTheme = ref({})
 onMounted(() => {
     currentTheme.value = theme.value.library[libraryData?.value.libName]
@@ -26,6 +26,10 @@ export default {
                 <div class="row">
                     <div>helper</div>
                     <ElSwitch v-model="themeHelper" />
+                </div>
+                <div class="row">
+                    <div>box info</div>
+                    <ElSwitch v-model="boxInfo" />
                 </div>
                 <div>
                     base

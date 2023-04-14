@@ -1,6 +1,6 @@
 import { AppendedMetadata } from './filterAndAppend'
 import { ScraperResult, FileMetadata, LibraryStore } from '@s/store/library'
-import { vidoeHash, getFileType } from '@s/utils'
+import { vidoeHash, getFileType, screenObject } from '@s/utils'
 import { scrapeLogger } from '@s/utils/logger'
 import path, { basename } from 'path'
 import fs from 'fs'
@@ -90,7 +90,7 @@ export default async function scraper(library: LibraryStore['']) {
             stageTotal: Object.keys(library.flatFile).length,
         })
     }
-    const flatFile = library.flatFile
+    const flatFile = screenObject(library.flatFile, this.dirAndFile?.fileList)
     const queryList = []
     let i = 0
     for (const filePath in flatFile) {
@@ -98,10 +98,12 @@ export default async function scraper(library: LibraryStore['']) {
             if (progressController) {
                 progressController.setCurrent({ currentId: i++, currentName: filePath })
             }
+
             if (queryList.length >= 32) {
                 await Promise.allSettled(queryList)
                 queryList.length = 0
             }
+
             const fileMetadata = flatFile[filePath]
             fileMetadata.scraperInfo = fileMetadata.scraperInfo || {}
             if (

@@ -157,7 +157,18 @@ export const reqIsFirst = async (): Promise<boolean> => {
     }
 }
 
-export type sortBy = 'path' | 'title' | 'id' | 'order' | 'rank' | 'like'
+type sortBy =
+    | 'path'
+    | 'title'
+    | 'id'
+    | 'order'
+    | 'rank'
+    | 'like'
+    | 'add'
+    | 'air'
+    | 'creat'
+    | 'update'
+    | 'change'
 export interface LibQuery {
     libName?: string
     sort?: Array<'asc' | 'desc'>
@@ -179,7 +190,7 @@ export async function reqLibrary({
     start = 0,
     end = 20,
     sort = ['asc'],
-    sortBy = ['title'],
+    sortBy = ['title', 'order'],
 }: ReqLibrary): Promise<libraryData> {
     return (await requests.get(`/library/lib`, {
         decompress: true,
@@ -300,7 +311,7 @@ export interface MapResult extends ScraperResult {
     locked?: boolean //用于防止覆写用户设定
 }
 export interface MapRule {
-    [key: keyof MapResult]: string
+    [key: keyof MapResult]: string | string[]
 }
 export interface libraryConfig {
     library: {}
@@ -327,3 +338,9 @@ export const reqUpdateLibrary = async (libName: string, targetPath: string): Pro
 
 export const reqReapirLibrary = async (libName: string): Promise<void> =>
     requests.put(`/library/manager`, { libName })
+
+export const reqEditMapRule = async (params: {
+    name: string
+    mapFile?: MapRule
+    mapDir?: MapRule
+}): Promise<void> => requests.put(`/library/mapRule`, params)

@@ -1,5 +1,5 @@
 import path, { basename, dirname, extname, resolve } from 'path'
-import { readFile, readdir, stat, writeFile } from 'fs/promises'
+import { readFile, readdir, stat, writeFile, access } from 'fs/promises'
 import library, {
     LibraryStore,
     resultType,
@@ -70,7 +70,6 @@ export class TaskProgressController {
                     return Reflect.get(target, key)
                 },
                 set(target, key, value) {
-                    emitProgress(target)
                     if (this.count++ % 10 === 0) {
                         logger.debug('progress', target)
                     }
@@ -81,6 +80,7 @@ export class TaskProgressController {
     }
     setTotal(total: number) {
         this.progress.total = total
+        emitProgress(this.progress)
         return this
     }
     setStage(stage: {
@@ -90,15 +90,18 @@ export class TaskProgressController {
         currentName?: string
         currentId?: number
     }) {
-        ;['stageName', 'stageId', 'stageTotal', 'currentName', 'currentId'].forEach(
-            (key) => delete this.progress[key],
-        )
+        const deleteList = ['stageName', 'stageId', 'stageTotal', 'currentName', 'currentId']
+        if (this.progress.stageName !== stage.stageName) {
+            deleteList.forEach((key) => delete this.progress[key])
+        }
         Object.assign(this.progress, stage)
+        emitProgress(this.progress)
         return this
     }
     setCurrent(current: { currentName?: string; currentId?: number }) {
         ;['currentName', 'currentId'].forEach((key) => delete this.progress[key])
         Object.assign(this.progress, current)
+        emitProgress(this.progress)
         return this
     }
     end() {
@@ -136,12 +139,12 @@ export class Scraper {
     /**
      * countDirAndFile
      */
-    public async countDirAndFile() {
+    public async countDirAndFile(updatePath?: string) {
         this.progressController.setStage({ stageName: 'countDirAndFile' })
         const fileList = []
         const dirList = []
-
-        await filterDirFile.call(this, this.library.rootPath, { fileList, dirList })
+        await filterDirFile.call(this, updatePath || this.library.rootPath, { fileList, dirList })
+        if (updatePath) dirList.push(updatePath)
         this.dirAndFile = { fileList, dirList }
     }
 
@@ -185,11 +188,18 @@ export class Scraper {
                     parentTitle: 'scraperInfo.dandan.animeTitle',
                 },
                 mapDir: mapDir || {
-                    // order: '',
+                    order: 'scraperInfo.dandan.animeId',
                     path: 'baseInfo.path',
                     title: ['scraperInfo.dandan.animeTitle', 'scraperInfo.children.title'],
                     result: 'baseInfo.result',
                     poster: 'scraperInfo.local.poster',
+                    create: 'baseInfo.birthtime',
+                    add: 'baseInfo.add',
+                    update: 'baseInfo.update',
+                    change: 'baseInfo.mtime',
+                    air: 'scraperInfo.dandan.startDate',
+                    rank: 'scraperInfo.dandan.rating',
+                    like: 'scraperInfo.dandan.isFavorited',
                 },
                 config: config || {
                     library: {},
@@ -261,7 +271,7 @@ export class Scraper {
             stageTotal: this.dirAndFile.fileList.length,
             currentId: this.progressController.progress.currentId,
         })
-        this.library.flatFile = {}
+        this.library.flatFile = this.library.flatFile || {}
         const filterAndAppend = (await import('./video/filterAndAppend')).default
         for (let index = 0; index < this.dirAndFile.fileList.length; index++) {
             try {
@@ -284,29 +294,33 @@ export class Scraper {
     ) {
         const flat = this.library.flatFile
 
-        const exist = ['path', 'title', 'result', 'display', 'mime', 'hash'].reduce((pre, cur) => {
-            if (pre === false) {
-                return false
+        let exist = true
+        const checkList = ['path', 'title', 'result', 'display', 'mime', 'hash']
+        let i = 0
+        while (i < checkList.length) {
+            const key = checkList[i]
+            if (flat[filePath]?.baseInfo?.[key] == undefined) {
+                exist = false
+                break
             }
-            if (flat[filePath]?.[cur] != undefined) {
-                return true
-            } else return false
-        }, true)
+            i++
+        }
+
         if (exist) return
 
         const filetrResult = await filterAndAppend(filePath)
         if (filetrResult) {
-            const fileStat = await stat(filePath)
+            // const fileStat = await stat(filePath)
             const baseInfo = {
                 path: filePath,
                 title: basename(filePath).replace(extname(filePath), ''),
                 result: 'item' as const,
                 display: 'video',
-                size: fileStat.size,
-                atime: fileStat.atime,
-                mtime: fileStat.mtime,
-                ctime: fileStat.ctime,
-                birthtime: fileStat.birthtime,
+                // size: fileStat.size,
+                // atime: fileStat.atime,
+                // mtime: fileStat.mtime,
+                // ctime: fileStat.ctime,
+                // birthtime: fileStat.birthtime,
                 ...filetrResult,
             }
             flat[filePath] = { ...flat[filePath], baseInfo }
@@ -318,7 +332,7 @@ export class Scraper {
     /**
      * initDirLevel
      */
-    public async initDirLevel(overwrtie = false) {
+    public async initDirLevel(overwrtie = false, targetPath?: string) {
         const count: {
             [key in boxLevel]: object
         } = {
@@ -339,36 +353,44 @@ export class Scraper {
                 return boxPath
             }, filePath)
         }
+        scrapeLogger.debug('initDirLevel count', count)
 
         for (const level in count) {
             const levelCount = count[level]
             for (const boxPath in levelCount) {
                 const boxNum = levelCount[boxPath]
                 const target = this.library.flatDir[boxPath]
-                if (!target || overwrtie) {
+                if (!target || overwrtie || boxPath.includes(targetPath)) {
+                    const box =
+                        this.library.flatDir[boxPath] ??
+                        (this.library.flatDir[boxPath] = {} as DirMetadata)
+
                     //生成box基础信息
-                    this.library.flatDir[boxPath] = {
-                        baseInfo: {
-                            path: boxPath,
-                            title: basename(boxPath),
-                            result: this.library.rootPath.includes(boxPath) ? 'dir' : level,
-                            children:
-                                level === 'box0'
-                                    ? Object.keys(this.library.flatFile).filter(
-                                          (filePath) => dirname(filePath) === boxPath,
-                                      )
-                                    : Object.keys(this.library.flatDir).filter(
-                                          (dirPath) => dirname(dirPath) === boxPath,
-                                      ),
-                        },
-                        userInfo: {},
-                        scraperInfo: {
-                            mapResult: {},
-                        },
+                    box.baseInfo = box.baseInfo || {
+                        path: boxPath,
+                        title: basename(boxPath),
+                        result: this.library.rootPath.includes(boxPath)
+                            ? 'dir'
+                            : (level as boxLevel),
+                        children: [
+                            ...Object.keys(this.library.flatFile).filter(
+                                (filePath) => dirname(filePath) === boxPath,
+                            ),
+                            ...Object.keys(this.library.flatDir).filter(
+                                (dirPath) => dirname(dirPath) === boxPath,
+                            ),
+                        ],
+                    }
+                    box.userInfo = box.userInfo || {}
+                    box.scraperInfo = box.scraperInfo || {
+                        mapResult: {},
                     }
                 } else {
                     //排除掉个别存储位置不规范的文件的干扰
-                    if (target.baseInfo.result && boxNum > count[target.baseInfo.result][boxPath]) {
+                    if (
+                        Object.keys(count).includes(target.baseInfo.result) &&
+                        boxNum > count[target.baseInfo.result][boxPath]
+                    ) {
                         target.baseInfo.result = level
                     }
                 }
@@ -463,7 +485,7 @@ export class Scraper {
     }
 
     /**
-     * appendDirResult
+     * flatToTree
      */
     public flatToTree() {
         try {
@@ -507,28 +529,38 @@ export class Scraper {
     }
 
     /**
-     * allUpdate
+     * repair
      */
-    public async repair() {
+    public async repair(targetPath?: string) {
         try {
-            scrapeLogger.info('repair start', this.library.name, this.library.rootPath)
+            scrapeLogger.info(
+                'repair start',
+                this.library.name,
+                targetPath ?? this.library.rootPath,
+            )
             this.setSaveTimer()
+            await this.cleanInexistent(targetPath)
 
             let fileList = this.dirAndFile?.fileList
             let dirList = this.dirAndFile?.dirList
             let flatFileList = Object.keys(this.library?.flatFile)
             const flatDirList = Object.keys(this.library?.flatDir)
-            if (!(dirList?.length > 0 && fileList?.length > 0)) {
+            if (!targetPath && !(dirList?.length > 0 && fileList?.length > 0)) {
                 await this.countDirAndFile()
                 fileList = this.dirAndFile?.fileList
                 dirList = this.dirAndFile?.dirList
                 this.save()
             }
             if (flatFileList?.length < fileList?.length) {
+                console.log(flatFileList?.length, fileList?.length)
+
                 await this.filterFileType()
                 flatFileList = Object.keys(this.library?.flatFile)
                 this.save()
             }
+            //仅通过层级关系初始化文件夹box类型及基础信息
+            await this.initDirLevel(false, targetPath)
+            this.save()
             //调用刮削器对单文件进行刮削
             await this.scrapeFlatFile()
             this.save()
@@ -550,6 +582,58 @@ export class Scraper {
         }
         clearInterval(this.saveTimer)
         console.log('~~~~~~~~~~~~~~~done')
+    }
+
+    /**
+     * cleanInexistent
+     */
+    public async cleanInexistent(targetPath?: string) {
+        let flatFileList = Object.keys(this.library.flatFile)
+        if (targetPath) {
+            flatFileList = flatFileList.filter((filePath) => filePath.includes(targetPath))
+        }
+        for (let index = 0; index < flatFileList.length; index++) {
+            const filePath = flatFileList[index]
+            try {
+                await access(filePath)
+            } catch (error) {
+                delete this.library.flatFile[filePath]
+            }
+        }
+
+        let flatDirList = Object.keys(this.library.flatDir)
+        if (targetPath) {
+            flatDirList = flatDirList.filter((dirPath) => dirPath.includes(targetPath))
+        }
+        for (let index = 0; index < flatDirList.length; index++) {
+            const filePath = flatDirList[index]
+            try {
+                await access(filePath)
+            } catch (error) {
+                delete this.library.flatDir[filePath]
+            }
+        }
+    }
+
+    /**
+     * update
+     */
+    public async update(libName: string, targetPath: string) {
+        scrapeLogger.info('start update', libName, '---------', targetPath)
+        try {
+            scrapeLogger.info('update 1')
+            await this.mount(libName)
+            this.progressController.setCurrent({ currentName: 'start update' + libName })
+            scrapeLogger.info('update 2')
+            await this.countDirAndFile(targetPath)
+            scrapeLogger.info('update 3')
+            await this.repair(targetPath)
+        } catch (error) {
+            scrapeLogger.error('update', error)
+            this.progressController.reject()
+        }
+
+        scrapeLogger.info('start end', libName, '---------', targetPath)
     }
 
     async close() {

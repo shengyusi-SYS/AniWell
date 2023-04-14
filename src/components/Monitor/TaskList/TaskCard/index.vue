@@ -65,6 +65,8 @@ export default {
         flex-wrap: nowrap;
     }
     .taskCard-label {
+        flex-shrink: 0;
+        flex-wrap: nowrap;
         margin-right: 0.5em;
     }
     .taskCard-title,

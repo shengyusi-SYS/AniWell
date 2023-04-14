@@ -8,20 +8,35 @@ export async function toWebp(input: string | Buffer | ReadStream | Readable): Pr
     return await new Promise(async (resolve, reject) => {
         const task = spawn(
             init.ffmpegPath,
-            [`-i -`, '-f webp', '-compression_level 6', '-hide_banner', '-y', '-'],
+            [`-i -`, '-f webp', '-quality 75', '-hide_banner', '-y', '-'],
             { shell: true },
         )
 
         if (typeof input === 'string') input = createReadStream(input)
         else if (Buffer.isBuffer(input)) input = bufferToStream(input)
 
-        input.pipe(task.stdin)
+        const message = []
+        task.stderr.on('data', (data) => {
+            message.push(data.toString())
+            if (
+                data
+                    .toString()
+                    .includes('deprecated pixel format used, make sure you did set range correctly')
+            ) {
+                message.push('pix_fmt error')
+                task.kill()
+                reject(message)
+            }
+        })
+        setTimeout(() => {
+            reject(message)
+        }, 10000)
 
         const output: Buffer[] = []
-
         task.stdout.on('data', (chunk) => {
             output.push(chunk)
         })
+
         task.on('exit', (code) => {
             if (code === 0) {
                 resolve(Buffer.concat(output))
@@ -29,8 +44,11 @@ export async function toWebp(input: string | Buffer | ReadStream | Readable): Pr
                 reject(code)
             }
         })
+
         task.on('error', (err) => {
             reject(err)
         })
+
+        input.pipe(task.stdin)
     })
 }

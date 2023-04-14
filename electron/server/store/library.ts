@@ -55,12 +55,14 @@ export interface FileMetadata {
     baseInfo: {
         //文件信息，来自文件本身或经过一定的本地处理得到(无需网络请求)
         path: string
-        size: number
         result: 'item'
-        atime: Date //访问
-        mtime: Date //修改文件
-        ctime: Date //修改状态
-        birthtime: Date //创建
+        mime?: string
+        hash?: string
+        // size: number
+        // atime: Date //访问
+        // mtime: Date //修改文件
+        // ctime: Date //修改状态
+        // birthtime: Date //创建
     }
     scraperInfo: {
         mapResult: MapResult //经过map规则映射后的最终的刮削结果，也是客户端获取library时读取的对象
@@ -79,6 +81,10 @@ export interface DirMetadata {
         result: resultType
         title: string
         children: string[] //子项路径字符串
+        add: Date
+        update: Date
+        birthtime?: Date //创建
+        mtime?: Date //修改文件
     }
     scraperInfo: {
         mapResult: MapResult & {
