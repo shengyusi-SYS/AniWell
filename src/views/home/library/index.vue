@@ -17,7 +17,6 @@ import { ChevronDownIcon, ChevronLeftIcon } from '@heroicons/vue/20/solid'
 import { ElMessageBox } from 'element-plus'
 // import VideoPlayer from '@v/components/VideoPlayer/index.vue'
 // import { useElementSize } from '@v/hooks/useElementSize'
-// import isDesktop from '@h/useIsDesktop'
 
 const router = useRouter()
 const currentRouter = computed(() => router.currentRoute.value)
@@ -237,6 +236,9 @@ const libraryInfoOpen = ref(false)
 //     },
 //     { immediate: true },
 // )
+
+const padding = computed(() => (isDesktop.value ? '2em' : '1em'))
+
 useListenLifecycle('Library')
 </script>
 
@@ -448,6 +450,7 @@ export default {
     font-size: v-bind('boxTheme.fontSizeTitle');
     display: flex;
     flex-direction: column;
+    padding: v-bind('padding');
 }
 .library-cards {
     overflow: visible;

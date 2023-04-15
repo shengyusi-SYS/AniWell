@@ -3,13 +3,14 @@ import getVideoInfo, { VideoInfo } from './getVideoInfo'
 import handleSubtitles, { subInfo } from './handleSubtitles'
 import selectMethod from './selectMethod'
 import { ClientParams } from '@s/api/v1/library/handler/video'
-import handleFonts, { fontInfo } from './handleFonts'
+import handleFonts from './handleFonts'
 import DirectPlayHandler from './directPlayHandler'
 import { v4 as uuidv4 } from 'uuid'
 import { signAccessToken } from '@s/utils/jwt'
 import HlsHandler from './hlsHandler'
 import { readFileSync } from 'fs'
 import { Request, Response } from 'express'
+import { fontInfo } from '@s/store/fonts'
 
 export interface IVideoTask {
     taskId: string

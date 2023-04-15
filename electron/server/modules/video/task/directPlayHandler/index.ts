@@ -13,7 +13,7 @@ export default class DirectPlayHandler implements VideoHandler {
     constructor() {}
     public async init({ videoInfo }: { videoInfo: VideoInfo }) {
         this.filePath = videoInfo.filePath
-        this.contentType = mediaContentType(this.filePath)
+        this.contentType = mediaContentType(this.filePath) || 'video/mp4'
         // return this
     }
     /**

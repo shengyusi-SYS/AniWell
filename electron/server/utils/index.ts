@@ -1,4 +1,3 @@
-import settings from '@s/store/settings'
 import { logger, scrapeLogger } from './logger'
 import rimraf from 'rimraf'
 import { EventEmitter } from 'events'
@@ -32,91 +31,33 @@ function mediaContentType(name) {
     return type[path.extname(name)]
 }
 
-//解压同路径下的fonts压缩包到fontsDir
-async function extractFonts(packPath, fontsDir?: string) {
-    if (!fontsDir) {
-        fontsDir = path.resolve(settings.server.tempPath, 'fonts')
-    }
-    logger.debug('utils extractFonts start', fontsDir)
-    try {
-        await new Promise((resolve, reject) => {
-            rimraf(fontsDir, (err) => resolve(null))
-        })
-        await mkdir(fontsDir)
-    } catch (error) {}
-    await new Promise((resolve, reject) => {
-        const stream = Seven.extractFull(packPath, fontsDir, {
-            recursive: true,
-            $bin: pathTo7zip,
-        })
-        stream.on('end', function () {
-            resolve(null)
-        })
-        stream.on('error', (err) => resolve(err))
-    })
-    //检查是否有子文件夹嵌套，只检查一层，多了不干
-    let dirContent = await readdir(fontsDir)
-    if (dirContent.length == 1) {
-        const fontsList = []
-        const tempDir = path.join(fontsDir, dirContent[0])
-        dirContent = await readdir(tempDir)
-        dirContent.forEach((v) => {
-            fontsList.push(
-                rename(path.join(tempDir, v), path.join(fontsDir, v)).catch((e) =>
-                    Promise.resolve(),
-                ),
-            )
-        })
-        await Promise.all(fontsList)
-    }
-}
-
+//解压fonts压缩包到dest
 //竟然不能解压rar，之后修复
-export async function extractAndList(packPath: string, fontsDir: string) {
-    const list = []
+export async function extractAndList(packPath: string, dest: string) {
+    const fileList = []
     try {
         await new Promise((resolve, reject) => {
-            const stream = Seven.extractFull(packPath, fontsDir, {
+            const stream = Seven.extractFull(packPath, dest, {
                 recursive: true,
                 $bin: pathTo7zip,
-            })
-            stream.on('data', (data) => {
-                const filePath = data.file
-                if (path.extname(filePath)) {
-                    list.push(filePath)
-                }
             })
             stream.on('end', function () {
                 resolve(null)
             })
             stream.on('error', (err) => resolve(err))
         })
+        await filterDirFile(dest, { fileList, dirList: [] })
     } catch (error) {
-        logger.error('extractAndList', packPath)
+        logger.error('extractAndList', packPath, error)
     }
-
-    return list
+    logger.debug('extractAndList', fileList)
+    return fileList
 }
 
 //列出压缩包内容
 async function listPack(packPath) {
     return Seven.list(packPath, {
         $bin: pathTo7zip,
-    })
-}
-
-//计算视频hash，弹弹play模式，废弃，异步模式会导致读取变成小文件随机读取，效率极低
-async function vidoeHashS(filePath) {
-    const hash = crypto.createHash('md5')
-    return await new Promise((resolve, reject) => {
-        const stream = fs.createReadStream(filePath, { end: 1024 * 1024 * 16 - 1 })
-        stream.on('data', (chunk) => {
-            hash.update(chunk, 'utf8')
-        })
-        stream.on('end', () => {
-            const md5 = hash.digest('hex')
-            resolve(md5)
-        })
     })
 }
 
@@ -311,17 +252,15 @@ export function toNumberDeep<T>(obj: T, ignore: string[] = ['level']): T {
 
 export async function filterDirFile(filterDirPath, { fileList, dirList }) {
     logger.debug('filterDirFile start', filterDirPath)
-    const progressController: TaskProgressController = this.progressController
+    const progressController: TaskProgressController = this?.progressController
     const curList = (await readdir(filterDirPath)).map((v) => path.resolve(filterDirPath, v))
     const typeResult = await Promise.allSettled(curList.map((v) => readdir(v)))
     const nextDirList = []
     typeResult.forEach((v, i) => {
-        v.status === 'fulfilled'
-            ? (() => {
-                  dirList.push(curList[i])
-                  nextDirList.push(curList[i])
-              })()
-            : fileList.push(curList[i])
+        if (v.status === 'fulfilled') {
+            dirList.push(curList[i])
+            nextDirList.push(curList[i])
+        } else fileList.push(curList[i])
     })
 
     if (progressController) {
@@ -378,7 +317,6 @@ export const screenObject = <T extends Object>(target: T, ref: string[] | undefi
 export {
     generatePictureUrl,
     mediaContentType,
-    extractFonts,
     listPack,
     vidoeHash,
     getFileType,

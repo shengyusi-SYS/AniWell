@@ -90,12 +90,8 @@ export default {
                 </div>
             </ElAside>
             <ElMain class="col">
-                <ElScrollbar>
-                    <RouterView
-                        v-slot="{ Component, route }"
-                        class="home-router-view"
-                        :style="isDesktop ? 'padding: 0 2em' : 'padding:0 1em'"
-                    >
+                <ElScrollbar :min-size="10">
+                    <RouterView v-slot="{ Component, route }" class="home-router-view">
                         <KeepAlive include="Library">
                             <Component
                                 :is="Component"
@@ -166,7 +162,7 @@ export default {
             // overflow-x: hidden;
         }
         .home-router-view {
-            padding: 0 2em;
+            // padding: 0 2em;
         }
     }
     .el-header {
@@ -219,4 +215,9 @@ export default {
     transform-origin: left;
     z-index: 100;
 }
+
+// :deep(.el-scrollbar__bar) {
+//     width: 4px;
+//     height: 4px;
+// }
 </style>

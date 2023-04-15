@@ -3,6 +3,7 @@ import { users, UserData } from '@s/store/users'
 import { signAccessToken, verifyToken } from '@s/utils/jwt'
 import VideoTaskCenter from '@s/modules/video'
 import { getLibrary } from '@s/store/library'
+import { logger } from '@s/utils/logger'
 
 export interface ClientParams {
     libName?: string
@@ -36,6 +37,7 @@ export default async function videoHandler(req, res, next) {
         console.log(task.src)
         res.status(200).send(task.src)
     } catch (error) {
+        logger.error('video', error)
         res.status(500).json({ message: '处理失败', error })
     }
 }

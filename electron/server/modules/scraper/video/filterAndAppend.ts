@@ -6,6 +6,7 @@ import {
 } from '@s/utils/media'
 import { getFileType, vidoeHash } from '@s/utils'
 import { FileMetadata } from '@s/store/library'
+import { scrapeLogger } from '@s/utils/logger'
 
 type baseInfo = FileMetadata['baseInfo']
 export interface AppendedMetadata extends baseInfo, ScreenedMediaInfo {
@@ -18,18 +19,19 @@ export default async function filterAndAppend(filePath: string) {
         if (!typeFilter) {
             return
         }
-        // const mediaInfo = (await getScreenedMediaInfo(filePath)) as AppendedMetadata
-        const mediaInfo = { hash: '', mime: '' }
-        if (mediaInfo) {
-            try {
-                mediaInfo.hash = await vidoeHash(filePath)
-                mediaInfo.mime = await getVideoMimeType(filePath)
-            } catch (error) {}
-            return mediaInfo
-        } else {
-            return
+        const mediaInfo = { hash: '', mime: '', pixFmt: '' }
+        try {
+            mediaInfo.hash = await vidoeHash(filePath)
+            mediaInfo.mime = await getVideoMimeType(filePath)
+            const screenedMediaInfo = (await getScreenedMediaInfo(filePath)) as AppendedMetadata
+            mediaInfo.pixFmt = screenedMediaInfo.vidoeStream.pix_fmt
+        } catch (error) {
+            scrapeLogger.error('filterAndAppend mediaInfo', filePath, mediaInfo, error)
         }
+
+        return mediaInfo
     } catch (error) {
+        scrapeLogger.error('filterAndAppend', filePath, error)
         return
     }
 }

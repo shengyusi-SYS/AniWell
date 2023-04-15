@@ -141,7 +141,7 @@ router.post('/item', async (req, res, next) => {
     try {
         if (display === 'video') {
             await videoHandler(req, res, next)
-        } else return res.status(500).json({ message: '无对应处理程序', alert: true })
+        } else res.status(500).json({ message: '无对应处理程序', alert: true })
     } catch (error) {
         logger.error('/library/item', error)
         res.status(500).json({ message: '处理失败', alert: true })

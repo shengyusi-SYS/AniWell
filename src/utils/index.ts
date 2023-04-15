@@ -1,3 +1,6 @@
+import { libraryData } from '@v/stores/library'
+import videojs from 'video.js'
+
 export async function testVideoMime(mime: string) {
     const mediaConfig = {
         type: 'file' as const,
@@ -25,5 +28,39 @@ export async function testVideoMime(mime: string) {
         return false
     } catch (error) {
         return false
+    }
+}
+
+export async function selectVideoMethod(item: libraryData) {
+    try {
+        if (typeof item.mime !== 'string') {
+            return 'transcode'
+        }
+
+        const mimeResult = await testVideoMime(item.mime)
+        const pixFmt = (item.pixFmt as string) ?? ''
+        const codec = item.mime.match(/codecs="(?<codec>.+)"/)?.groups?.codec.split('.')[0]
+        console.log(codec, pixFmt, mimeResult)
+
+        if (videojs.browser.IS_IOS) {
+            if (codec === 'avc1' && pixFmt.includes('p10')) {
+                return 'transcode'
+            }
+            if (codec !== 'avc1') {
+                return 'transcode'
+            }
+        }
+        if (videojs.browser.IS_ANDROID) {
+            if (codec === 'avc1' && pixFmt.includes('p10')) {
+                return 'transcode'
+            }
+        }
+        if (videojs.browser.IS_WINDOWS) {
+        }
+        if (mimeResult) {
+            return 'direct'
+        } else return 'transcode'
+    } catch (error) {
+        return 'transcode'
     }
 }

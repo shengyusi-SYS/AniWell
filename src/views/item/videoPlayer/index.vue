@@ -12,7 +12,7 @@ import { useVideoPlayerStore } from '@v/stores/videoPlayer'
 import { isFunction, useElementSize } from '@vueuse/core'
 import useListenLifecycle from '@v/hooks/useListenLifecycle'
 import { libraryData } from '@v/stores/library'
-import { testVideoMime } from '@v/utils'
+import { selectVideoMethod, testVideoMime } from '@v/utils'
 
 import Hls from 'hls.js'
 import DPlayer from 'dplayer'
@@ -60,7 +60,7 @@ const controller = {
         for (let index = 0; index < itemList.length; index++) {
             const item = itemList[index]
             try {
-                const method = (await testVideoMime(item.mime)) ? 'direct' : 'transcode'
+                const method = await selectVideoMethod(item)
                 clientLog(item.mime, method, item.title)
                 const srcQueryTask = () => {
                     return reqItemSrc({
@@ -112,13 +112,17 @@ const controller = {
                     // const wasmUrl = URL.createObjectURL(await (await fetch(libassWASMUrl)).blob())
                     // const subUrl = URL.createObjectURL(await (await fetch(assSub.url)).blob())
                     const fontsList = src.fontsList
-                    const availableFonts = {}
+                    const availableFonts: { [fontName: string]: string }[] = []
                     const fontsUrl: string[] = []
                     if (fontsList) {
                         for (let index = 0; index < fontsList.length; index++) {
                             const font = fontsList[index]
                             fontsUrl.push(font.url)
-                            availableFonts[font.name] = font.url
+                            const fontName = font.name.replace(/.\w+$/i, '').toLowerCase()
+                            const availableFont = {
+                                [fontName]: font.url,
+                            }
+                            availableFonts.push(availableFont)
                         }
                     }
                     this.playerOptions.video.type = 'customDirect'

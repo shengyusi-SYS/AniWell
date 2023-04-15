@@ -182,6 +182,7 @@ export class Scraper {
                     result: 'baseInfo.result',
                     display: 'baseInfo.display',
                     mime: 'baseInfo.mime',
+                    pixFmt: 'baseInfo.pixFmt',
                     poster: 'scraperInfo.extPic.poster',
                     title: 'scraperInfo.dandan.title',
                     order: 'scraperInfo.dandan.episode',
@@ -295,7 +296,7 @@ export class Scraper {
         const flat = this.library.flatFile
 
         let exist = true
-        const checkList = ['path', 'title', 'result', 'display', 'mime', 'hash']
+        const checkList = ['path', 'title', 'result', 'display', 'mime', 'hash', 'pixFmt']
         let i = 0
         while (i < checkList.length) {
             const key = checkList[i]
@@ -538,6 +539,7 @@ export class Scraper {
                 this.library.name,
                 targetPath ?? this.library.rootPath,
             )
+            this.progressController.setStage({ stageName: 'repair start' + this.library.name })
             this.setSaveTimer()
             await this.cleanInexistent(targetPath)
 

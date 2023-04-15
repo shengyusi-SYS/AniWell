@@ -11,8 +11,13 @@ import {
     ScraperConfig,
 } from '@v/api'
 import useListenLifecycle from '@v/hooks/useListenLifecycle'
+import { useGlobalStore } from '@v/stores/global'
+import { storeToRefs } from 'pinia'
 import { Ref } from 'vue'
 const libraryList: Ref<libraryInfo[]> = ref([])
+
+const globalStore = useGlobalStore()
+const { isDesktop } = storeToRefs(globalStore)
 
 const update = async () => {
     try {
@@ -31,6 +36,7 @@ const defaultScraperConfig: ScraperConfig = {
         result: 'baseInfo.result',
         display: 'baseInfo.display',
         mime: 'baseInfo.mime',
+        pixFmt: 'baseInfo.pixFmt',
         poster: 'scraperInfo.extPic.poster',
         title: 'scraperInfo.dandan.title',
         order: 'scraperInfo.dandan.episode',
@@ -115,7 +121,7 @@ export default {
 
 <template>
     <div class="libraryManager-base col">
-        <div class="row">
+        <div class="libraryManager-list row">
             <template v-for="library in libraryList" :key="library.libName">
                 <div class="col libraryManager-card">
                     <div class="libraryManager-card-label" style="font-weight: 600">
@@ -152,7 +158,7 @@ export default {
                 (manageMethod === 'delete' ? '删除' : manageMethod === 'repair' ? '修复' : '更新') +
                 '?'
             "
-            width="30%"
+            :width="isDesktop ? '30em' : '100%'"
             align-center
             @closed="cleanQueryManage"
         >
@@ -175,7 +181,12 @@ export default {
                 >
             </div>
         </ElDialog>
-        <ElDialog v-model="formOpenned" title="新建资源库" width="30%" align-center>
+        <ElDialog
+            v-model="formOpenned"
+            title="新建资源库"
+            :width="isDesktop ? '30em' : '100%'"
+            align-center
+        >
             <div class="col libraryManager-form">
                 <ElInput
                     v-model="newConfig.name"
@@ -203,6 +214,12 @@ export default {
 
 <style lang="less" scoped>
 .libraryManager-base {
+    padding: 0;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    .libraryManager-list {
+        flex-wrap: wrap;
+    }
     .libraryManager-form {
         flex-grow: 1;
         text-align: left;
