@@ -135,6 +135,7 @@ router.post('/item', async (req, res, next) => {
     try {
         await access(itemPath)
     } catch (error) {
+        logger.error('/item access itemPath error', error)
         res.status(400).json({ message: '资源文件不存在', alert: true })
     }
 

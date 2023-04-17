@@ -22,7 +22,7 @@ import libassWASMUrl from '@v/lib/ass/subtitles-octopus-worker.wasm?url'
 import SubtitlesOctopus from '@v/lib/ass/subtitles-octopus'
 import { globalCache } from '@v/stores/global'
 
-// const router = useRouter()
+const router = useRouter()
 // onBeforeRouteUpdate((to, from) => {
 //     console.log(to, from)
 // })
@@ -51,6 +51,7 @@ const controller = {
     },
     taskId: '' as string | undefined,
     hlsInstance: {} as Hls,
+    state: 'init' as 'init' | 'play' | 'error',
 
     async setPlaylist(itemList: libraryData[], libName?: string) {
         this.playlist.length = 0
@@ -109,7 +110,10 @@ const controller = {
                     // const workerUrl = URL.createObjectURL(
                     //     await (await fetch(libassWorkerUrl)).blob(),
                     // )
-                    // const wasmUrl = URL.createObjectURL(await (await fetch(libassWASMUrl)).blob())
+                    // let wasmUrl: string
+                    // try {
+                    //     wasmUrl = URL.createObjectURL(await (await fetch(libassWASMUrl)).blob())
+                    // } catch (error) {}
                     // const subUrl = URL.createObjectURL(await (await fetch(assSub.url)).blob())
                     const fontsList = src.fontsList
                     const availableFonts: { [fontName: string]: string }[] = []
@@ -138,7 +142,13 @@ const controller = {
                                 fallbackFont: '/方正准圆.TTF',
                                 wasmUrl: libassWASMUrl,
                             }
-                            // console.log('ass', playerOptions)
+                            clientLog(
+                                'ass',
+                                playerOptions,
+                                libassWorkerUrl,
+                                libassLegacyWorkerUrl,
+                                libassWASMUrl,
+                            )
                             controller.assInstance = new SubtitlesOctopus(playerOptions)
                         },
                     }
@@ -181,7 +191,7 @@ const controller = {
     bindEvents() {
         console.log('~~~~~~~~~~~~~~bindEvents')
     },
-    async autoPlay(): Promise<() => {}> {
+    async autoPlay(): Promise<Function | void> {
         try {
             console.log('~~~~~~~~~~~~~~autoplay')
             if (this.assInstance?.dispose) {
@@ -201,7 +211,13 @@ const controller = {
             })
             return this.autoPlay()
         } catch (error) {
+            this.state = 'error'
+            ElMessage.error({
+                message: '播放错误',
+                grouping: true,
+            })
             clientLog('autoPlay error', error)
+            return router.back()
         }
     },
 }
@@ -229,8 +245,8 @@ onBeforeUnmount(() => {
 })
 
 onBeforeRouteLeave((to, from) => {
-    if (controller.taskId) {
-        reqStopTranscode(controller.taskId)
+    if (controller.taskId || controller.state === 'error') {
+        if (controller.taskId) reqStopTranscode(controller.taskId)
     } else return false //！重要，避免用户操作过快漏掉停止转码的请求
     if (controller.assInstance?.dispose) {
         try {

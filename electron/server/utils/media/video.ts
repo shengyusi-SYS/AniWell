@@ -25,7 +25,7 @@ export async function extractPicture({
         return await new Promise((resolve, reject) => {
             scrapeLogger.debug('pictureExtractor start', inputPath, duration)
             const task = spawn(
-                init.ffmpegPath,
+                basename(init.ffmpegPath),
                 [
                     `-ss ${duration / 8}`,
                     `-i "${path.resolve(inputPath)}"`,
@@ -42,7 +42,7 @@ export async function extractPicture({
                     '-y',
                     `"${path.resolve(outputPath)}"`,
                 ],
-                { shell: true },
+                { shell: true, cwd: dirname(init.ffmpegPath) },
             )
             task.on('exit', (code) => {
                 if (code === 0) {
@@ -66,12 +66,12 @@ export async function extractPicture({
 
 export async function cutVideo(
     filePath: string,
-    savePath: string = resolve(paths.temp, 'cut', uuidv4() + '.mp4'),
+    savePath: string = resolve(paths.cut, uuidv4() + '.mp4'),
     length = 0.01,
 ) {
     return new Promise<string>((resolve, reject) => {
         const task = spawn(
-            init.ffmpegPath,
+            basename(init.ffmpegPath),
             [
                 `-i "${filePath}"`,
                 '-map v:0',
@@ -83,29 +83,24 @@ export async function cutVideo(
             ],
             {
                 shell: true,
+                cwd: dirname(init.ffmpegPath),
             },
         )
+        const message = []
+        task.stderr.on('data', (data) => {
+            message.push(data.toString())
+        })
         task.on('exit', (code) => {
             if (code === 0) {
                 resolve(savePath)
             } else {
-                scrapeLogger.error(
-                    [
-                        `-i "${filePath}"`,
-                        '-map v:0',
-                        `-t ${length}`,
-                        '-hide_banner',
-                        '-c copy',
-                        '-y',
-                        savePath,
-                    ].join(' '),
-                )
-                reject()
+                scrapeLogger.error('cutVideo', task.spawnargs.join(' '))
+                reject(message)
             }
         })
         task.on('error', (e) => {
             scrapeLogger.error(e)
-            reject(e)
+            reject([e, message])
         })
     })
 }

@@ -3,13 +3,14 @@ import init from '@s/utils/init'
 import { createReadStream, ReadStream } from 'fs'
 import { bufferToStream } from '..'
 import { Readable } from 'stream'
+import { basename, dirname } from 'path'
 
 export async function toWebp(input: string | Buffer | ReadStream | Readable): Promise<Buffer> {
     return await new Promise(async (resolve, reject) => {
         const task = spawn(
-            init.ffmpegPath,
+            basename(init.ffmpegPath),
             [`-i -`, '-f webp', '-quality 75', '-hide_banner', '-y', '-'],
-            { shell: true },
+            { shell: true, cwd: dirname(init.ffmpegPath) },
         )
 
         if (typeof input === 'string') input = createReadStream(input)

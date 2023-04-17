@@ -54,7 +54,7 @@ export default async function getVideoInfo(filePath: string, libName?: string): 
         if (metadata == undefined) {
             metadata = await getScreenedMediaInfo(filePath)
         }
-
+        logger.debug('getVideoInfo', 'end', metadata)
         const { format, vidoeStream, audioStreams, subtitleStreams } = metadata
         const { bit_rate, duration } = format
         const { codec_name, width, height, pix_fmt, r_frame_rate, color_space, index } = vidoeStream
@@ -76,7 +76,7 @@ export default async function getVideoInfo(filePath: string, libName?: string): 
             platform: settings.transcode.platform,
             encode: settings.transcode.encode,
         }
-        logger.debug('getVideoInfo', 'end')
+        logger.debug('getVideoInfo', 'end', videoInfo)
         return videoInfo
     } catch (error) {
         logger.error('getVideoInfo err', error)

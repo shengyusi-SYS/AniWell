@@ -1000,6 +1000,9 @@ let SubtitlesOctopus = function (options) {
     } else {
         self.workerUrl = options.legacyWorkerUrl || 'subtitles-octopus-worker-legacy.js' // Link to legacy worker
     }
+    self.worker = options.worker
+    self.wasmUrl = options.wasmUrl
+
     self.subUrl = options.subUrl // Link to sub file (optional if subContent specified)
     self.subContent = options.subContent || null // Sub content (optional if subUrl specified)
     self.onErrorEvent = options.onError // Function called in case of critical error meaning sub wouldn't be shown and you should use alternative method (for instance it occurs if browser doesn't support web workers).
@@ -1087,6 +1090,7 @@ let SubtitlesOctopus = function (options) {
             libassMemoryLimit: self.libassMemoryLimit,
             libassGlyphLimit: self.libassGlyphLimit,
             dropAllAnimations: self.dropAllAnimations,
+            wasmUrl: self.wasmUrl,
         })
     }
 

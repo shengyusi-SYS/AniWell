@@ -1,5 +1,5 @@
 import { access } from 'fs/promises'
-import path from 'path'
+import path, { basename, dirname } from 'path'
 import init from '@s/utils/init'
 const { ffmpegSuffix } = init
 import settings from '@s/store/settings'
@@ -49,13 +49,10 @@ class hlsProcessController {
                 'ffmpegPath',
                 path.resolve(settings.server.ffmpegPath, `ffmpeg${ffmpegSuffix}`),
             )
-            const ffmpeg = (this.currentProcess = spawn(
-                settings.server.ffmpegPath
-                    ? `"${path.resolve(settings.server.ffmpegPath, `ffmpeg${ffmpegSuffix}`)}"`
-                    : 'ffmpeg',
-                params,
-                { shell: true },
-            ))
+            const ffmpeg = (this.currentProcess = spawn(basename(init.ffmpegPath), params, {
+                shell: true,
+                cwd: dirname(init.ffmpegPath),
+            }))
             this.processList.push(ffmpeg)
             ffmpeg.id = initSegmentId
             ffmpeg.queue = []

@@ -206,9 +206,11 @@ export default {
                 >
             </div>
         </ElDialog>
-        <ElButton type="primary" class="libraryManager-save" @click="formOpenned = true"
-            >添加</ElButton
-        >
+        <div class="col" style="flex-grow: 1; justify-content: center; align-items: center">
+            <ElButton type="primary" class="libraryManager-save" @click="formOpenned = true"
+                >添加</ElButton
+            >
+        </div>
     </div>
 </template>
 

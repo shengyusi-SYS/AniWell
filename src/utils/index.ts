@@ -1,3 +1,4 @@
+import { clientLog } from '@v/api'
 import { libraryData } from '@v/stores/library'
 import videojs from 'video.js'
 
@@ -40,7 +41,7 @@ export async function selectVideoMethod(item: libraryData) {
         const mimeResult = await testVideoMime(item.mime)
         const pixFmt = (item.pixFmt as string) ?? ''
         const codec = item.mime.match(/codecs="(?<codec>.+)"/)?.groups?.codec.split('.')[0]
-        console.log(codec, pixFmt, mimeResult)
+        // clientLog(codec, pixFmt, mimeResult)
 
         if (videojs.browser.IS_IOS) {
             if (codec === 'avc1' && pixFmt.includes('p10')) {

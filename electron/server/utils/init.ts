@@ -56,8 +56,8 @@ class Init {
     }
 
     private checkFFmpeg(ffmpegDirPath: string) {
-        this.ffmpegPath = join(ffmpegDirPath, 'ffmpeg' + this.ffmpegSuffix)
-        this.ffprobePath = join(ffmpegDirPath, 'ffprobe' + this.ffmpegSuffix)
+        this.ffmpegPath = path.resolve(ffmpegDirPath, 'ffmpeg' + this.ffmpegSuffix)
+        this.ffprobePath = path.resolve(ffmpegDirPath, 'ffprobe' + this.ffmpegSuffix)
         fs.accessSync(this.ffmpegPath)
         fs.accessSync(this.ffprobePath)
     }
@@ -106,7 +106,9 @@ class Init {
             const defaultSSLPath = path.resolve(paths.data, 'ssl')
             try {
                 fs.mkdirSync(defaultSSLPath)
-            } catch (error) {}
+            } catch (error) {
+                logger.error('mkdir defaultSSLPath', error)
+            }
             try {
                 const cert = createCertificate()
                 this.ssl = cert

@@ -21,7 +21,7 @@ router.get('/salt', async (req, res, next) => {
             res.json({ salt })
         }
     } else {
-        res.status(400).json({ error: '请求错误', alert: true })
+        res.status(400).json({ error: '请求错误' })
     }
 })
 
@@ -57,10 +57,10 @@ router.post('/login', upload.none(), async (req, res, next) => {
                 res.status(200).end()
                 return
             } else {
-                res.status(401).json({ error: '用户名或密码错误' })
+                res.status(401).json({ error: '用户名或密码错误', alert: true })
             }
         } catch (error) {
-            res.status(401).json({ error: '用户名或密码错误' })
+            res.status(401).json({ error: '用户名或密码错误', alert: true })
         }
     } else {
         res.status(400).json({ error: '请求错误' })

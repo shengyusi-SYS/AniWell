@@ -226,6 +226,7 @@ export default {
 
 <style lang="less" scoped>
 .settings-base {
+    padding: 2em;
     .settings-tabs {
     }
 }

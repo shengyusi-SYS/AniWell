@@ -5,15 +5,15 @@ import init from '@s/utils/init'
 import MP4Box from 'mp4box'
 import { readChunkSync, toNumberDeep } from '@s/utils'
 import paths from '../envPath'
-import { createReadStream, ReadStream } from 'fs'
-import { mkdir, unlink } from 'fs/promises'
+import { createReadStream, readFileSync, ReadStream } from 'fs'
+import { mkdir, unlink, rm } from 'fs/promises'
 import { v4 as uuidv4 } from 'uuid'
 import { cutVideo } from './video'
-import { scrapeLogger } from '@s/utils/logger'
+import { logger, scrapeLogger } from '@s/utils/logger'
 
 export function getMediaInfoSync(filePath: string): Promise<MediaInfo> {
     const task = spawnSync(
-        init.ffprobePath,
+        basename(init.ffprobePath),
         [
             `-i "${path.resolve(filePath)}"`,
             '-show_streams',
@@ -21,119 +21,126 @@ export function getMediaInfoSync(filePath: string): Promise<MediaInfo> {
             '-print_format json',
             '-hide_banner',
         ],
-        { shell: true },
+        { shell: true, cwd: dirname(init.ffprobePath) },
     )
     const result = JSON.parse(task.stdout.toString())
     return result
 }
 
 export async function getMediaInfo(filePath: string): Promise<MediaInfo> {
-    return new Promise((resolve, reject) => {
-        const task = spawn(
-            init.ffprobePath,
-            [
+    try {
+        return await new Promise((resolve, reject) => {
+            const params = [
                 `-i "${path.resolve(filePath)}"`,
                 '-show_streams',
                 '-show_format',
                 '-show_chapters',
                 '-print_format json',
                 '-hide_banner',
-            ],
-            { shell: true },
-        )
-        let info = ''
-        task.stdout.on('data', (data) => {
-            info += data.toString()
+            ]
+            const task = spawn(basename(init.ffprobePath), params, {
+                shell: true,
+                cwd: dirname(init.ffprobePath),
+            })
+            let info = ''
+            task.stdout.on('data', (data) => {
+                info += data.toString()
+            })
+            const message: string[] = []
+            task.stderr.on('data', (msg) => {
+                message.push(msg.toString())
+            })
+            task.on('exit', (code) => {
+                if (code === 0) {
+                    const result = JSON.parse(info)
+                    resolve(toNumberDeep(result))
+                } else {
+                    reject([message, params])
+                }
+            })
         })
-        task.on('exit', (code) => {
-            if (code === 0) {
-                const result = JSON.parse(info)
-                resolve(toNumberDeep(result))
-            } else {
-                reject()
-            }
-        })
-    })
+    } catch (error) {
+        logger.error('getMediaInfo err', filePath, error)
+        return Promise.reject(error)
+    }
 }
 
 export async function getScreenedMediaInfo(filePath: string): Promise<ScreenedMediaInfo> {
-    const metadata = await getMediaInfo(filePath)
-    const vidoeStream = metadata.streams.find((v) => {
-        return v.codec_type == 'video'
-    })
-    const audioStreams = metadata.streams.filter((v) => {
-        return v.codec_type == 'audio'
-    })
-    const subtitleStreams = metadata.streams.filter((v) => {
-        return v.codec_type == 'subtitle'
-    })
-    const chapters = metadata.chapters.map((v) => {
+    try {
+        const metadata = await getMediaInfo(filePath)
+        const vidoeStream = metadata.streams.find((v) => {
+            return v.codec_type == 'video'
+        })
+        const audioStreams = metadata.streams.filter((v) => {
+            return v.codec_type == 'audio'
+        })
+        const subtitleStreams = metadata.streams.filter((v) => {
+            return v.codec_type == 'subtitle'
+        })
+        const chapters = metadata.chapters.map((v) => {
+            return {
+                title: v.tags.title,
+                start: v.start_time,
+            }
+        })
         return {
-            title: v.tags.title,
-            start: v.start_time,
+            format: metadata.format,
+            vidoeStream,
+            audioStreams,
+            subtitleStreams,
+            chapters,
         }
-    })
-    return {
-        format: metadata.format,
-        vidoeStream,
-        audioStreams,
-        subtitleStreams,
-        chapters,
+    } catch (error) {
+        logger.error('getScreenedMediaInfo err', filePath, error)
+        return Promise.reject(error)
     }
 }
 
 const mimeReg = /codecs="(?<codec>(av|he|hv|vp)\w+(\.\w+)*)(,\w+(\.\w+)*)?"/i
 export async function getVideoMimeType(filePath: string) {
-    const readMediaHeader = async () => {
-        //ffmpeg不能直接获得标准的mime codec，MP4box不能直接解析mkv格式，就很烦
-        //解决方案：ffmpeg提取MP4格式的视频头，交给MP4box解析，但准确度待验证，要彻底解决怕是要去读规范文件
-        try {
-            const cutPath = await cutVideo(filePath)
-            return {
-                cutPath,
-                chunk: readChunkSync(cutPath, { length: 1024 * 1024 * 5, startPosition: 0 }),
-            }
-        } catch (error) {
-            return {
-                cutPath: filePath,
-                chunk: readChunkSync(filePath, { length: 1024 * 1024 * 5, startPosition: 0 }),
-            }
-        }
-    }
-    const mp4boxfile = MP4Box.createFile()
-    let chunk
+    //ffmpeg不能直接获得标准的mime codec，MP4box不能直接解析mkv格式，就很烦
+    //解决方案：ffmpeg提取MP4格式的视频头，交给MP4box解析，但准确度待验证，要彻底解决怕是要去读规范文件
+    let chunk: Buffer
     try {
-        const res = await readMediaHeader()
-        chunk = res.chunk
-        unlink(res.cutPath)
-    } catch (error) {}
+        const cutPath = await cutVideo(filePath)
+        chunk = readFileSync(cutPath)
+        await rm(cutPath)
+    } catch (error) {
+        chunk = readChunkSync(filePath, { length: 1024 * 1024 * 5, startPosition: 0 })
+    }
+
     if (!chunk) {
         return Promise.reject()
     }
     const arrayBuffer = new Uint8Array(chunk).buffer
     arrayBuffer.fileStart = 0
-    return new Promise<string>((resolve, reject) => {
-        setTimeout(() => {
-            reject('未知原因，部分视频会卡住，也不报错')
-        }, 3000)
-        mp4boxfile.onReady = (info) => {
-            try {
-                const codec = info.mime.match(mimeReg)?.groups?.codec
-                scrapeLogger.info('getVideoMimeType', codec)
-                resolve(`video/mp4; codecs="${codec}"`)
-            } catch (error) {
-                scrapeLogger.error('getVideoMimeType', info.mime)
-                reject(error)
+    try {
+        return await new Promise<string>((resolve, reject) => {
+            const mp4boxfile = MP4Box.createFile()
+            setTimeout(() => {
+                reject('未知原因，部分视频会卡住，也不报错')
+            }, 3000)
+            mp4boxfile.onReady = (info) => {
+                try {
+                    const codec = info.mime.match(mimeReg)?.groups?.codec
+                    scrapeLogger.info('getVideoMimeType', codec)
+                    resolve(`video/mp4; codecs="${codec}"`)
+                } catch (error) {
+                    scrapeLogger.error('getVideoMimeType', info.mime)
+                    reject(error)
+                }
             }
-        }
-        mp4boxfile.onError = function (e) {
-            scrapeLogger.error('getVideoMimeType', e)
+            mp4boxfile.onError = function (e) {
+                scrapeLogger.error('getVideoMimeType', e)
 
-            reject(e)
-        }
-        mp4boxfile.appendBuffer(arrayBuffer)
-        mp4boxfile.flush()
-    })
+                reject(e)
+            }
+            mp4boxfile.appendBuffer(arrayBuffer)
+            mp4boxfile.flush()
+        })
+    } catch (error) {
+        return Promise.reject(error)
+    }
 }
 
 export interface StreamInfo {

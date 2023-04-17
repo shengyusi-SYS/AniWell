@@ -66,7 +66,7 @@ export const clientLog = (...args: any[]) => {
     console.log('clientLog', msg)
     socket.emit('clientLog', msg)
 }
-clientLog(ua)
+// clientLog(ua)
 
 export const reqDebug = (...args: any[]) => {
     const msg = args

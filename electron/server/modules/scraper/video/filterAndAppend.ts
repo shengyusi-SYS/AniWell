@@ -25,6 +25,7 @@ export default async function filterAndAppend(filePath: string) {
             mediaInfo.mime = await getVideoMimeType(filePath)
             const screenedMediaInfo = (await getScreenedMediaInfo(filePath)) as AppendedMetadata
             mediaInfo.pixFmt = screenedMediaInfo.vidoeStream.pix_fmt
+            scrapeLogger.debug('filterAndAppend mediaInfo', filePath, mediaInfo)
         } catch (error) {
             scrapeLogger.error('filterAndAppend mediaInfo', filePath, mediaInfo, error)
         }

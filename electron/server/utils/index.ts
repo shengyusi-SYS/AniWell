@@ -4,7 +4,7 @@ import { EventEmitter } from 'events'
 import path from 'path'
 const event = new EventEmitter()
 import sevenBin from '7zip-bin'
-const pathTo7zip = sevenBin.path7za
+const pathTo7zip = sevenBin.path7za.replace('app.asar', 'app.asar.unpacked')
 import Seven from 'node-7z'
 import { readdir, mkdir, rename } from 'fs/promises'
 import crypto from 'crypto'
@@ -37,20 +37,32 @@ export async function extractAndList(packPath: string, dest: string) {
     const fileList = []
     try {
         await new Promise((resolve, reject) => {
+            const message = []
             const stream = Seven.extractFull(packPath, dest, {
                 recursive: true,
                 $bin: pathTo7zip,
             })
+            stream.on('data', (data) => {
+                message.push(data)
+            })
             stream.on('end', function () {
+                logger.debug('extractAndList message', message)
                 resolve(null)
             })
-            stream.on('error', (err) => resolve(err))
+            stream.on('error', (err) => {
+                logger.error('extractAndList error', [err, message])
+                reject([err, message])
+            })
         })
+    } catch (error) {
+        logger.error('extractAndList extractFull', packPath, error)
+    }
+    try {
         await filterDirFile(dest, { fileList, dirList: [] })
     } catch (error) {
-        logger.error('extractAndList', packPath, error)
+        logger.error('extractAndList filterDirFile error', packPath, error)
     }
-    logger.debug('extractAndList', fileList)
+    logger.debug('extractAndList', pathTo7zip, packPath, dest, fileList)
     return fileList
 }
 

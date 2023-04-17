@@ -30,7 +30,7 @@ requests.interceptors.response.use(
     (error) => {
         const errorData = error.response.data
         if (errorData.alert) {
-            globalCache.alertMessages.value = errorData.error
+            globalCache.alertMessages.value = errorData.message ?? errorData.error
         }
         return Promise.reject(error)
     },

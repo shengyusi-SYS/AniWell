@@ -300,7 +300,8 @@ export class Scraper {
         let i = 0
         while (i < checkList.length) {
             const key = checkList[i]
-            if (flat[filePath]?.baseInfo?.[key] == undefined) {
+            const value = flat[filePath]?.baseInfo?.[key]
+            if (value == undefined || (typeof value === 'string' && value.length === 0)) {
                 exist = false
                 break
             }
@@ -539,6 +540,7 @@ export class Scraper {
                 this.library.name,
                 targetPath ?? this.library.rootPath,
             )
+            this.progressController = new TaskProgressController('repair ' + this.library.name)
             this.progressController.setStage({ stageName: 'repair start' + this.library.name })
             this.setSaveTimer()
             await this.cleanInexistent(targetPath)
@@ -621,21 +623,46 @@ export class Scraper {
      * update
      */
     public async update(libName: string, targetPath: string) {
-        scrapeLogger.info('start update', libName, '---------', targetPath)
         try {
-            scrapeLogger.info('update 1')
-            await this.mount(libName)
+            scrapeLogger.info('start update', libName, '---------', targetPath)
+            this.progressController = new TaskProgressController('update ' + libName)
             this.progressController.setCurrent({ currentName: 'start update' + libName })
-            scrapeLogger.info('update 2')
-            await this.countDirAndFile(targetPath)
-            scrapeLogger.info('update 3')
-            await this.repair(targetPath)
-        } catch (error) {
-            scrapeLogger.error('update', error)
-            this.progressController.reject()
-        }
+            if (this.library == undefined) {
+                this.mount(libName)
+            }
 
-        scrapeLogger.info('start end', libName, '---------', targetPath)
+            try {
+                await access(targetPath)
+            } catch (error) {
+                scrapeLogger.info('update Inexistent', libName, '---------', targetPath)
+                try {
+                    await this.cleanInexistent(targetPath)
+                    this.flatToTree()
+                    this.save()
+                    this.progressController.end()
+                    return
+                } catch (error) {
+                    scrapeLogger.error('update Inexistent', error)
+                    return
+                }
+            }
+
+            try {
+                scrapeLogger.info('update 1')
+                await this.mount(libName)
+                scrapeLogger.info('update 2')
+                await this.countDirAndFile(targetPath)
+                scrapeLogger.info('update 3')
+                await this.repair(targetPath)
+            } catch (error) {
+                scrapeLogger.error('update', error)
+                this.progressController.reject()
+            }
+
+            scrapeLogger.info('update end', libName, '---------', targetPath)
+        } catch (error) {
+            scrapeLogger.error('update', libName, '---------', targetPath, error)
+        }
     }
 
     async close() {
