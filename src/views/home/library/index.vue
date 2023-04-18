@@ -37,7 +37,7 @@ const currentPage = ref(Number(router.currentRoute.value.query?.page) || 1)
 const total = computed(() => libraryData.value.total || 20)
 const pageSize = computed(() => boxTheme.value.pageSize)
 
-//页面切换
+//分页切换查询
 let pageStart = ref(0)
 let pageEnd = computed(() => pageStart.value + pageSize.value)
 let openingCard = false
@@ -55,7 +55,7 @@ const paginationQuery = (replace = false) => {
         } else router.push(opt)
     }
 }
-
+//监听分页配置
 const sizeChange = watch(pageSize, (newSize, oldSize) => {
     console.log('sizeChange', newSize, oldSize)
 
@@ -69,6 +69,7 @@ const pageChange = watch(currentPage, (newPage, oldPage) => {
     paginationQuery()
 })
 
+//点击card
 let sortConfig: sortConfig = {
     start: 0,
     end: 20,
@@ -81,6 +82,7 @@ let currentLibName: ComputedRef<string> = computed(
 async function openCard(libName: string, cardData: libraryData, index?: number) {
     openingCard = true
     if (cardData.result === 'item') {
+        //card为item时，转到item页面
         const targetLibrary =
             libraryData.value.libName === libName
                 ? libraryData.value
@@ -89,7 +91,7 @@ async function openCard(libName: string, cardData: libraryData, index?: number) 
             const cards = targetLibrary.children?.filter((v) => v.display === cardData.display)
             if (cards == undefined) return
 
-            if (typeof index === 'number') cards.push(...cards.splice(0, index))
+            if (typeof index === 'number') cards.push(...cards.splice(0, index)) //以点击对象为起始，重排item顺序
             await itemStore.setItemList(cards, {
                 libName,
                 display: cardData.display || 'file',
@@ -98,6 +100,7 @@ async function openCard(libName: string, cardData: libraryData, index?: number) 
         } else {
         }
     } else {
+        //card不为item时，打开对应层
         let boxLevel = cardData.result || 'dir'
         if (libraryConfig.value[libName] == undefined) {
             libraryConfig.value[libName] = defaultLibraryConfig
@@ -119,7 +122,7 @@ async function openCard(libName: string, cardData: libraryData, index?: number) 
             query.sortBy = ['change', 'add', 'order', 'title']
             query.sort = ['desc', 'desc', 'asc', 'asc']
         }
-        console.log(query)
+        // console.log(query)
 
         router.push({
             name: 'library',
@@ -128,6 +131,7 @@ async function openCard(libName: string, cardData: libraryData, index?: number) 
     }
 }
 
+//右键菜单
 const floatMenuCoordinate = ref({ x: 0, y: 0 })
 const floatMenuOpen = ref(false)
 const selectedCard: Ref<libraryData | undefined> = ref(undefined)
@@ -142,12 +146,14 @@ async function clickCard(e: PointerEvent, cardData: libraryData) {
     floatMenuOpen.value = true
 }
 
+//electron本地打开
 async function openLocalFolder() {
     if (window.electronAPI?.openLocalFolder) {
         window.electronAPI.openLocalFolder(selectedCard.value?.path)
     }
 }
 
+//更新询问弹窗
 const queryUpdateDialogOpen = ref(false)
 async function queryUpdatePath() {
     if (selectedCard.value) {
@@ -166,7 +172,6 @@ async function cancelUpdatePath() {
     queryUpdateDialogOpen.value = false
     selectedCard.value = undefined
 }
-
 watchEffect(() => {
     if (floatMenuOpen.value === false && queryUpdateDialogOpen.value === false) {
         selectedCard.value = undefined
@@ -189,6 +194,7 @@ onBeforeRouteUpdate(async (to, from, next) => {
         floatMenuOpen.value = false
         historyBack = !openingCard && !changePagination
         const query = to.query
+        //query中length为1的数组会被转成string，请求时需要转回数组
         if (typeof query.sort === 'string') {
             query.sort = [query.sort]
         }
@@ -228,14 +234,6 @@ onBeforeRouteUpdate(async (to, from, next) => {
 })
 
 const libraryInfoOpen = ref(false)
-
-// watch(
-//     useWindowSize().width,
-//     (width) => {
-//         console.log(width)
-//     },
-//     { immediate: true },
-// )
 
 const padding = computed(() => (isDesktop.value ? '2em' : '1em'))
 

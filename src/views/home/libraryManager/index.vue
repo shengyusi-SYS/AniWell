@@ -58,10 +58,11 @@ const defaultScraperConfig: ScraperConfig = {
     },
 }
 
+//添加资源库
 const newConfig = ref(JSON.parse(JSON.stringify(defaultScraperConfig)))
 const formOpenned = ref(false)
 const addLibrary = async () => {
-    console.log('addLibrary', newConfig.value)
+    // console.log('addLibrary', newConfig.value)
     try {
         await reqAddLibrary(newConfig.value)
         newConfig.value = JSON.parse(JSON.stringify(defaultScraperConfig))
@@ -70,6 +71,7 @@ const addLibrary = async () => {
     } catch (error) {}
 }
 
+//资源库操作
 type manageMethods = 'update' | 'repair' | 'delete'
 const dialogOpen = ref(false)
 const targetLibrary: Ref<libraryInfo | undefined> = ref(undefined)

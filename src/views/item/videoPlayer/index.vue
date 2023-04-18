@@ -39,7 +39,7 @@ const controller = {
     playlist: [] as Array<{ title: string; srcTask: () => Promise<VideoSrc> }>,
     playerOptions: {},
     currentIndex: -1,
-    player: {} as DPlayer,
+    player: {} as DPlayer,//dplayer不方便定制UI，可能还是得videojs
     videoElement: {} as HTMLElement,
     assInstance: {} as SubtitlesOctopus,
     libName: '',
@@ -84,6 +84,7 @@ const controller = {
     async getSrc(index = 0): Promise<VideoSrc> {
         return await this.playlist[index].srcTask()
     },
+    //生成配置项
     async setPlayerOptions({ index = 0 } = {}) {
         this.currentIndex = index
         const src: VideoSrc = await this.getSrc(index)
@@ -191,6 +192,7 @@ const controller = {
     bindEvents() {
         console.log('~~~~~~~~~~~~~~bindEvents')
     },
+    //自动播放
     async autoPlay(): Promise<Function | void> {
         try {
             console.log('~~~~~~~~~~~~~~autoplay')

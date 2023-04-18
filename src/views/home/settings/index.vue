@@ -23,6 +23,7 @@ const changeSettings = async () => {
     } catch (error) {}
 }
 
+//暂时采用模板与数据分层处理，之后考虑jsx或ssr方案
 const settingsTemplate = {
     server: {
         label: '服务器',
