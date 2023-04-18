@@ -17,7 +17,7 @@ const monitorOpenned = ref(false)
 
 const router = useRouter()
 
-// useListenLifecycle('Home')
+useListenLifecycle('Home')
 </script>
 
 <script lang="ts">
@@ -79,6 +79,13 @@ export default {
                             >
                                 <SquaresPlusIcon class="home-navigation-nav-icon" />
                                 <div class="home-navigation-nav-label">资源管理</div>
+                            </div>
+                            <div
+                                v-if="false"
+                                class="row home-navigation-nav"
+                                @click="router.push({ name: 'test' })"
+                            >
+                                <div class="home-navigation-nav-label">test</div>
                             </div>
                         </div>
                     </Transition>

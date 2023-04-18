@@ -239,7 +239,7 @@ const libraryInfoOpen = ref(false)
 
 const padding = computed(() => (isDesktop.value ? '2em' : '1em'))
 
-useListenLifecycle('Library')
+// useListenLifecycle('Library')
 </script>
 
 <script lang="ts">

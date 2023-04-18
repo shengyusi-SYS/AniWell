@@ -47,7 +47,7 @@ export const useLibraryStore = defineStore('library', () => {
         libraryData.value = newData
         globalStore.setLibraryTheme(newData.libName)
         if (newData.libName === 'overview') {
-            newData.children?.map((v) => v.libName).forEach(globalStore.setLibraryTheme)
+            newData.children?.map((v) => v.libName).forEach(globalStore.setLibraryTheme) //为不同资源库初始化样式
         }
     }
 

@@ -9,19 +9,21 @@ export const socket = io()
 const ua = new UAParser().getResult()
 
 socket.on('connect', () => {
-    console.log(socket.id)
+    // console.log(socket.id)
 })
 socket.on('data', (data) => {
-    console.log(data)
+    // console.log(data)
 })
 socket.on('time', (time) => {
     const delay = Date.now() - time
     globalCache.serverDelay.add(delay)
 })
+//服务端推送的日志
 socket.on('log', (log) => {
     globalCache.serverLog.info(log)
 })
 
+//任务进度
 export interface TaskProgress {
     state: 'pending' | 'fulfilled' | 'rejected'
     name: string
@@ -39,6 +41,7 @@ socket.on('progress', (taskProgress: TaskProgress) => {
     globalCache.serverTaskProgress.add(taskProgress)
 })
 
+//客户端日志上传到服务端
 export const clientLog = (...args: any[]) => {
     const msg = args
         .map((v) => {
@@ -68,21 +71,24 @@ export const clientLog = (...args: any[]) => {
 }
 // clientLog(ua)
 
-export const reqDebug = (...args: any[]) => {
-    const msg = args
-        .map((v) => (v && typeof v === 'object' ? JSON.stringify(v, null, '\t') : v))
-        .join(' ')
+//客户端不方便查看控制台时用
+// export const reqDebug = (...args: any[]) => {
+//     const msg = args
+//         .map((v) => (v && typeof v === 'object' ? JSON.stringify(v, null, '\t') : v))
+//         .join(' ')
 
-    return requests.post('/debug', msg)
-}
+//     return requests.post('/debug', msg)
+// }
 
 export const reqSalt = (username: string): Promise<{ salt: string }> =>
     requests.get('/users/salt?username=' + username)
 
+//利用httponly的cookie无法被js读写的特性进行检查
 const checkToken = () => {
     document.cookie = 'refreshToken=refreshToken;path=/;'
     return !/refreshToken=refreshToken/.test(document.cookie)
 }
+//登录流程，还是把自动登录独立出来好一点
 let tried = false
 export const reqLogin = async (username?: string, password?: string): Promise<boolean> => {
     try {
@@ -138,14 +144,17 @@ export const reqLogin = async (username?: string, password?: string): Promise<bo
     }
 }
 
+//注销当前登录，服务端封禁当前token
 export const reqLogout = (): Promise<void> => requests.get('/users/logout')
 
+//初始化时更新用户
 export const reqModify = async (
     username: string,
     password: string,
     salt: string,
 ): Promise<true | Error> => requests.post('/users/modify', { username, password, salt })
 
+//检查是否为初始化状态
 export const reqIsFirst = async (): Promise<boolean> => {
     try {
         await requests.get('/users/first')
@@ -184,6 +193,7 @@ export interface ReqLibrary {
     sort?: Array<'asc' | 'desc'>
     sortBy?: Array<sortBy> | 'random'
 }
+//获取资源库
 export async function reqLibrary({
     libName = '',
     path = '',
@@ -203,8 +213,6 @@ export async function reqLibrary({
         } as LibQuery,
     })) as libraryData
 }
-
-/*  */
 
 export interface itemQuery {
     display: 'video' | 'file'
@@ -246,16 +254,18 @@ export interface chaptersInfo {
     title: string
     start: number
 }
-
+//item资源请求
 export async function reqItemSrc(data: VideoQueryParams): Promise<VideoSrc>
 export async function reqItemSrc(data: itemQuery): Promise<ItemSrc>
 export async function reqItemSrc(data: itemQuery | VideoQueryParams): Promise<ItemSrc | VideoSrc> {
     return requests.post(`/library/item`, data)
 }
 
+//停止转码请求
 export const reqStopTranscode = async (taskId: string): Promise<{}> =>
     requests.get(`/video/clearVideoTemp?taskId=${taskId}`)
 
+//海报图请求
 export const reqPoster = async (path: string): Promise<Blob> =>
     requests.get(`/library/poster?path=` + encodeURIComponent(path), {
         responseType: 'blob',
@@ -280,8 +290,10 @@ export interface settings {
         customOutputCommand: string
     }
 }
+//获取服务端配置
 export const reqSettings = async (): Promise<settings> => requests.get(`/settings`)
 
+//修改服务端配置
 export const reqChangeSettings = async (newSettings: settings): Promise<void> =>
     requests.post(`/settings`, newSettings)
 
@@ -293,6 +305,7 @@ export interface libraryInfo {
     mapDir: object
     config: object
 }
+//获取资源库列表
 export const reqLibraryList = async (): Promise<libraryInfo[]> => requests.get(`/library/manager`)
 
 export interface ScraperResult {
@@ -327,18 +340,20 @@ export interface ScraperConfig {
     mapDir?: MapRule
     config?: libraryConfig
 }
+//资源库相关
+//新建
 export const reqAddLibrary = async (scraperConfig: ScraperConfig): Promise<void> =>
     requests.post(`/library/manager`, scraperConfig)
-
+// 删除
 export const reqDeleteLibrary = async (libName: string): Promise<void> =>
     requests.delete(`/library/manager`, { data: { libName } })
-
+// 更新
 export const reqUpdateLibrary = async (libName: string, targetPath: string): Promise<void> =>
     requests.patch(`/library/manager`, { libName, targetPath })
-
+// 修复
 export const reqReapirLibrary = async (libName: string): Promise<void> =>
     requests.put(`/library/manager`, { libName })
-
+// 修改映射规则
 export const reqEditMapRule = async (params: {
     name: string
     mapFile?: MapRule

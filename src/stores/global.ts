@@ -58,6 +58,7 @@ export interface Theme {
     }
 }
 
+//默认资源库配置
 export const defaultLibraryConfig: LibraryConfig = {
     dir: {
         sort: ['asc'],
@@ -100,6 +101,7 @@ export const useGlobalStore = defineStore('global', () => {
 
     const isDesktop = computed(() => clientState.minHeightCheck && clientState.minWidthCheck)
 
+    //根据桌面/移动端修改默认值
     const def = <T>(a: T, b: T) => (isDesktop.value ? a : b)
 
     const defaultLibraryTheme: LibraryTheme = {
@@ -214,6 +216,7 @@ export const useGlobalStore = defineStore('global', () => {
         library: {},
     })
 
+    //覆盖el plus默认样式
     const baseThemeMap: { [varName: string]: string } = {
         '--el-bg-color': 'backgroundColor',
         '--el-bg-color-overlay': 'backgroundColorD1',
@@ -256,6 +259,7 @@ try {
     serverPort = await window.electronAPI.getServerPort()
 } catch (error) {}
 
+//全局缓存
 export const globalCache = {
     loggedIn: false,
     electronEnv: Boolean(window.electronAPI),
@@ -317,6 +321,7 @@ export const globalCache = {
     alertMessages: ref(''),
 }
 
+//非响应式全局数据
 const globalData = {
     first: false,
     salt: '',

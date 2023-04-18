@@ -21,12 +21,11 @@ const show = ref(false)
 useClickAway(el, () => {
     show.value = false
     props.clickAway()
-    console.log('useClickAway', show.value)
+    // console.log('useClickAway', show.value)
 })
 
 watchEffect(() => {
-    console.log('WATCH', '-----', props.coordinate, { x, y }, show.value, props.isShow)
-
+    // console.log('WATCH', '-----', props.coordinate, { x, y }, show.value, props.isShow)
     x.value = props.coordinate.x
     y.value = props.coordinate.y
     show.value = props.isShow

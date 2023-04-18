@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type { TaskProgress } from '@v/api'
 import { globalCache } from '@v/stores/global'
+
 const taskList = globalCache.serverTaskProgress.list
 const taskProgressList = computed(() =>
+    //计算映射进度
     globalCache.serverTaskProgress.list.value.map((task) => {
         const res: TaskProgress = {
             state: task.state,

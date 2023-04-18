@@ -15,9 +15,9 @@ const requests = axios.create({
 
 //请求拦截器
 requests.interceptors.request.use((config) => {
-    if (globalCache.electronEnv && !import.meta.env.DEV) {
-        config.headers.set('electron', 'true')
-    }
+    // if (globalCache.electronEnv && !import.meta.env.DEV) {
+    //     config.headers.set('electron', 'true')
+    // }
     return config
 })
 //响应拦截器
@@ -28,6 +28,7 @@ requests.interceptors.response.use(
         } else return res.data
     },
     (error) => {
+        //全局错误通知
         const errorData = error.response.data
         if (errorData.alert) {
             globalCache.alertMessages.value = errorData.message ?? errorData.error

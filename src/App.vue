@@ -19,6 +19,7 @@ store.$subscribe((mutation, state) => {
     localStorage.setItem('global', JSON.stringify(state))
 })
 
+//全局错误提示
 watch(globalCache.alertMessages, (val) => {
     if (val) {
         ElMessage.error({
@@ -30,6 +31,7 @@ watch(globalCache.alertMessages, (val) => {
 })
 
 onMounted(() => {
+    //监听样式修改，借鉴了vueuse的useCssVar
     store.initTheme()
     watch(
         theme.value.base,
@@ -68,7 +70,10 @@ onMounted(() => {
     <div ref="app" class="app">
         <RouterView v-slot="{ Component, route }">
             <KeepAlive include="Home">
-                <Component :is="Component" :key="route.meta.usePathKey ? route.path : undefined" />
+                <Component
+                    :is="Component"
+                    :key="route.meta.usePathKey ?? route.path ?? route.hash"
+                />
             </KeepAlive>
         </RouterView>
 

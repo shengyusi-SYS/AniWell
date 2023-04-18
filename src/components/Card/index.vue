@@ -8,6 +8,7 @@ const props = defineProps<{
     data: libraryData
 }>()
 const { result } = props.data
+//海报图链接，以后换成blob
 const poster: string = props.data.poster
     ? '/api/v1//library/poster?path=' + encodeURIComponent(props.data.poster).replace(/\'/g, "\\'")
     : ''
