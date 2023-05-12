@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import { reqDeleteLibrary, ReqLibrary, reqLibrary, reqUpdateLibrary } from '@v/api'
+import type { sortBy } from '@v/api'
 import useListenLifecycle from '@v/hooks/useListenLifecycle'
-import { sortConfig, useGlobalStore, defaultLibraryConfig, globalCache } from '@v/stores/global'
+import {
+    sortConfig,
+    useGlobalStore,
+    defaultLibraryConfig,
+    globalCache,
+    defaultSort,
+} from '@v/stores/global'
+import type { sortTuple } from '@v/stores/global'
 import { useItemStore } from '@v/stores/item'
 import { libraryData, useLibraryStore } from '@v/stores/library'
 import { useDraggable, useElementSize, useWindowSize } from '@vueuse/core'
@@ -12,9 +20,12 @@ import {
     ArrowPathIcon,
     EllipsisHorizontalIcon,
     XMarkIcon,
+    ArrowsUpDownIcon,
 } from '@heroicons/vue/24/outline'
-import { ChevronDownIcon, ChevronLeftIcon } from '@heroicons/vue/20/solid'
+import { ChevronDownIcon, ChevronLeftIcon, PlayIcon } from '@heroicons/vue/24/solid'
 import { ElMessageBox } from 'element-plus'
+import { type } from 'os'
+import { useClickAway } from '@vant/use'
 // import VideoPlayer from '@v/components/VideoPlayer/index.vue'
 // import { useElementSize } from '@v/hooks/useElementSize'
 
@@ -70,15 +81,13 @@ const pageChange = watch(currentPage, (newPage, oldPage) => {
 })
 
 //点击card
-let sortConfig: sortConfig = {
-    start: 0,
-    end: 20,
-    sort: ['asc'],
-    sortBy: ['title'],
-}
-let currentLibName: ComputedRef<string> = computed(
+const sortConfig: ComputedRef<sortConfig> = computed(
+    () => libraryConfig.value?.[currentLibName.value]?.[libraryData.value?.result],
+)
+const currentLibName: ComputedRef<string> = computed(
     () => libraryData.value.libName || currentLibName.value,
 )
+
 async function openCard(libName: string, cardData: libraryData, index?: number) {
     openingCard = true
     if (cardData.result === 'item') {
@@ -91,7 +100,9 @@ async function openCard(libName: string, cardData: libraryData, index?: number) 
             const cards = targetLibrary.children?.filter((v) => v.display === cardData.display)
             if (cards == undefined) return
 
-            if (typeof index === 'number') cards.push(...cards.splice(0, index)) //以点击对象为起始，重排item顺序
+            const index = cards.findIndex((v) => v === cardData)
+            if (index !== -1) cards.push(...cards.splice(0, index)) //以点击对象为起始，重排item顺序
+
             await itemStore.setItemList(cards, {
                 libName,
                 display: cardData.display || 'file',
@@ -105,23 +116,17 @@ async function openCard(libName: string, cardData: libraryData, index?: number) 
         if (libraryConfig.value[libName] == undefined) {
             libraryConfig.value[libName] = defaultLibraryConfig
         }
-        sortConfig = libraryConfig.value[libName]?.[boxLevel]
+        // sortConfig.value = libraryConfig.value[libName]?.[boxLevel]
 
         const query = {
             libName,
             path: cardData.path,
-            ...sortConfig,
+            ...sortConfig.value,
             result: boxLevel,
             start: 0,
             end: theme.value.library[libName][boxLevel].pageSize || pageSize.value || 20,
         }
-        if (['box0', 'box1', 'box2', 'box3'].includes(boxLevel)) {
-            query.sortBy = ['add', 'order', 'title']
-            query.sort = ['desc', 'asc', 'asc']
-        } else {
-            query.sortBy = ['change', 'add', 'order', 'title']
-            query.sort = ['desc', 'desc', 'asc', 'asc']
-        }
+
         // console.log(query)
 
         router.push({
@@ -177,6 +182,60 @@ watchEffect(() => {
         selectedCard.value = undefined
     }
 })
+
+//排序菜单
+const sortMenuOpen = ref(false)
+const sortMenu = ref()
+useClickAway(sortMenu, () => {
+    sortMenuOpen.value = false
+})
+const sortList: Ref<sortTuple[]> = ref(JSON.parse(JSON.stringify(defaultSort)))
+watchEffect(() => {
+    const newSortBy = sortConfig.value?.sortBy
+    if (newSortBy instanceof Array) {
+        sortList.value.sort(([sortByA, sortA], [sortByB, sortB]) => {
+            return newSortBy.indexOf(sortByA) - newSortBy.indexOf(sortByB)
+        })
+    }
+})
+watch(
+    sortList,
+    (value) => {
+        sortConfig.value.sortBy = value.map((v) => v[0])
+        sortConfig.value.sort = value.map((v) => v[1])
+    },
+    { deep: true },
+)
+//拖动排序
+let dragIndex = 0
+function dragstart(index: number) {
+    dragIndex = index
+}
+function dragenter(e: DragEvent, index: number) {
+    if (dragIndex !== index) {
+        const moving = sortList.value[dragIndex]
+        sortList.value.splice(dragIndex, 1)
+        sortList.value.splice(index, 0, moving)
+        dragIndex = index
+    }
+}
+function dragend() {
+    console.log(sortConfig.value)
+
+    router.push({
+        name: 'library',
+        query: { ...currentRouter.value.query, ...sortConfig.value },
+    })
+}
+function changeOrder(index: number, order: 'asc' | 'desc') {
+    sortList.value[index][1] = order === 'asc' ? 'desc' : 'asc'
+    nextTick(() => {
+        router.push({
+            name: 'library',
+            query: { ...currentRouter.value.query, ...sortConfig.value },
+        })
+    })
+}
 
 onMounted(() => {
     enterLibrary({ libName: '' })
@@ -236,7 +295,6 @@ onBeforeRouteUpdate(async (to, from, next) => {
 const libraryInfoOpen = ref(false)
 
 const padding = computed(() => (isDesktop.value ? '2em' : '1em'))
-
 // useListenLifecycle('Library')
 </script>
 
@@ -293,30 +351,69 @@ export default {
 
         <div v-else class="library-cards col">
             <div v-show="boxInfo" class="library-info col">
-                <div class="library-info-head row" @click="libraryInfoOpen = !libraryInfoOpen">
+                <div class="library-info-head row">
                     <div class="library-info-libName van-ellipsis" style="font-weight: 600">
                         {{ libraryData.title ?? libraryData.path }}
                     </div>
-                    <div class="col">
-                        <ChevronLeftIcon
-                            v-show="!libraryInfoOpen"
-                            class="svg-icon"
-                            style="font-size: 1em"
+                    <div class="library-info-bar">
+                        <div
+                            ref="sortMenu"
+                            class="col ml1 library-info-sort"
+                            style="position: relative"
                         >
-                        </ChevronLeftIcon>
-                        <ChevronDownIcon
-                            v-show="libraryInfoOpen"
-                            class="svg-icon"
-                            style="font-size: 1em"
-                        ></ChevronDownIcon>
+                            <ArrowsUpDownIcon
+                                class="svg-icon"
+                                @click="sortMenuOpen = !sortMenuOpen"
+                            ></ArrowsUpDownIcon>
+                            <div v-show="sortMenuOpen" class="info-sort-menu">
+                                <div class="col info-sort-list">
+                                    <div>拖动排序</div>
+                                    <TransitionGroup name="order">
+                                        <div
+                                            v-for="([attr, order], index) in sortList"
+                                            :key="attr"
+                                            class="row info-sort-item"
+                                            :draggable="true"
+                                            @dragenter.prevent="dragenter($event, index)"
+                                            @dragover.prevent
+                                            @dragstart="dragstart(index)"
+                                            @dragend="dragend"
+                                        >
+                                            <div>{{ attr }}</div>
+                                            <div class="row">
+                                                <!-- {{ order }} -->
+                                                <PlayIcon
+                                                    class="svg-icon-w1"
+                                                    :style="
+                                                        order === 'asc'
+                                                            ? 'transform: rotate(-90deg)'
+                                                            : 'transform: rotate(90deg)'
+                                                    "
+                                                    @click="changeOrder(index, order)"
+                                                ></PlayIcon>
+                                            </div>
+                                        </div>
+                                    </TransitionGroup>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col ml1" @click="libraryInfoOpen = !libraryInfoOpen">
+                            <ChevronLeftIcon v-show="!libraryInfoOpen" class="svg-icon">
+                            </ChevronLeftIcon>
+                            <ChevronDownIcon
+                                v-show="libraryInfoOpen"
+                                class="svg-icon"
+                            ></ChevronDownIcon>
+                        </div>
                     </div>
                 </div>
                 <div
                     v-show="libraryInfoOpen"
                     style="flex-grow: 1; margin-bottom;: 2em"
+                    class="library-info-content"
                     :class="globalStore.isDesktop ? 'row' : 'col'"
                 >
-                    <div class="col">
+                    <div class="col library-info-poster">
                         <img
                             v-if="libraryData.poster"
                             :src="`/api/v1//library/poster?path=${encodeURIComponent(
@@ -326,7 +423,11 @@ export default {
                             alt=""
                         />
                     </div>
-                    <div style="flex-grow: 1" class="col">
+                    <div
+                        style="flex-grow: 1"
+                        :style="globalStore.isDesktop ? 'margin-left:2em' : ''"
+                        class="col library-info-text"
+                    >
                         <template v-for="(info, key) in libraryData" :key="key">
                             <div
                                 v-if="!['children', 'poster'].includes(key)"
@@ -408,7 +509,7 @@ export default {
                         class="row floatMenu-item"
                         @click="openLocalFolder"
                     >
-                        <div class="floatMenu-text">本地文件夹</div>
+                        <div class="floatMenu-text">本地打开</div>
                     </div>
                     <div class="row floatMenu-item" @click="floatMenuOpen = false">
                         <div class="floatMenu-text">
@@ -461,10 +562,35 @@ export default {
         background-color: v-bind('theme.base.backgroundColor');
         .library-info-head {
             line-height: 2;
+            margin-bottom: 1em;
             justify-content: space-between;
             align-items: center;
         }
         .library-info-libName {
+        }
+        .library-info-bar {
+            display: flex;
+            flex-direction: row;
+            flex-grow: 1;
+            justify-content: flex-end;
+            .ml1 {
+                margin-left: 1em;
+            }
+            .info-sort-menu {
+                display: block;
+                position: absolute;
+                height: 20em;
+                width: 10em;
+                background-color: v-bind('theme.base.backgroundColorD1');
+                top: 2em;
+                right: 0;
+                overflow-y: scroll;
+                user-select: none;
+            }
+            .info-sort-item {
+                padding: 0 1em;
+                justify-content: space-between;
+            }
         }
     }
     .library-grid {
@@ -534,5 +660,18 @@ export default {
     max-width: 100%;
     padding: 0;
     --van-grid-item-content-background: none;
+}
+.order-move,
+.order-enter-active,
+.order-leave-active {
+    transition: all 0.5s ease;
+}
+.order-enter-from,
+.order-leave-to {
+    opacity: 0;
+    transform: translateX(30px);
+}
+.order-leave-active {
+    position: absolute;
 }
 </style>

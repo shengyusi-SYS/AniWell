@@ -7,11 +7,12 @@ import { VideoHandler } from '@s/modules/video/task'
 import { VideoInfo } from '../../getVideoInfo'
 import { Request, Response } from 'express'
 import { transcodeLogger } from '@s/utils/logger'
+import type hlsProcessController from '../hlsProcessController'
 
 //hls请求处理
 export default class HlsRequestHandler {
     videoIndex
-    HlsProcessController
+    HlsProcessController: hlsProcessController
     currentProcess
     lastTargetId
     readTimeout
@@ -90,7 +91,7 @@ export default class HlsRequestHandler {
         // if (transState=='stop') {
         //         continueFFmpegProgress()
         // }
-        if (targetSegment === 'index0') {
+        if (this.HlsProcessController.transState === 'init' && targetSegment === 'index0') {
             await this.HlsProcessController.killCurrentProcess()
             await this.HlsProcessController.generateHlsProcess(targetSegment)
         }

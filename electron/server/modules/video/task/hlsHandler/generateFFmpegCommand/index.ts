@@ -209,6 +209,7 @@ export default function generateFfmpegCommand(videoInfo: VideoInfo) {
             ]
         }
         const notSupport =
+            videoInfo.codec == 'h264' &&
             Number(/yuv\d{3}p\d{0,2}/.exec(videoInfo.pix_fmt)[0].replace(/yuv\d{3}p/, '')) >= 10
         if (decoders.hasOwnProperty(settings.transcode.platform)) {
             if (!(videoInfo.codec == 'h264' && notSupport)) {

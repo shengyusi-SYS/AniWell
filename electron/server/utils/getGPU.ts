@@ -8,7 +8,9 @@ let gpus = {}
 if (osPlatform == 'win') {
     const output = spawnSync('wmic', ['path Win32_VideoController get /format:list'], {
         shell: true,
+        cwd: 'C:\\Windows\\System32\\wbem',
     }).stdout.toString('utf8')
+    logger.debug('gpus output', output)
     const com = /Caption=(?<caption>.+)(.|\s)*?PNPDeviceID=PCI\\VEN_(?<deviceID>\w{4})(.|\n)+?/g
     const cards = output.matchAll(com)
     let i = 0

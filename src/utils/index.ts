@@ -1,6 +1,8 @@
 import { clientLog } from '@v/api'
 import { libraryData } from '@v/stores/library'
+import { useSettingsStore } from '@v/stores/settings'
 import videojs from 'video.js'
+const settingsStore = useSettingsStore()
 
 export async function testVideoMime(mime: string) {
     const mediaConfig = {
@@ -34,6 +36,12 @@ export async function testVideoMime(mime: string) {
 
 export async function selectVideoMethod(item: libraryData) {
     try {
+        if (settingsStore.settings.transcode.method === 'direct') {
+            return 'direct'
+        }
+        if (settingsStore.settings.transcode.method === 'transcode') {
+            return 'transcode'
+        }
         if (typeof item.mime !== 'string') {
             return 'transcode'
         }
@@ -42,7 +50,8 @@ export async function selectVideoMethod(item: libraryData) {
         const pixFmt = (item.pixFmt as string) ?? ''
         const codec = item.mime.match(/codecs="(?<codec>.+)"/)?.groups?.codec.split('.')[0]
         // clientLog(codec, pixFmt, mimeResult)
-
+        if (pixFmt === 'yuv420p') {
+        }
         if (videojs.browser.IS_IOS) {
             if (codec === 'avc1' && pixFmt.includes('p10')) {
                 return 'transcode'

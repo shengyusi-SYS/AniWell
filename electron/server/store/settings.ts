@@ -22,34 +22,38 @@ export interface Settings {
         autoBitrate: boolean
         advAccel: boolean
         encode: string
+        method: string
         customInputCommand: string
         customOutputCommand: string
     }
 }
 
+const defaults = {
+    server: {
+        serverPort: 9009,
+        ffmpegPath: '',
+        tempPath: paths.temp,
+        cert: resolve(paths.data, 'ssl', 'domain.pem'),
+        key: resolve(paths.data, 'ssl', 'domain.key'),
+        debug: false,
+        dev: dev,
+    },
+    transcode: {
+        platform: 'nvidia',
+        bitrate: 5,
+        autoBitrate: false,
+        advAccel: true,
+        encode: 'h264',
+        method: 'auto',
+        customInputCommand: '',
+        customOutputCommand: '',
+    },
+}
+
 const store = new Store({
     name: 'settings',
     cwd: paths.config,
-    defaults: {
-        server: {
-            serverPort: 9009,
-            ffmpegPath: '',
-            tempPath: paths.temp,
-            cert: resolve(paths.data, 'ssl', 'domain.pem'),
-            key: resolve(paths.data, 'ssl', 'domain.key'),
-            debug: false,
-            dev: dev,
-        },
-        transcode: {
-            platform: 'nvidia',
-            bitrate: 5,
-            autoBitrate: false,
-            advAccel: true,
-            encode: 'h264',
-            customInputCommand: '',
-            customOutputCommand: '',
-        },
-    },
+    defaults,
 })
 
 const accessPath = (path) => {
@@ -74,6 +78,7 @@ const settingsChecker = {
     autoBitrate: (v) => typeof v === 'boolean',
     advAccel: (v) => typeof v === 'boolean',
     encode: (v) => typeof v === 'string',
+    method: (v) => typeof v === 'string',
     customInputCommand: (v) => typeof v === 'string',
     customOutputCommand: (v) => typeof v === 'string',
 }
@@ -92,7 +97,13 @@ const settings = new Proxy(store.store, {
                     if (key === 'dev') {
                         return dev
                     }
-                    return Reflect.get(target, key)
+                    const res = Reflect.get(target, key)
+                    if (res == undefined) {
+                        //修复新版/不存在配置
+                        const res = Reflect.get(defaults, key)
+                        Reflect.set(target, key, res)
+                        return res
+                    } else return res
                 },
                 set(target, key, value, reciver) {
                     let res

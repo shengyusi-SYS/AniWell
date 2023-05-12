@@ -166,7 +166,7 @@ export const reqIsFirst = async (): Promise<boolean> => {
     }
 }
 
-type sortBy =
+export type sortBy =
     | 'path'
     | 'title'
     | 'id'

@@ -3,7 +3,7 @@ import { useWindowSize, useMediaQuery } from '@vueuse/core'
 import { useCssVar, UseCssVarOptions } from '@vueuse/core'
 import { Ref } from 'vue'
 import { boxLevel, resultType } from './library'
-import { LibQuery, TaskProgress } from '@v/api'
+import { LibQuery, TaskProgress, sortBy } from '@v/api'
 
 export interface LibraryConfig {
     [boxLevel: string]: sortConfig & {}
@@ -58,41 +58,45 @@ export interface Theme {
     }
 }
 
+export type sortTuple = [sortBy, 'asc' | 'desc']
+export const defaultSort: sortTuple[] = [
+    ['change', 'desc'],
+    ['add', 'desc'],
+    ['order', 'asc'],
+    ['title', 'asc'],
+    ['path', 'asc'],
+    ['id', 'asc'],
+    ['rank', 'desc'],
+    ['like', 'desc'],
+    ['air', 'desc'],
+    ['creat', 'desc'],
+    ['update', 'desc'],
+]
+const defaultSortRule = {
+    sortBy: defaultSort.map((v) => v[0]),
+    sort: defaultSort.map((v) => v[1]),
+}
+
 //默认资源库配置
-export const defaultLibraryConfig: LibraryConfig = {
-    dir: {
-        sort: ['asc'],
-        sortBy: ['title'],
+const boxes = ['dir', 'box3', 'box2', 'box1', 'box0']
+export const defaultLibraryConfig: LibraryConfig = {}
+for (let index = 0; index < boxes.length; index++) {
+    const level = boxes[index]
+    defaultLibraryConfig[level] = {
+        sort: defaultSortRule.sort,
+        sortBy: defaultSortRule.sortBy,
         start: 0,
         end: 20,
-    },
-    box0: {
-        sort: ['asc', 'asc'],
-        sortBy: ['order'],
-        start: 0,
-        end: 20,
-    },
-    box1: {
-        sort: ['asc'],
-        sortBy: ['title'],
-        start: 0,
-        end: 20,
-    },
-    box2: {
-        sort: ['asc'],
-        sortBy: ['title'],
-        start: 0,
-        end: 20,
-    },
-    box3: {
-        sort: ['asc'],
-        sortBy: ['title'],
-        start: 0,
-        end: 20,
-    },
+    }
 }
 
 export const useGlobalStore = defineStore('global', () => {
+    const savedGlobal = () => {
+        const savedGlobal = localStorage.getItem('global') || false
+        const global = savedGlobal ? JSON.parse(savedGlobal) : false
+        return global
+    }
+
     const clientState = reactive({
         minWidthCheck: useMediaQuery('(min-width: 426px)'),
         minHeightCheck: useMediaQuery('(min-height: 426px)'),
@@ -102,17 +106,17 @@ export const useGlobalStore = defineStore('global', () => {
     const isDesktop = computed(() => clientState.minHeightCheck && clientState.minWidthCheck)
 
     //根据桌面/移动端修改默认值
-    const def = <T>(a: T, b: T) => (isDesktop.value ? a : b)
+    const selectByEnv = <T>(a: T, b: T) => (isDesktop.value ? a : b)
 
     const defaultLibraryTheme: LibraryTheme = {
         dir: {
-            column: def(5, 1),
+            column: selectByEnv(5, 1),
             columnGutter: 2,
-            rowGutter: def(4, 8),
+            rowGutter: selectByEnv(4, 8),
             pageSize: 20,
             shadow: '0 0 35px 5px rgb(0 0 0 / 40%)',
             shadowHover: '0 0 35px 5px rgb(0 0 0 / 60%)',
-            fontSize: def(1, 0.8),
+            fontSize: selectByEnv(1, 0.8),
             fontSizeTitle: 1.5,
             fontSizeLabel: 1,
             fontColor: '#999',
@@ -122,13 +126,13 @@ export const useGlobalStore = defineStore('global', () => {
             textAlign: 'center',
         },
         box0: {
-            column: def(5, 1),
+            column: selectByEnv(5, 1),
             columnGutter: 2,
-            rowGutter: def(4, 8),
+            rowGutter: selectByEnv(4, 8),
             pageSize: 20,
             shadow: '0 0 35px 5px rgb(0 0 0 / 40%)',
             shadowHover: '0 0 35px 5px rgb(0 0 0 / 60%)',
-            fontSize: def(1, 0.8),
+            fontSize: selectByEnv(1, 0.8),
             fontSizeTitle: 1.5,
             fontSizeLabel: 1,
             fontColor: '#999',
@@ -138,13 +142,13 @@ export const useGlobalStore = defineStore('global', () => {
             textAlign: 'center',
         },
         box1: {
-            column: def(5, 1),
+            column: selectByEnv(5, 1),
             columnGutter: 2,
-            rowGutter: def(4, 8),
+            rowGutter: selectByEnv(4, 8),
             pageSize: 20,
             shadow: '0 0 35px 5px rgb(0 0 0 / 40%)',
             shadowHover: '0 0 35px 5px rgb(0 0 0 / 60%)',
-            fontSize: def(1, 0.8),
+            fontSize: selectByEnv(1, 0.8),
             fontSizeTitle: 1.5,
             fontSizeLabel: 1,
             fontColor: '#999',
@@ -154,13 +158,13 @@ export const useGlobalStore = defineStore('global', () => {
             textAlign: 'center',
         },
         box2: {
-            column: def(5, 1),
+            column: selectByEnv(5, 1),
             columnGutter: 2,
-            rowGutter: def(4, 8),
+            rowGutter: selectByEnv(4, 8),
             pageSize: 20,
             shadow: '0 0 35px 5px rgb(0 0 0 / 40%)',
             shadowHover: '0 0 35px 5px rgb(0 0 0 / 60%)',
-            fontSize: def(1, 0.8),
+            fontSize: selectByEnv(1, 0.8),
             fontSizeTitle: 1.5,
             fontSizeLabel: 1,
             fontColor: '#999',
@@ -170,13 +174,13 @@ export const useGlobalStore = defineStore('global', () => {
             textAlign: 'center',
         },
         box3: {
-            column: def(5, 1),
+            column: selectByEnv(5, 1),
             columnGutter: 2,
-            rowGutter: def(4, 8),
+            rowGutter: selectByEnv(4, 8),
             pageSize: 20,
             shadow: '0 0 35px 5px rgb(0 0 0 / 40%)',
             shadowHover: '0 0 35px 5px rgb(0 0 0 / 60%)',
-            fontSize: def(1, 0.8),
+            fontSize: selectByEnv(1, 0.8),
             fontSizeTitle: 1.5,
             fontSizeLabel: 1,
             fontColor: '#999',
@@ -186,15 +190,15 @@ export const useGlobalStore = defineStore('global', () => {
             textAlign: 'center',
         },
         item: {
-            column: def(5, 2),
+            column: selectByEnv(5, 2),
             columnGutter: 2,
-            rowGutter: def(4, 8),
+            rowGutter: selectByEnv(4, 8),
             pageSize: 20,
             shadow: '0 0 35px 5px rgb(0 0 0 / 40%)',
             shadowHover: '0 0 35px 5px rgb(0 0 0 / 60%)',
-            fontSize: def(1, 0.8),
-            fontSizeTitle: def(1.2, 1.5),
-            fontSizeLabel: def(0.8, 1),
+            fontSize: selectByEnv(1, 0.8),
+            fontSizeTitle: selectByEnv(1.2, 1.5),
+            fontSizeLabel: selectByEnv(0.8, 1),
             fontColor: '#999',
             fontColorTitle: '#fff',
             fontColorLabel: '#999',
@@ -224,8 +228,7 @@ export const useGlobalStore = defineStore('global', () => {
     }
 
     const initTheme = () => {
-        const savedGlobal = localStorage.getItem('global') || false
-        const global = savedGlobal ? JSON.parse(savedGlobal) : false
+        const global = savedGlobal()
         if (typeof global === 'object' && global.theme) {
             const userTheme = global.theme as Theme
             if (userTheme) theme.value = userTheme
@@ -239,9 +242,16 @@ export const useGlobalStore = defineStore('global', () => {
         }
     }
 
-    const libraryConfig: Ref<{
+    interface libraryConfigs {
         [libName: string]: LibraryConfig
-    }> = ref({})
+    }
+    const libraryConfig: Ref<libraryConfigs> = (() => {
+        const global = savedGlobal()
+        if (typeof global === 'object' && global.libraryConfig instanceof Object) {
+            const savedLibraryConfig = global.libraryConfig as libraryConfigs
+            return ref(savedLibraryConfig)
+        } else return ref({})
+    })()
 
     return {
         theme,

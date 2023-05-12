@@ -75,7 +75,7 @@ async function createWindow() {
         width: 1920,
         height: 1080,
         // frame: false,
-        // titleBarStyle: 'hidden',
+        titleBarStyle: 'hidden',
         // titleBarOverlay: false,
         autoHideMenuBar: true,
     })
@@ -121,6 +121,14 @@ app.whenReady()
 
         ipcMain.on('openLocalFolder', (event, targetPath) => {
             shell.openPath(resolve(targetPath))
+        })
+
+        ipcMain.on('closeWindow', (event) => {
+            win.close()
+        })
+
+        ipcMain.on('refreshWindow', (event) => {
+            win.reload()
         })
 
         ipcMain.on('test', async (event, data) => {

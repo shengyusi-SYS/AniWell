@@ -69,7 +69,7 @@ export const useLibraryStore = defineStore('library', () => {
 
     const themeHelper = ref(false)
 
-    const boxInfo = ref(false)
+    const boxInfo = ref(true)
 
     return { libraryData, enterLibrary, currentTheme, boxTheme, themeHelper, boxInfo }
 })

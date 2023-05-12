@@ -1,9 +1,11 @@
 import envPaths from 'env-paths'
-import { resolve } from 'path'
+import { dirname, resolve } from 'path'
 import os from 'os'
 import { access, mkdir } from 'fs/promises'
+import { accessSync, mkdirSync } from 'fs'
+import { Paths } from 'env-paths'
 
-const base =
+const base: Paths =
     import.meta.env.DEV === true //开发时的各路径
         ? {
               data: resolve('./dev/Data'),
@@ -21,14 +23,25 @@ const append = {
     ssl: resolve(base.data, 'ssl'),
 }
 
-export const paths = { ...base, ...append }
+const paths = { ...base, ...append }
+
+Object.values(base).forEach((path) => {
+    try {
+        mkdirSync(dirname(path))
+    } catch (error) {}
+    try {
+        mkdirSync(path)
+    } catch (error) {}
+})
+Object.values(append).forEach((path) => {
+    try {
+        mkdirSync(path)
+    } catch (error) {}
+})
+try {
+    Object.values(paths).forEach((path) => accessSync(path))
+} catch (error) {
+    process.abort()
+}
 
 export default paths
-
-Promise.allSettled(Object.values(paths).map((path) => mkdir(path)))
-    .then((result) => {
-        return Promise.all(Object.values(paths).map((path) => access(path)))
-    })
-    .catch((err) => {
-        process.abort()
-    })

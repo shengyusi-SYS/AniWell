@@ -11,7 +11,7 @@
         "build": "vue-tsc --noEmit && vite build && electron-builder",
         "skipCheck": "vite build && electron-builder",
         "onlyBuild": "vite build",
-        "test": "node ./test.mjs"
+        "test": "chcp 65001 && node ./test/test.mjs"
     },
     "engines": {
         "node": "^14.18.0 || >=16.0.0"

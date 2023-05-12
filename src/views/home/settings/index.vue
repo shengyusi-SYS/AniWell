@@ -119,6 +119,16 @@ const settingsTemplate = {
             note: '',
             selection: [{ label: 'h264', value: 'h264' }],
         },
+        method: {
+            type: 'select',
+            label: '',
+            note: '',
+            selection: [
+                { label: 'auto', value: 'auto' },
+                { label: 'direct', value: 'direct' },
+                { label: 'transcode', value: 'transcode' },
+            ],
+        },
         customInputCommand: {
             checker: () => {},
             type: 'text',
