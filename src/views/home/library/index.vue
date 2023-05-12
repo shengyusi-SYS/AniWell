@@ -222,7 +222,7 @@ function dragenter(e: DragEvent, index: number) {
 function dragend() {
     console.log(sortConfig.value)
 
-    router.push({
+    router.replace({
         name: 'library',
         query: { ...currentRouter.value.query, ...sortConfig.value },
     })
@@ -230,7 +230,7 @@ function dragend() {
 function changeOrder(index: number, order: 'asc' | 'desc') {
     sortList.value[index][1] = order === 'asc' ? 'desc' : 'asc'
     nextTick(() => {
-        router.push({
+        router.replace({
             name: 'library',
             query: { ...currentRouter.value.query, ...sortConfig.value },
         })
