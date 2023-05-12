@@ -17,7 +17,7 @@ const monitorOpenned = ref(false)
 
 const router = useRouter()
 
-useListenLifecycle('Home')
+// useListenLifecycle('Home')
 </script>
 
 <script lang="ts">

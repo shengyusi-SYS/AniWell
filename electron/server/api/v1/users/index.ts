@@ -1,5 +1,5 @@
 import { logger } from '@s/utils/logger'
-import express from 'express'
+import express, { NextFunction, Response, Request } from 'express'
 const router = express.Router()
 import multer from 'multer'
 const upload = multer()
@@ -10,21 +10,6 @@ import bannedToken from '@s/store/bannedToken'
 import { session } from 'electron'
 import settings from '@s/store/settings'
 
-router.get('/salt', async (req, res, next) => {
-    const username = req.query?.username
-    if (typeof username === 'string') {
-        const user = users.getUser({ username })
-        if (user === false) {
-            res.status(404).json({ error: '用户名不存在', alert: true })
-        } else {
-            const salt = user.salt
-            res.json({ salt })
-        }
-    } else {
-        res.status(400).json({ error: '请求错误' })
-    }
-})
-
 router.get('/logout', async (req, res) => {
     try {
         bannedToken.add(req.cookies.refreshToken)
@@ -34,10 +19,81 @@ router.get('/logout', async (req, res) => {
     }
 })
 
-router.post('/login', upload.none(), async (req, res, next) => {
+router.get('/login', async (req, res, next) => {
     const { refreshToken } = req.cookies
     if (verifyToken(refreshToken)) {
         res.status(200).end()
+    } else {
+        res.status(403).json({ error: '请重新登陆', alert: true })
+    }
+})
+
+interface IPinfo {
+    ip: string
+    tryTimes: number
+    release?: number
+}
+class CountIP {
+    store: IPinfo[] = []
+    check = (req: Request, res: Response, next: NextFunction) => {
+        const ip = req.ip
+        const exist = this.store.find((v) => v.ip === ip)
+        if (exist) {
+            if (exist.tryTimes >= 20) {
+                if (exist.release) {
+                    if (Date.now() >= exist.release) {
+                        return next()
+                    } else {
+                        res.status(403).json({
+                            error: 'ip封禁中,请稍后重试,或重启服务端',
+                            alert: true,
+                        })
+                        return
+                    }
+                } else {
+                    exist.release = Date.now() + 1000 * 3600 * 6
+                    res.status(403).json({
+                        error: '错误过多,请6小时后重试,或重启服务端',
+                        alert: true,
+                    })
+                    return
+                }
+            } else exist.tryTimes++
+        } else {
+            this.store.push({ ip, tryTimes: 1 })
+        }
+        next()
+    }
+    release = (req: Request) => {
+        const targetIndex = this.store.findIndex((v) => v.ip === req.ip)
+        if (targetIndex >= 0) {
+            this.store.splice(targetIndex, 1)
+        }
+    }
+}
+const countIP = new CountIP()
+
+router.get('/salt', countIP.check, async (req, res, next) => {
+    const username = req.query?.username
+    if (typeof username === 'string') {
+        const user = users.getUser({ username })
+        if (user !== false) {
+            const salt = user.salt
+            res.json({ salt })
+            return
+        } else {
+            res.status(404).json({ error: '用户名不存在', alert: true })
+        }
+    } else {
+        res.status(400).json({ error: '请求错误' })
+    }
+})
+
+router.post('/login', countIP.check, upload.none(), async (req, res, next) => {
+    const { refreshToken } = req.cookies
+    if (verifyToken(refreshToken)) {
+        res.status(200).end()
+        countIP.release(req)
         return
     }
     const electronReq = req.headers.electron
@@ -55,6 +111,7 @@ router.post('/login', upload.none(), async (req, res, next) => {
                     secure: !settings.server.dev,
                 })
                 res.status(200).end()
+                countIP.release(req)
                 return
             } else {
                 res.status(401).json({ error: '用户名或密码错误', alert: true })

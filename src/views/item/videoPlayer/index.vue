@@ -39,7 +39,7 @@ const controller = {
     playlist: [] as Array<{ title: string; srcTask: () => Promise<VideoSrc> }>,
     playerOptions: {},
     currentIndex: -1,
-    player: {} as DPlayer,//dplayer不方便定制UI，可能还是得videojs
+    player: {} as DPlayer, //dplayer不方便定制UI，可能还是得videojs
     videoElement: {} as HTMLElement,
     assInstance: {} as SubtitlesOctopus,
     libName: '',
@@ -224,7 +224,7 @@ const controller = {
     },
 }
 
-useListenLifecycle('videoPlayer')
+// useListenLifecycle('videoPlayer')
 
 onMounted(async () => {
     // try {

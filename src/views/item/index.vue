@@ -5,7 +5,7 @@ const router = useRouter()
 // if (display === 'video') {
 //     router.push({ name: 'videoPlayer', query: router.currentRoute.value.query })
 // }
-useListenLifecycle('Item')
+// useListenLifecycle('Item')
 </script>
 
 <script lang="ts">

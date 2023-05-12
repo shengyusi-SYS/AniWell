@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reqLogin, reqIsFirst, reqDebug } from '@v/api'
+import { reqLogin, reqIsFirst, reqAutoLogin } from '@v/api'
 import useListenLifecycle from '@v/hooks/useListenLifecycle'
 import { proxyGlobalData } from '@v/stores/global'
 const router = useRouter()
@@ -7,7 +7,7 @@ const router = useRouter()
 const loginUser = ref({ username: '', password: '' })
 const login = async () => {
     const res = await reqLogin(...Object.values(loginUser.value))
-    console.log('login', proxyGlobalData.first, res)
+    // console.log('login', proxyGlobalData.first, res)
 
     if (res) {
         try {
@@ -25,14 +25,13 @@ const login = async () => {
     }
 }
 
-onMounted(() => {
-    reqLogin() //尝试自动登录
-        .then((result) => {
-            if (result) router.push({ name: 'home' })
-        })
-        .catch((err) => {})
-})
-useListenLifecycle('login')
+reqAutoLogin() //尝试自动登录
+    .then((result) => {
+        if (result) router.push({ name: 'home' })
+    })
+    .catch((err) => {})
+
+// useListenLifecycle('login')
 </script>
 
 <script lang="ts">

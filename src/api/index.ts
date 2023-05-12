@@ -88,23 +88,25 @@ const checkToken = () => {
     document.cookie = 'refreshToken=refreshToken;path=/;'
     return !/refreshToken=refreshToken/.test(document.cookie)
 }
+
+export const reqAutoLogin = async () => {
+    //检查是否已获得refreshToken或是自动登录
+    if (checkToken()) {
+        //尝试仅通过cookie验证
+        try {
+            await requests.get('/users/login')
+            globalCache.loggedIn = true
+            return true
+        } catch (error) {
+            return false
+        }
+    }
+}
+
 //登录流程，还是把自动登录独立出来好一点
 let tried = false
 export const reqLogin = async (username?: string, password?: string): Promise<boolean> => {
     try {
-        //检查是否已获得refreshToken或是自动登录
-        if (checkToken() || (!username && !password)) {
-            //尝试仅通过cookie验证,失败则走常规流程
-            try {
-                await requests.post('/users/login')
-                globalCache.loggedIn = true
-                return true
-            } catch (error) {
-                if (!username && !password) {
-                    return false
-                }
-            }
-        }
         //请求用户名对应的salt,如果本地存储有salt则尝试以本地salt登录
         let salt = proxyGlobalData.salt
         if (!salt) {

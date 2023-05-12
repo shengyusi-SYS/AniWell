@@ -112,7 +112,7 @@ const manageLibrary = async () => {
     cleanQueryManage()
 }
 
-useListenLifecycle('LibraryManager')
+// useListenLifecycle('LibraryManager')
 </script>
 
 <script lang="ts">
