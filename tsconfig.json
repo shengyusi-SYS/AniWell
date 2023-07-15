@@ -1,24 +1,8 @@
 {
-    "compilerOptions": {
-        "target": "ESNext",
-        "module": "ESNext",
-        "moduleResolution": "node",
-        "importHelpers": true,
-        "jsx": "preserve",
-        "esModuleInterop": true,
-        "resolveJsonModule": true,
-        "sourceMap": true,
-        "baseUrl": ".",
-        "paths": {
-            "@s/*": ["electron/server/*"],
-            "@v/*": ["src/*"],
-            "@h/*": ["src/hooks/*"]
-        },
-        "strict": true,
-        "allowSyntheticDefaultImports": true,
-        "skipLibCheck": true,
-        "allowJs": true
-    },
-    "include": ["src"],
-    "references": [{ "path": "./tsconfig.node.json" }]
+  "files": [],
+  "include": [
+    "src/server/trpc/**/*"
+  ],
+  "references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.web.json" }],
+
 }
