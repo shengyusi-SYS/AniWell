@@ -1,16 +1,13 @@
 import axios from "axios"
 import { globalCache } from "@v/stores/global"
+import router from "@v/router"
 
 //配置项
 const requests = axios.create({
-    baseURL:
-        // globalCache.electronEnv && !import.meta.env.DEV
-        //     ? `https://localhost:${globalCache.serverPort}/api/v1`
-        //     :
-        "/api/v1",
+    baseURL: "/api/v1",
     timeout: 10000,
     // /跨域请求时是否需要使用凭证
-    withCredentials: true,
+    // withCredentials: true,
 })
 
 //请求拦截器
@@ -32,6 +29,9 @@ requests.interceptors.response.use(
         const errorData = error.response.data
         if (errorData.alert) {
             globalCache.alertMessages.value = errorData.message ?? errorData.error
+        }
+        if (error.response.status === 403) {
+            router.replace({ name: "login" })
         }
         return Promise.reject(error)
     },

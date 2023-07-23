@@ -103,27 +103,17 @@ export const reqPoster = async (path: string, src?: Ref<string | Blob>) => {
 export const reqSalt = (username: string): Promise<{ salt: string }> =>
     requests.get("/users/salt?username=" + username)
 
-//利用httponly的cookie无法被js读写的特性进行检查
-const checkToken = () => {
-    document.cookie = "refreshToken=refreshToken;path=/;"
-    return !/refreshToken=refreshToken/.test(document.cookie)
-}
-
 export const reqAutoLogin = async () => {
-    //检查是否已获得refreshToken或是自动登录
-    if (checkToken()) {
-        //尝试仅通过cookie验证
-        try {
-            await requests.get("/users/login")
-            globalCache.loggedIn = true
-            return true
-        } catch (error) {
-            return false
-        }
+    try {
+        await requests.get("/users/login")
+        globalCache.loggedIn = true
+        return true
+    } catch (error) {
+        return false
     }
 }
 
-//登录流程，还是把自动登录独立出来好一点
+//常规登录流程
 let tried = false
 export const reqLogin = async (username?: string, password?: string): Promise<boolean> => {
     try {
@@ -143,11 +133,9 @@ export const reqLogin = async (username?: string, password?: string): Promise<bo
         const passwordHash = bcrypt.hashSync(password, salt)
         try {
             await requests.post("/users/login", { username, password: passwordHash })
-            if (checkToken()) {
-                globalCache.loggedIn = true
-                tried = false
-                return true
-            } else return false
+            globalCache.loggedIn = true
+            tried = false
+            return true
         } catch (error) {
             //登录失败则尝试移除本地salt后重新登录
             proxyGlobalData.salt = ""

@@ -92,12 +92,13 @@ router.get("/salt", countIP.check, async (req, res, next) => {
 
 router.post("/login", countIP.check, upload.none(), async (req, res, next) => {
     const { refreshToken } = req.cookies
+
     if (verifyToken(refreshToken)) {
         res.status(200).end()
         countIP.release(req)
         return
     }
-    const electronReq = req.headers.electron
+
     const { username, password } = req.body
     if (typeof username === "string" && typeof password === "string") {
         try {
@@ -109,9 +110,10 @@ router.post("/login", countIP.check, upload.none(), async (req, res, next) => {
                 res.cookie("refreshToken", signRefreshToken(user), {
                     maxAge: 1000 * 3600 * 24 * 30,
                     httpOnly: true,
-                    secure: !settings.server.dev,
+                    secure: true,
                 })
                 res.status(200).end()
+
                 countIP.release(req)
                 return
             } else {
