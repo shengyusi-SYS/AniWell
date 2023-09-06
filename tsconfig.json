@@ -1,8 +1,12 @@
 {
-  "files": [],
-  "include": [
-    "src/server/trpc/**/*"
-  ],
-  "references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.web.json" }],
-
+    "extends": "./tsconfig.template.json",
+    "files": [],
+    "references": [
+        {
+            "path": "./packages/tsconfig.json"
+        },
+        {
+            "path": "./apps/tsconfig.json"
+        }
+    ]
 }
