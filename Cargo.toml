@@ -1,0 +1,16 @@
+[workspace]
+resolver = "2"
+members = ["src-backend", "src-tauri"]
+
+[workspace.package]
+version = "0.6.0"
+description = "ani_well"
+authors = ["生于斯"]
+license = ""
+repository = ""
+edition = "2021"
+
+[profile.dev]
+debug = 0
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
