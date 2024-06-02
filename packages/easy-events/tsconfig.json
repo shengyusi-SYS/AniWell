@@ -1,7 +1,0 @@
-{
-    "extends": "../../tsconfig.template.json",
-    "files": [],
-    "compilerOptions": {
-        "keyofStringsOnly": true
-    }
-}

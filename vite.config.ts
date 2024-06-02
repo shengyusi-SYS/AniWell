@@ -1,38 +1,33 @@
-import { defineConfig } from 'vite'
-import keypress from 'keypress'
-import treeKill from 'tree-kill'
-import { Plugin } from 'vite'
-import chalk from 'chalk'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { internalIpV4 } from "internal-ip";
 
-function noticePlugin(): Plugin {
-    return {
-        name: 'notice-plugin',
-        async configureServer(server) {
-            console.log(chalk.blue('press ctrl+x to stop childprocesses'))
-        },
-    }
-}
-keypress(process.stdin)
-process.stdin.on('keypress', function (ch, key) {
-    console.log('got "keypress"', key)
-    if (key && key.ctrl && (key.name == 'x' || key.name == 'c')) {
-        if (key.name == 'c') console.log(chalk.blue('press ctrl+x to stop childprocesses'))
-        process.stdin.pause()
-        treeKill(process.pid, 'SIGINT', () => {})
-    }
-})
-export default defineConfig(async ({ command, mode, ssrBuild }) => {
-    if (mode === 'development') {
-        await import('./scripts/dev')
-        return {
-            plugins: [noticePlugin()],
+// @ts-expect-error process is a nodejs global
+const mobile = !!/android|ios/.exec(process.env.TAURI_ENV_PLATFORM);
+
+// https://vitejs.dev/config/
+export default defineConfig(async () => ({
+  plugins: [react()],
+
+  // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
+  //
+  // 1. prevent vite from obscuring rust errors
+  clearScreen: false,
+  // 2. tauri expects a fixed port, fail if that port is not available
+  server: {
+    port: 1420,
+    strictPort: true,
+    host: mobile ? "0.0.0.0" : false,
+    hmr: mobile
+      ? {
+          protocol: "ws",
+          host: await internalIpV4(),
+          port: 1421,
         }
-    } else if (mode === 'production') {
-        await import('./scripts/build')
-        console.log(chalk.green('build completed , exit now'))
-        treeKill(process.pid)
-        return {
-            plugins: [noticePlugin()],
-        }
-    }
-})
+      : undefined,
+    watch: {
+      // 3. tell vite to ignore watching `src-tauri`
+      ignored: ["**/src-tauri/**"],
+    },
+  },
+}));
