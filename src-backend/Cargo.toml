@@ -1,6 +1,7 @@
 [package]
 name = "ani-well-backend"
 version = { workspace = true }
+edition = { workspace = true }
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -10,6 +11,8 @@ name = "ani_well_backend_lib"
 crate-type = ["rlib"]
 
 [dependencies]
+anyhow = "1.0.86"
 axum = "0.7.5"
 serde = "1.0.203"
 serde_json = "1.0.117"
+tokio = "1.38.0"

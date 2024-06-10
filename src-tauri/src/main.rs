@@ -2,5 +2,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    tauri_app_lib::run()
+    std::thread::spawn(|| {
+        let _server = ani_well_backend_lib::serve();
+    });
+    ani_well_tauri_lib::run()
 }

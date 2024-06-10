@@ -1,3 +1,3 @@
 fn main() {
-   let _server = aniwell_backend_lib::server();
+    let _server = ani_well_backend_lib::serve();
 }
