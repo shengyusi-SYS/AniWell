@@ -1,2 +1,2 @@
 [build]
-rustflags = ["-Zthreads=16", "-Clink-arg=-fuse-ld=lld"]
+rustflags = ["-Zthreads=12", "-Clink-arg=-fuse-ld=lld"]
