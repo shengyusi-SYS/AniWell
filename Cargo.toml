@@ -2,6 +2,13 @@
 resolver = "2"
 members = ["src-backend", "src-tauri"]
 
+[package]
+name = "ani_well"
+
+[[bin]]
+name = "ani_well"
+path = "src-tauri/main.rs"
+
 [workspace.package]
 version = "0.6.0"
 description = "ani_well"
@@ -10,7 +17,15 @@ license = ""
 repository = ""
 edition = "2021"
 
+[workspace.dependencies]
+anyhow = "1.0.93"
+serde = { version = "1.0.214", features = ["derive"] }
+serde_json = "1.0.132"
+tokio = { version = "1.41.1", features = ["full"] }
+
 [profile.dev]
 debug = 0
+opt-level = 1
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.dev.package."*"]
+opt-level = 3

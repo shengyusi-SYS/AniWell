@@ -1,10 +1,14 @@
+use std::sync::Arc;
+
 use axum::{
-    extract,
+    extract::{self, State},
     http::StatusCode,
     routing::{get, post},
-    Router,
+    Json, Router,
 };
 use serde::Deserialize;
+
+use crate::structs::state::GlobalState;
 
 struct User {}
 
@@ -13,12 +17,12 @@ pub struct LoginData {
     username: String,
     password: String,
 }
-pub fn route() -> Router {
+pub fn route() -> Router<GlobalState> {
     Router::new().route("/login", get(login))
 }
 
-async fn login(extract::Json(data): extract::Json<LoginData>) -> StatusCode {
-    println!("{:?}", data);
+async fn login(State(state): State<GlobalState>, Json(data): Json<LoginData>) -> StatusCode {
+    println!("{:?}{:?}", data, state);
     if data.username == "admin" && data.password == "admin" {
         StatusCode::OK
     } else {

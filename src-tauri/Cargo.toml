@@ -1,20 +1,24 @@
 [package]
-name = "ani-well-tauri"
-version = { workspace = true }
-description = "ani-well-tauri"
-edition = { workspace = true }
+name = "ani-well"
+version = "0.1.0"
+description = "A Tauri App"
+authors = ["you"]
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-name = "ani_well_tauri_lib"
-crate-type = ["lib", "cdylib", "staticlib"]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "ani_well_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.0.0-beta", features = [] }
+tauri-build = { version = "2", features = [] }
 
 [dependencies]
-serde = "1.0.203"
-serde_json = "1.0.117"
-tauri = { version = "2.0.0-beta", features = [] }
-ani-well-backend = { path = "../src-backend" }
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+serde_json = { workspace = true }
+serde = { workspace = true }

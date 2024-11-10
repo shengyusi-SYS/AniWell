@@ -1,17 +1,18 @@
 {
-  "productName": "tauri-app",
-  "version": "0.0.0",
-  "identifier": "com.tauri.dev",
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "ani-well",
+  "version": "0.1.0",
+  "identifier": "com.ani-well.app",
   "build": {
-    "beforeDevCommand": "pnpm dev",
+    "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm build",
+    "beforeBuildCommand": "bun run build",
     "frontendDist": "../dist"
   },
   "app": {
     "windows": [
       {
-        "title": "tauri-app",
+        "title": "ani-well",
         "width": 800,
         "height": 600
       }

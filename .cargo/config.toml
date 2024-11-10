@@ -1,2 +1,16 @@
-[build]
-rustflags = ["-Zthreads=12", "-Clink-arg=-fuse-ld=lld"]
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = [
+    "-C",
+    "link-arg=-fuse-ld=lld",
+    # (Nightly) Make the current crate share its generic instantiations
+    "-Zshare-generics=y",
+]
+
+[target.x86_64-pc-windows-msvc]
+linker = "rust-lld.exe"
+rustflags = [
+    # Nightly
+    # "-Zshare-generics=y",
+    # "-Zthreads=0",
+]
